@@ -1,0 +1,117 @@
+{
+  "skills": {
+    "react-vite-guidelines": {
+      "description": "React/Vite/TypeScript strict 구조와 컴포넌트 설계 원칙",
+      "promptTriggers": {
+        "keywords": [
+          "react",
+          "vite",
+          "frontend",
+          "component",
+          "tsx",
+          "state"
+        ],
+        "intentPatterns": [
+          "(build|implement|refactor).*?(react|vite|frontend|component)",
+          "(ui|form|page|screen|layout)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "apps/web/**"
+        ]
+      }
+    },
+    "spring-boot-guidelines": {
+      "description": "Spring Boot feature package 구조, DTO/validation/service/repository 경계",
+      "promptTriggers": {
+        "keywords": [
+          "spring",
+          "spring boot",
+          "java",
+          "controller",
+          "service",
+          "repository",
+          "jpa"
+        ],
+        "intentPatterns": [
+          "(build|implement|refactor).*?(api|controller|service|repository|spring|java)",
+          "(entity|dto|validation|flyway)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "apps/api/**"
+        ]
+      }
+    },
+    "campus-action-domain": {
+      "description": "성심교정 학생용 action extraction 도메인 규칙",
+      "promptTriggers": {
+        "keywords": [
+          "공지",
+          "장학",
+          "공결",
+          "학생증",
+          "trinity",
+          "사이버캠퍼스",
+          "action extraction"
+        ],
+        "intentPatterns": [
+          "(extract|parse|classify).*?(notice|action|deadline|eligibility|evidence)",
+          "(장학|공결|수강|비교과|동아리).*?(추출|분류|정리)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "apps/api/**",
+          "apps/web/**"
+        ]
+      }
+    },
+    "notice-extraction-quality": {
+      "description": "노이즈 제거, 근거 snippet, confirmed vs inferred 분리 규칙",
+      "promptTriggers": {
+        "keywords": [
+          "evidence",
+          "snippet",
+          "confidence",
+          "deadline",
+          "eligibility",
+          "inferred"
+        ],
+        "intentPatterns": [
+          "(quality|improve|review).*?(extraction|notice|action)",
+          "(noise|dedupe|evidence|confirmed|inferred)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "apps/api/**"
+        ]
+      }
+    },
+    "api-contract-guidelines": {
+      "description": "프론트-백엔드 API 계약 일치와 타입 drift 방지 원칙",
+      "promptTriggers": {
+        "keywords": [
+          "openapi",
+          "contract",
+          "dto",
+          "type",
+          "client"
+        ],
+        "intentPatterns": [
+          "(align|sync|generate).*?(type|contract|dto|api)",
+          "(frontend|backend).*?(contract|schema|response)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "apps/api/**",
+          "apps/web/**"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Claude state
+.claude/state/
+.claude/plans/
+.claude/memory/
+.claude/projects/
+
+# Web
+apps/web/node_modules/
+apps/web/dist/
+
+# API
+apps/api/.gradle/
+apps/api/build/
+apps/api/out/
+
+# Env
+.env
+.env.*
