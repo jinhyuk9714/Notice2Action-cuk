@@ -32,8 +32,8 @@ export async function requestActionExtraction(
   return json;
 }
 
-export async function fetchActionList(): Promise<ActionListResponse> {
-  const response = await fetch('/api/v1/actions');
+export async function fetchActionList(sort: 'recent' | 'due' = 'recent'): Promise<ActionListResponse> {
+  const response = await fetch(`/api/v1/actions?sort=${encodeURIComponent(sort)}`);
 
   if (!response.ok) {
     const body = await response.text();

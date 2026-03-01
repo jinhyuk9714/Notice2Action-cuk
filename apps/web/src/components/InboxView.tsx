@@ -6,13 +6,15 @@ import { ActionSummaryCard } from './ActionSummaryCard';
 
 export function InboxView(): ReactElement {
   const [actions, setActions] = useState<readonly SavedActionSummary[]>([]);
+  const [sort, setSort] = useState<'recent' | 'due'>('due');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<SavedActionDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchActionList()
+    setLoading(true);
+    fetchActionList(sort)
       .then((result) => {
         setActions(result.actions);
         setLoading(false);
@@ -22,7 +24,7 @@ export function InboxView(): ReactElement {
         setError(message);
         setLoading(false);
       });
-  }, []);
+  }, [sort]);
 
   function handleSelect(id: string): void {
     setSelectedId(id);
@@ -61,6 +63,16 @@ export function InboxView(): ReactElement {
         <div className="panel-header">
           <p className="eyebrow">Saved Actions</p>
           <h2>{actions.length}개</h2>
+          <div className="sort-toggle">
+            <button
+              className={`sort-btn${sort === 'due' ? ' sort-btn-active' : ''}`}
+              onClick={() => { setSort('due'); }}
+            >마감순</button>
+            <button
+              className={`sort-btn${sort === 'recent' ? ' sort-btn-active' : ''}`}
+              onClick={() => { setSort('recent'); }}
+            >최신순</button>
+          </div>
         </div>
         <div className="card-list">
           {actions.map((action) => (

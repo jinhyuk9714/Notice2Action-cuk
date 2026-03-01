@@ -92,8 +92,13 @@ public class ActionPersistenceService {
   }
 
   @Transactional(readOnly = true)
-  public ActionListResponse listActions() {
-    List<ExtractedActionEntity> entities = actionRepository.findAllByOrderByCreatedAtDesc();
+  public ActionListResponse listActions(String sort) {
+    List<ExtractedActionEntity> entities;
+    if ("due".equals(sort)) {
+      entities = actionRepository.findAllOrderByDueAtIsoAscNullsLast();
+    } else {
+      entities = actionRepository.findAllByOrderByCreatedAtDesc();
+    }
 
     List<SavedActionSummaryDto> summaries = entities.stream()
         .map(this::toSummaryDto)

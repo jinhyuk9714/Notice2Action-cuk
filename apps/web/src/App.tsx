@@ -4,10 +4,12 @@ import { InboxView } from './components/InboxView';
 import { SourceIngestionForm } from './components/SourceIngestionForm';
 import { requestActionExtraction } from './lib/api';
 import type { ActionExtractionRequest, ExtractedAction } from './lib/types';
+import { useReminderCheck } from './lib/useReminderCheck';
 
 type ActiveView = 'extract' | 'inbox';
 
 export default function App(): ReactElement {
+  useReminderCheck();
   const [activeView, setActiveView] = useState<ActiveView>('extract');
   const [actions, setActions] = useState<readonly ExtractedAction[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);

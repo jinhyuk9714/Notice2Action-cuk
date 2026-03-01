@@ -55,11 +55,47 @@ class ActionPersistenceServiceTest {
     ActionExtractionResponse extracted = extractionService.extract(request);
     persistenceService.persistExtraction(request, extracted);
 
-    ActionListResponse list = persistenceService.listActions();
+    ActionListResponse list = persistenceService.listActions("recent");
 
     assertThat(list.actions()).isNotEmpty();
     assertThat(list.actions().getFirst().title()).isEqualTo("공결 신청 안내");
     assertThat(list.actions().getFirst().sourceCategory()).isEqualTo(SourceCategory.NOTICE);
+  }
+
+  @Test
+  void listActions_with_due_sort_returns_soonest_first() {
+    // Action with earlier due date
+    ActionExtractionRequest earlyReq = new ActionExtractionRequest(
+        "2026년 3월 5일까지 TRINITY에서 신청을 완료하세요.",
+        null, "조기 마감", SourceCategory.NOTICE, List.of()
+    );
+    ActionExtractionResponse earlyExtracted = extractionService.extract(earlyReq);
+    persistenceService.persistExtraction(earlyReq, earlyExtracted);
+
+    // Action with later due date
+    ActionExtractionRequest lateReq = new ActionExtractionRequest(
+        "2026년 3월 20일까지 장학포털에서 장학금 신청을 완료하세요.",
+        null, "늦은 마감", SourceCategory.NOTICE, List.of()
+    );
+    ActionExtractionResponse lateExtracted = extractionService.extract(lateReq);
+    persistenceService.persistExtraction(lateReq, lateExtracted);
+
+    // Action with no due date
+    ActionExtractionRequest noDueReq = new ActionExtractionRequest(
+        "학교 공지사항을 확인하세요.",
+        null, "마감 없음", SourceCategory.NOTICE, List.of()
+    );
+    ActionExtractionResponse noDueExtracted = extractionService.extract(noDueReq);
+    persistenceService.persistExtraction(noDueReq, noDueExtracted);
+
+    ActionListResponse list = persistenceService.listActions("due");
+
+    assertThat(list.actions()).hasSizeGreaterThanOrEqualTo(3);
+    // Earlier due date comes first
+    assertThat(list.actions().get(0).title()).isEqualTo("조기 마감");
+    assertThat(list.actions().get(1).title()).isEqualTo("늦은 마감");
+    // Null due date comes last
+    assertThat(list.actions().get(list.actions().size() - 1).dueAtIso()).isNull();
   }
 
   @Test

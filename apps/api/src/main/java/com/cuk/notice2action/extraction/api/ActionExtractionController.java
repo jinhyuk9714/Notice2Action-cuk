@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -47,8 +48,10 @@ public class ActionExtractionController {
   }
 
   @GetMapping("/actions")
-  public ActionListResponse listActions() {
-    return actionPersistenceService.listActions();
+  public ActionListResponse listActions(
+      @RequestParam(name = "sort", required = false, defaultValue = "recent") String sort
+  ) {
+    return actionPersistenceService.listActions(sort);
   }
 
   @GetMapping("/actions/{id}")

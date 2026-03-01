@@ -1,4 +1,11 @@
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
+import { computeDday } from '../lib/dday';
+import {
+  loadReminders,
+  saveReminder,
+  removeReminder,
+  requestNotificationPermission,
+} from '../lib/reminder';
 import type { SavedActionDetail } from '../lib/types';
 
 type ActionDetailPanelProps = Readonly<{
@@ -6,6 +13,39 @@ type ActionDetailPanelProps = Readonly<{
 }>;
 
 export function ActionDetailPanel({ detail }: ActionDetailPanelProps): ReactElement {
+  const dday = computeDday(detail.dueAtIso);
+  const existingReminder = loadReminders().find(r => r.actionId === detail.id);
+  const [hasReminder, setHasReminder] = useState(existingReminder !== undefined && !existingReminder.dismissed);
+
+  async function handleToggleReminder(): Promise<void> {
+    if (hasReminder) {
+      removeReminder(detail.id);
+      setHasReminder(false);
+      return;
+    }
+
+    const granted = await requestNotificationPermission();
+    if (!granted) return;
+    if (detail.dueAtIso === null) return;
+
+    const dueDate = new Date(detail.dueAtIso);
+    const remindAt = new Date(dueDate.getTime() - 24 * 60 * 60 * 1000);
+
+    const remindAtIso = remindAt.getTime() < Date.now()
+      ? new Date().toISOString()
+      : remindAt.toISOString();
+
+    saveReminder({
+      actionId: detail.id,
+      remindAtIso,
+      title: detail.title,
+      dueLabel: detail.dueAtLabel ?? dueDate.toLocaleDateString('ko-KR'),
+      dismissed: false,
+    });
+
+    setHasReminder(true);
+  }
+
   return (
     <article className="card detail-panel">
       <div className="card-header">
@@ -25,7 +65,14 @@ export function ActionDetailPanel({ detail }: ActionDetailPanelProps): ReactElem
       <dl className="meta-grid">
         <div>
           <dt>마감</dt>
-          <dd>{detail.dueAtLabel ?? '미확인'}</dd>
+          <dd>
+            {detail.dueAtLabel ?? '미확인'}
+            {dday !== null ? (
+              <span className={`dday-badge dday-${dday.urgency} dday-inline`}>
+                {dday.label}
+              </span>
+            ) : null}
+          </dd>
         </div>
         <div>
           <dt>시스템</dt>
@@ -40,6 +87,15 @@ export function ActionDetailPanel({ detail }: ActionDetailPanelProps): ReactElem
           <dd>{detail.requiredItems.length > 0 ? detail.requiredItems.join(', ') : '없음'}</dd>
         </div>
       </dl>
+
+      {detail.dueAtIso !== null ? (
+        <button
+          className={`reminder-btn${hasReminder ? ' reminder-btn-active' : ''}`}
+          onClick={() => { void handleToggleReminder(); }}
+        >
+          {hasReminder ? '리마인더 해제' : '리마인더 설정 (D-1)'}
+        </button>
+      ) : null}
 
       {detail.source !== null ? (
         <div className="source-info">
