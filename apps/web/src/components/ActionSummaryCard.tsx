@@ -1,15 +1,17 @@
 import type { ReactElement } from 'react';
 import { computeDday } from '../lib/dday';
 import { hasActiveReminders } from '../lib/reminder';
+import type { RelevanceResult } from '../lib/relevance';
 import type { SavedActionSummary } from '../lib/types';
 
 type ActionSummaryCardProps = Readonly<{
   action: SavedActionSummary;
   selected: boolean;
   onSelect: (id: string) => void;
+  relevance: RelevanceResult;
 }>;
 
-export function ActionSummaryCard({ action, selected, onSelect }: ActionSummaryCardProps): ReactElement {
+export function ActionSummaryCard({ action, selected, onSelect, relevance }: ActionSummaryCardProps): ReactElement {
   const dday = computeDday(action.dueAtIso);
   const hasReminder = hasActiveReminders(action.id);
 
@@ -19,10 +21,17 @@ export function ActionSummaryCard({ action, selected, onSelect }: ActionSummaryC
       onClick={() => { onSelect(action.id); }}
     >
       <div className="summary-card-header">
-        {action.sourceCategory !== null ? (
-          <span className="eyebrow">{action.sourceCategory}</span>
+        <div>
+          {action.sourceCategory !== null ? (
+            <span className="eyebrow">{action.sourceCategory}</span>
+          ) : null}
+          <h4>{action.title}</h4>
+        </div>
+        {relevance.level === 'relevant' ? (
+          <span className="relevance-badge relevance-relevant" title={relevance.reason ?? undefined}>관련</span>
+        ) : relevance.level === 'not_relevant' ? (
+          <span className="relevance-badge relevance-not-relevant" title={relevance.reason ?? undefined}>해당없음</span>
         ) : null}
-        <h4>{action.title}</h4>
       </div>
 
       <p className="summary-card-body">{action.actionSummary}</p>

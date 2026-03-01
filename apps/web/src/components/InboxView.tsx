@@ -1,8 +1,12 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { fetchActionDetail, fetchActionList } from '../lib/api';
+import { loadProfile, saveProfile, isProfileConfigured } from '../lib/profile';
+import type { UserProfile } from '../lib/profile';
+import { computeRelevance } from '../lib/relevance';
 import type { SavedActionDetail, SavedActionSummary } from '../lib/types';
 import { ActionDetailPanel } from './ActionDetailPanel';
 import { ActionSummaryCard } from './ActionSummaryCard';
+import { ProfileSettings } from './ProfileSettings';
 
 export function InboxView(): ReactElement {
   const [actions, setActions] = useState<readonly SavedActionSummary[]>([]);
@@ -11,6 +15,8 @@ export function InboxView(): ReactElement {
   const [detail, setDetail] = useState<SavedActionDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfile>(() => loadProfile());
+  const [showRelevantOnly, setShowRelevantOnly] = useState<boolean>(false);
 
   useEffect(() => {
     setLoading(true);
@@ -26,6 +32,11 @@ export function InboxView(): ReactElement {
       });
   }, [sort]);
 
+  function handleProfileChange(newProfile: UserProfile): void {
+    saveProfile(newProfile);
+    setProfile(newProfile);
+  }
+
   function handleSelect(id: string): void {
     setSelectedId(id);
     setDetail(null);
@@ -39,6 +50,20 @@ export function InboxView(): ReactElement {
         setError(message);
       });
   }
+
+  const actionsWithRelevance = useMemo(() => {
+    return actions.map((action) => ({
+      action,
+      relevance: computeRelevance(action.eligibility, profile),
+    }));
+  }, [actions, profile]);
+
+  const filteredActions = useMemo(() => {
+    if (!showRelevantOnly) return actionsWithRelevance;
+    return actionsWithRelevance.filter(
+      ({ relevance }) => relevance.level === 'relevant' || relevance.level === 'unknown',
+    );
+  }, [actionsWithRelevance, showRelevantOnly]);
 
   if (loading) {
     return <div className="inbox-state">불러오는 중...</div>;
@@ -57,12 +82,17 @@ export function InboxView(): ReactElement {
     );
   }
 
+  const profileConfigured = isProfileConfigured(profile);
+
   return (
     <section className="inbox-layout">
       <div className="inbox-list">
         <div className="panel-header">
           <p className="eyebrow">Saved Actions</p>
-          <h2>{actions.length}개</h2>
+          <h2>{filteredActions.length}개</h2>
+
+          <ProfileSettings profile={profile} onProfileChange={handleProfileChange} />
+
           <div className="sort-toggle">
             <button
               className={`sort-btn${sort === 'due' ? ' sort-btn-active' : ''}`}
@@ -73,14 +103,28 @@ export function InboxView(): ReactElement {
               onClick={() => { setSort('recent'); }}
             >최신순</button>
           </div>
+
+          {profileConfigured ? (
+            <div className="filter-toggle">
+              <label className="filter-label">
+                <input
+                  type="checkbox"
+                  checked={showRelevantOnly}
+                  onChange={(e) => { setShowRelevantOnly(e.target.checked); }}
+                />
+                관련 항목만 보기
+              </label>
+            </div>
+          ) : null}
         </div>
         <div className="card-list">
-          {actions.map((action) => (
+          {filteredActions.map(({ action, relevance }) => (
             <ActionSummaryCard
               key={action.id}
               action={action}
               selected={action.id === selectedId}
               onSelect={handleSelect}
+              relevance={relevance}
             />
           ))}
         </div>
@@ -88,7 +132,7 @@ export function InboxView(): ReactElement {
 
       <div className="inbox-detail">
         {detail !== null ? (
-          <ActionDetailPanel detail={detail} />
+          <ActionDetailPanel detail={detail} profile={profile} />
         ) : (
           <div className="inbox-state">
             <p>목록에서 액션을 선택하세요.</p>

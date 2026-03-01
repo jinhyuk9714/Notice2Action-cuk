@@ -1,5 +1,7 @@
 import { useState, type ReactElement } from 'react';
 import { computeDday } from '../lib/dday';
+import type { UserProfile } from '../lib/profile';
+import { computeRelevance } from '../lib/relevance';
 import type { ReminderOffsetKey } from '../lib/reminder';
 import {
   getRemindersForAction,
@@ -11,6 +13,7 @@ import type { SavedActionDetail } from '../lib/types';
 
 type ActionDetailPanelProps = Readonly<{
   detail: SavedActionDetail;
+  profile: UserProfile;
 }>;
 
 type ReminderOption = Readonly<{
@@ -31,8 +34,9 @@ function getActiveOffsetKeys(actionId: string): Set<ReminderOffsetKey> {
   return new Set(reminders.map((r) => r.offsetKey));
 }
 
-export function ActionDetailPanel({ detail }: ActionDetailPanelProps): ReactElement {
+export function ActionDetailPanel({ detail, profile }: ActionDetailPanelProps): ReactElement {
   const dday = computeDday(detail.dueAtIso);
+  const relevance = computeRelevance(detail.eligibility, profile);
   const [activeKeys, setActiveKeys] = useState<Set<ReminderOffsetKey>>(
     () => getActiveOffsetKeys(detail.id),
   );
@@ -56,7 +60,6 @@ export function ActionDetailPanel({ detail }: ActionDetailPanelProps): ReactElem
 
     let remindAt: Date;
     if (option.offsetMs === 0) {
-      // D-Day: remind at 09:00 KST on the due date
       remindAt = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate(), 0, 0, 0);
     } else {
       remindAt = new Date(dueDate.getTime() - option.offsetMs);
@@ -111,7 +114,14 @@ export function ActionDetailPanel({ detail }: ActionDetailPanelProps): ReactElem
         </div>
         <div>
           <dt>대상/조건</dt>
-          <dd>{detail.eligibility ?? '미확인'}</dd>
+          <dd>
+            {detail.eligibility ?? '미확인'}
+            {relevance.level === 'relevant' ? (
+              <span className="relevance-badge relevance-relevant dday-inline" title={relevance.reason ?? undefined}>관련</span>
+            ) : relevance.level === 'not_relevant' ? (
+              <span className="relevance-badge relevance-not-relevant dday-inline" title={relevance.reason ?? undefined}>해당없음</span>
+            ) : null}
+          </dd>
         </div>
         <div>
           <dt>준비물</dt>

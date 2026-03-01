@@ -398,6 +398,120 @@ textarea {
   margin-left: 8px;
 }
 
+/* Profile settings */
+
+.profile-settings {
+  border-top: 1px solid #eef2f7;
+  padding-top: 12px;
+  margin-bottom: 12px;
+}
+
+.profile-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  padding: 0;
+}
+
+.profile-settings-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.profile-field label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.profile-field input,
+.profile-field select {
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+.year-group {
+  display: flex;
+  gap: 4px;
+}
+
+.year-btn {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 14px;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.year-btn:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.year-btn-active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+/* Relevance badge */
+
+.relevance-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.relevance-relevant {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.relevance-not-relevant {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+/* Filter toggle */
+
+.filter-toggle {
+  margin-top: 8px;
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.filter-label input[type="checkbox"] {
+  width: auto;
+  accent-color: #2563eb;
+}
+
 /* Sort toggle */
 
 .sort-toggle {

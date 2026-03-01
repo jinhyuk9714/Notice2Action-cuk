@@ -86,6 +86,7 @@ export type SavedActionSummary = Readonly<{
   actionSummary: string;
   dueAtIso: string | null;
   dueAtLabel: string | null;
+  eligibility: string | null;
   sourceCategory: SourceCategory | null;
   sourceTitle: string | null;
   createdAt: string;

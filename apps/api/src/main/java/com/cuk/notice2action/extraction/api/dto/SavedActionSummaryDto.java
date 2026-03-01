@@ -10,6 +10,7 @@ public record SavedActionSummaryDto(
     String actionSummary,
     String dueAtIso,
     String dueAtLabel,
+    String eligibility,
     SourceCategory sourceCategory,
     String sourceTitle,
     OffsetDateTime createdAt

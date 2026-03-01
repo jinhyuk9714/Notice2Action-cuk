@@ -123,6 +123,7 @@ public class ActionPersistenceService {
         entity.getActionSummary(),
         entity.getDueAtIso() != null ? entity.getDueAtIso().toString() : null,
         entity.getDueAtLabel(),
+        entity.getEligibility(),
         source != null ? source.getSourceCategory() : null,
         source != null ? source.getTitle() : null,
         entity.getCreatedAt()
