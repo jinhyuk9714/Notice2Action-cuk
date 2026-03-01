@@ -152,6 +152,79 @@ export function isActionListResponse(value: unknown): value is ActionListRespons
   );
 }
 
+// --- Source history types ---
+
+export type SourceSummary = Readonly<{
+  id: string;
+  title: string | null;
+  sourceCategory: SourceCategory;
+  sourceUrl: string | null;
+  createdAt: string;
+  actionCount: number;
+}>;
+
+export type SourceListResponse = Readonly<{
+  sources: readonly SourceSummary[];
+  currentPage: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}>;
+
+export type SourceDetail = Readonly<{
+  id: string;
+  title: string | null;
+  sourceCategory: SourceCategory;
+  sourceUrl: string | null;
+  createdAt: string;
+  actions: readonly SavedActionSummary[];
+}>;
+
+function isSourceSummary(value: unknown): value is SourceSummary {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.id === 'string' &&
+    typeof record.sourceCategory === 'string' &&
+    typeof record.createdAt === 'string' &&
+    typeof record.actionCount === 'number'
+  );
+}
+
+export function isSourceListResponse(value: unknown): value is SourceListResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    Array.isArray(record.sources) &&
+    record.sources.every(isSourceSummary) &&
+    typeof record.currentPage === 'number' &&
+    typeof record.totalPages === 'number' &&
+    typeof record.hasNext === 'boolean'
+  );
+}
+
+export function isSourceDetail(value: unknown): value is SourceDetail {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.id === 'string' &&
+    typeof record.sourceCategory === 'string' &&
+    typeof record.createdAt === 'string' &&
+    Array.isArray(record.actions) &&
+    record.actions.every(isSavedActionSummary)
+  );
+}
+
 export function isSavedActionDetail(value: unknown): value is SavedActionDetail {
   if (typeof value !== 'object' || value === null) {
     return false;

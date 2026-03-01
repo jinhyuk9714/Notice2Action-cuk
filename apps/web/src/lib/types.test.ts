@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isActionExtractionResponse, isActionListResponse, isSavedActionDetail } from './types';
+import { isActionExtractionResponse, isActionListResponse, isSavedActionDetail, isSourceListResponse, isSourceDetail } from './types';
 
 const VALID_EVIDENCE = { fieldName: '마감일', snippet: '2026-03-15까지', confidence: 0.9 };
 
@@ -144,5 +144,82 @@ describe('isSavedActionDetail', () => {
   it('returns false when missing actionSummary', () => {
     const { actionSummary: _, ...noSummary } = VALID_DETAIL;
     expect(isSavedActionDetail(noSummary)).toBe(false);
+  });
+});
+
+const VALID_SOURCE_SUMMARY = {
+  id: 'src-1',
+  title: '공결 신청 안내',
+  sourceCategory: 'NOTICE',
+  sourceUrl: null,
+  createdAt: '2026-03-01T00:00:00Z',
+  actionCount: 2,
+};
+
+describe('isSourceListResponse', () => {
+  it('returns false for null', () => {
+    expect(isSourceListResponse(null)).toBe(false);
+  });
+
+  it('returns true for valid response', () => {
+    expect(isSourceListResponse({
+      sources: [VALID_SOURCE_SUMMARY],
+      currentPage: 0, pageSize: 20, totalElements: 1, totalPages: 1, hasNext: false,
+    })).toBe(true);
+  });
+
+  it('returns true for empty sources', () => {
+    expect(isSourceListResponse({
+      sources: [],
+      currentPage: 0, pageSize: 20, totalElements: 0, totalPages: 0, hasNext: false,
+    })).toBe(true);
+  });
+
+  it('returns false when missing pagination fields', () => {
+    expect(isSourceListResponse({ sources: [VALID_SOURCE_SUMMARY] })).toBe(false);
+  });
+
+  it('returns false when source missing id', () => {
+    const { id: _, ...noId } = VALID_SOURCE_SUMMARY;
+    expect(isSourceListResponse({
+      sources: [noId], currentPage: 0, totalPages: 1, hasNext: false,
+    })).toBe(false);
+  });
+});
+
+describe('isSourceDetail', () => {
+  it('returns false for null', () => {
+    expect(isSourceDetail(null)).toBe(false);
+  });
+
+  it('returns true for valid detail', () => {
+    expect(isSourceDetail({
+      id: 'src-1',
+      title: '공결 신청 안내',
+      sourceCategory: 'NOTICE',
+      sourceUrl: null,
+      createdAt: '2026-03-01T00:00:00Z',
+      actions: [VALID_SUMMARY],
+    })).toBe(true);
+  });
+
+  it('returns true for detail with empty actions', () => {
+    expect(isSourceDetail({
+      id: 'src-1',
+      title: null,
+      sourceCategory: 'PDF',
+      sourceUrl: null,
+      createdAt: '2026-03-01T00:00:00Z',
+      actions: [],
+    })).toBe(true);
+  });
+
+  it('returns false when missing sourceCategory', () => {
+    expect(isSourceDetail({
+      id: 'src-1',
+      title: '테스트',
+      createdAt: '2026-03-01T00:00:00Z',
+      actions: [],
+    })).toBe(false);
   });
 });

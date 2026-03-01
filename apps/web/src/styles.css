@@ -410,6 +410,80 @@ textarea {
   cursor: wait;
 }
 
+/* Source cards */
+
+.source-card {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.source-card:hover {
+  border-color: #93c5fd;
+}
+
+.source-card-selected {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.source-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.source-card-date {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.source-card-title {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.source-card-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.source-actions-list {
+  margin-top: 16px;
+}
+
+.source-actions-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.source-action-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.source-action-item:last-child {
+  border-bottom: none;
+}
+
+.source-action-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.source-action-due {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+  margin-left: 12px;
+}
+
 /* Calendar export */
 
 .calendar-btn {

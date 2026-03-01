@@ -25,4 +25,6 @@ public interface ExtractedActionRepository extends JpaRepository<ExtractedAction
   Page<ExtractedActionEntity> findAllOrderByDueAtIsoAscNullsLast(Pageable pageable);
 
   List<ExtractedActionEntity> findAllByDueAtIsoIsNotNullOrderByDueAtIsoAsc();
+
+  List<ExtractedActionEntity> findAllBySourceIdOrderByCreatedAtDesc(UUID sourceId);
 }

@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActionCard } from './components/ActionCard';
 import { InboxView } from './components/InboxView';
 import { SourceIngestionForm } from './components/SourceIngestionForm';
+import { SourceListView } from './components/SourceListView';
 import { requestActionExtraction, requestPdfExtraction, requestScreenshotExtraction } from './lib/api';
 import type { ActionExtractionRequest, ExtractedAction } from './lib/types';
 import { useReminderCheck } from './lib/useReminderCheck';
 
-type ActiveView = 'extract' | 'inbox';
+type ActiveView = 'extract' | 'inbox' | 'sources';
 
 export default function App(): ReactElement {
   useReminderCheck();
@@ -82,6 +83,12 @@ export default function App(): ReactElement {
           >
             액션 인박스
           </button>
+          <button
+            className={activeView === 'sources' ? 'tab tab-active' : 'tab'}
+            onClick={() => { setActiveView('sources'); }}
+          >
+            소스 히스토리
+          </button>
         </nav>
       </section>
 
@@ -110,8 +117,10 @@ export default function App(): ReactElement {
             </div>
           </div>
         </section>
-      ) : (
+      ) : activeView === 'inbox' ? (
         <InboxView />
+      ) : (
+        <SourceListView />
       )}
 
       {toastMessage !== null ? (

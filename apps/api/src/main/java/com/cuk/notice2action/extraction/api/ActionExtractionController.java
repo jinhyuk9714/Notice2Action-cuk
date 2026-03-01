@@ -4,9 +4,12 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
+import com.cuk.notice2action.extraction.api.dto.SourceDetailDto;
+import com.cuk.notice2action.extraction.api.dto.SourceListResponse;
 import com.cuk.notice2action.extraction.service.ActionExtractionService;
 import com.cuk.notice2action.extraction.service.ActionPersistenceService;
 import com.cuk.notice2action.extraction.service.ICalendarService;
+import com.cuk.notice2action.extraction.service.SourceHistoryService;
 import com.cuk.notice2action.extraction.service.PdfTextExtractor;
 import com.cuk.notice2action.extraction.service.ScreenshotTextExtractor;
 import com.cuk.notice2action.extraction.service.UrlContentFetcher;
@@ -41,6 +44,7 @@ public class ActionExtractionController {
   private final ScreenshotTextExtractor screenshotTextExtractor;
   private final ICalendarService iCalendarService;
   private final ExtractedActionRepository actionRepository;
+  private final SourceHistoryService sourceHistoryService;
 
   public ActionExtractionController(ActionExtractionService actionExtractionService,
       ActionPersistenceService actionPersistenceService,
@@ -48,7 +52,8 @@ public class ActionExtractionController {
       PdfTextExtractor pdfTextExtractor,
       ScreenshotTextExtractor screenshotTextExtractor,
       ICalendarService iCalendarService,
-      ExtractedActionRepository actionRepository) {
+      ExtractedActionRepository actionRepository,
+      SourceHistoryService sourceHistoryService) {
     this.actionExtractionService = actionExtractionService;
     this.actionPersistenceService = actionPersistenceService;
     this.urlContentFetcher = urlContentFetcher;
@@ -56,6 +61,7 @@ public class ActionExtractionController {
     this.screenshotTextExtractor = screenshotTextExtractor;
     this.iCalendarService = iCalendarService;
     this.actionRepository = actionRepository;
+    this.sourceHistoryService = sourceHistoryService;
   }
 
   @GetMapping("/health")
@@ -165,6 +171,19 @@ public class ActionExtractionController {
         .header(HttpHeaders.CONTENT_DISPOSITION,
             "attachment; filename=\"action-" + id + ".ics\"")
         .body(ics);
+  }
+
+  @GetMapping("/sources")
+  public SourceListResponse listSources(
+      @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+      @RequestParam(name = "size", required = false, defaultValue = "20") int size
+  ) {
+    return sourceHistoryService.listSources(page, size);
+  }
+
+  @GetMapping("/sources/{id}")
+  public SourceDetailDto getSourceDetail(@PathVariable UUID id) {
+    return sourceHistoryService.getSourceDetail(id);
   }
 
   private static String stripImageExtension(String filename) {

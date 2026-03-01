@@ -3,9 +3,13 @@ import {
   type ActionExtractionResponse,
   type ActionListResponse,
   type SavedActionDetail,
+  type SourceDetail,
+  type SourceListResponse,
   isActionExtractionResponse,
   isActionListResponse,
-  isSavedActionDetail
+  isSavedActionDetail,
+  isSourceDetail,
+  isSourceListResponse
 } from './types';
 
 export async function requestActionExtraction(
@@ -126,6 +130,38 @@ export async function fetchActionDetail(id: string): Promise<SavedActionDetail> 
   const json: unknown = await response.json();
   if (!isSavedActionDetail(json)) {
     throw new Error('Action detail response shape is invalid');
+  }
+
+  return json;
+}
+
+export async function fetchSourceList(page: number = 0): Promise<SourceListResponse> {
+  const response = await fetch(`/api/v1/sources?page=${page}&size=20`);
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || '소스 목록을 불러오지 못했습니다');
+  }
+
+  const json: unknown = await response.json();
+  if (!isSourceListResponse(json)) {
+    throw new Error('Source list response shape is invalid');
+  }
+
+  return json;
+}
+
+export async function fetchSourceDetail(id: string): Promise<SourceDetail> {
+  const response = await fetch(`/api/v1/sources/${encodeURIComponent(id)}`);
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || '소스 상세 정보를 불러오지 못했습니다');
+  }
+
+  const json: unknown = await response.json();
+  if (!isSourceDetail(json)) {
+    throw new Error('Source detail response shape is invalid');
   }
 
   return json;
