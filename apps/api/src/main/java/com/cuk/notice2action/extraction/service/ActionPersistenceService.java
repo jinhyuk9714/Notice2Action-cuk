@@ -3,6 +3,7 @@ package com.cuk.notice2action.extraction.service;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
+import com.cuk.notice2action.extraction.api.dto.ActionSearchCriteria;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
@@ -11,6 +12,7 @@ import com.cuk.notice2action.extraction.api.dto.SourceInfoDto;
 import com.cuk.notice2action.extraction.persistence.entity.EvidenceSnippetEntity;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
 import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
+import com.cuk.notice2action.extraction.persistence.repository.ActionSpecifications;
 import com.cuk.notice2action.extraction.persistence.repository.ExtractedActionRepository;
 import com.cuk.notice2action.extraction.persistence.repository.NoticeSourceRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -24,6 +26,8 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,6 +108,56 @@ public class ActionPersistenceService {
 
   @Transactional(readOnly = true)
   public ActionListResponse listActions(String sort, int page, int size) {
+    return listActions(new ActionSearchCriteria(null, null, null, null, sort), page, size);
+  }
+
+  @Transactional(readOnly = true)
+  public ActionListResponse listActions(ActionSearchCriteria criteria, int page, int size) {
+    boolean hasFilters = (criteria.q() != null && !criteria.q().isBlank())
+        || criteria.category() != null
+        || criteria.dueDateFrom() != null
+        || criteria.dueDateTo() != null;
+
+    if (!hasFilters) {
+      return listActionsSimple(criteria.sort(), page, size);
+    }
+
+    Specification<ExtractedActionEntity> spec = (root, query, cb) -> cb.conjunction();
+    if (criteria.q() != null && !criteria.q().isBlank()) {
+      spec = spec.and(ActionSpecifications.titleOrSummaryContains(criteria.q()));
+    }
+    if (criteria.category() != null) {
+      spec = spec.and(ActionSpecifications.sourceCategoryEquals(criteria.category()));
+    }
+    if (criteria.dueDateFrom() != null) {
+      spec = spec.and(ActionSpecifications.dueAtFrom(criteria.dueDateFrom()));
+    }
+    if (criteria.dueDateTo() != null) {
+      spec = spec.and(ActionSpecifications.dueAtTo(criteria.dueDateTo()));
+    }
+
+    Sort sorting = "due".equals(criteria.sort())
+        ? Sort.by(Sort.Order.asc("dueAtIso"))
+        : Sort.by(Sort.Order.desc("createdAt"));
+    Pageable pageable = PageRequest.of(page, size, sorting);
+
+    Page<ExtractedActionEntity> pageResult = actionRepository.findAll(spec, pageable);
+
+    List<SavedActionSummaryDto> summaries = pageResult.getContent().stream()
+        .map(this::toSummaryDto)
+        .toList();
+
+    return new ActionListResponse(
+        summaries,
+        pageResult.getNumber(),
+        pageResult.getSize(),
+        pageResult.getTotalElements(),
+        pageResult.getTotalPages(),
+        pageResult.hasNext()
+    );
+  }
+
+  private ActionListResponse listActionsSimple(String sort, int page, int size) {
     Pageable pageable = PageRequest.of(page, size);
     Page<ExtractedActionEntity> pageResult;
     if ("due".equals(sort)) {

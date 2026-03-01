@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
-import { deleteAction, fetchActionDetail, fetchActionList } from '../lib/api';
+import { deleteAction, fetchActionDetail, fetchActionList, type SearchParams } from '../lib/api';
 import { loadProfile, saveProfile, isProfileConfigured } from '../lib/profile';
 import type { UserProfile } from '../lib/profile';
 import { computeRelevance } from '../lib/relevance';
-import type { SavedActionDetail, SavedActionSummary } from '../lib/types';
+import type { SavedActionDetail, SavedActionSummary, SourceCategory } from '../lib/types';
 import { ActionDetailPanel } from './ActionDetailPanel';
 import { ActionSummaryCard } from './ActionSummaryCard';
 import { ProfileSettings } from './ProfileSettings';
@@ -21,12 +21,20 @@ export function InboxView(): ReactElement {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [hasNext, setHasNext] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<SourceCategory | ''>('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => { setSearchQuery(searchInput); }, 300);
+    return () => { clearTimeout(timer); };
+  }, [searchInput]);
 
   useEffect(() => {
     setActions([]);
     setCurrentPage(0);
     setHasNext(false);
-  }, [sort]);
+  }, [sort, searchQuery, categoryFilter]);
 
   useEffect(() => {
     const isFirstPage = currentPage === 0;
@@ -35,7 +43,11 @@ export function InboxView(): ReactElement {
     } else {
       setLoadingMore(true);
     }
-    fetchActionList(sort, currentPage)
+    const search: SearchParams = {
+      ...(searchQuery.length > 0 ? { q: searchQuery } : {}),
+      ...(categoryFilter !== '' ? { category: categoryFilter } : {}),
+    };
+    fetchActionList(sort, currentPage, search)
       .then((result) => {
         setActions((prev) => isFirstPage ? result.actions : [...prev, ...result.actions]);
         setHasNext(result.hasNext);
@@ -48,7 +60,7 @@ export function InboxView(): ReactElement {
         setLoading(false);
         setLoadingMore(false);
       });
-  }, [sort, currentPage]);
+  }, [sort, currentPage, searchQuery, categoryFilter]);
 
   function handleProfileChange(newProfile: UserProfile): void {
     saveProfile(newProfile);
@@ -109,7 +121,9 @@ export function InboxView(): ReactElement {
     return <div className="error-banner">{error}</div>;
   }
 
-  if (actions.length === 0) {
+  const hasActiveSearch = searchQuery.length > 0 || categoryFilter !== '';
+
+  if (actions.length === 0 && !hasActiveSearch) {
     return (
       <div className="inbox-state">
         <p>저장된 액션이 없습니다.</p>
@@ -137,6 +151,28 @@ export function InboxView(): ReactElement {
             캘린더 내보내기
           </a>
 
+          <div className="filter-row">
+            <input
+              type="search"
+              className="search-bar"
+              placeholder="제목 또는 요약 검색..."
+              value={searchInput}
+              onChange={(e) => { setSearchInput(e.target.value); }}
+            />
+            <select
+              className="filter-select"
+              value={categoryFilter}
+              onChange={(e) => { setCategoryFilter(e.target.value as SourceCategory | ''); }}
+            >
+              <option value="">전체 카테고리</option>
+              <option value="NOTICE">공지</option>
+              <option value="SYLLABUS">강의계획서</option>
+              <option value="EMAIL">이메일</option>
+              <option value="PDF">PDF</option>
+              <option value="SCREENSHOT">스크린샷</option>
+            </select>
+          </div>
+
           <div className="sort-toggle">
             <button
               className={`sort-btn${sort === 'due' ? ' sort-btn-active' : ''}`}
@@ -162,6 +198,9 @@ export function InboxView(): ReactElement {
           ) : null}
         </div>
         <div className="card-list">
+          {actions.length === 0 && hasActiveSearch ? (
+            <p className="empty-hint">검색 결과가 없습니다.</p>
+          ) : null}
           {filteredActions.map(({ action, relevance }) => (
             <ActionSummaryCard
               key={action.id}

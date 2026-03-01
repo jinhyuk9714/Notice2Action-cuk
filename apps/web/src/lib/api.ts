@@ -3,6 +3,7 @@ import {
   type ActionExtractionResponse,
   type ActionListResponse,
   type SavedActionDetail,
+  type SourceCategory,
   type SourceDetail,
   type SourceListResponse,
   isActionExtractionResponse,
@@ -11,6 +12,13 @@ import {
   isSourceDetail,
   isSourceListResponse
 } from './types';
+
+export type SearchParams = Readonly<{
+  q?: string;
+  category?: SourceCategory;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+}>;
 
 export async function requestActionExtraction(
   payload: ActionExtractionRequest
@@ -121,8 +129,21 @@ export async function requestEmailExtraction(
   return json;
 }
 
-export async function fetchActionList(sort: 'recent' | 'due' = 'recent', page: number = 0): Promise<ActionListResponse> {
-  const response = await fetch(`/api/v1/actions?sort=${encodeURIComponent(sort)}&page=${page}&size=20`);
+export async function fetchActionList(
+  sort: 'recent' | 'due' = 'recent',
+  page: number = 0,
+  search?: SearchParams
+): Promise<ActionListResponse> {
+  const params = new URLSearchParams();
+  params.set('sort', sort);
+  params.set('page', String(page));
+  params.set('size', '20');
+  if (search?.q !== undefined && search.q.length > 0) params.set('q', search.q);
+  if (search?.category !== undefined) params.set('category', search.category);
+  if (search?.dueDateFrom !== undefined) params.set('dueDateFrom', search.dueDateFrom);
+  if (search?.dueDateTo !== undefined) params.set('dueDateTo', search.dueDateTo);
+
+  const response = await fetch(`/api/v1/actions?${params.toString()}`);
 
   if (!response.ok) {
     const body = await response.text();

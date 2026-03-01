@@ -6,9 +6,11 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
-public interface ExtractedActionRepository extends JpaRepository<ExtractedActionEntity, UUID> {
+public interface ExtractedActionRepository extends JpaRepository<ExtractedActionEntity, UUID>,
+    JpaSpecificationExecutor<ExtractedActionEntity> {
 
   List<ExtractedActionEntity> findAllByOrderByCreatedAtDesc();
 

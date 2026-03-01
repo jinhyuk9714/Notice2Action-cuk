@@ -3,6 +3,7 @@ package com.cuk.notice2action.extraction.api;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
+import com.cuk.notice2action.extraction.api.dto.ActionSearchCriteria;
 import com.cuk.notice2action.extraction.api.dto.EmailExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SourceDetailDto;
@@ -19,6 +20,7 @@ import com.cuk.notice2action.extraction.persistence.repository.ExtractedActionRe
 import com.cuk.notice2action.extraction.domain.SourceCategory;
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -158,9 +160,27 @@ public class ActionExtractionController {
   public ActionListResponse listActions(
       @RequestParam(name = "sort", required = false, defaultValue = "recent") String sort,
       @RequestParam(name = "page", required = false, defaultValue = "0") int page,
-      @RequestParam(name = "size", required = false, defaultValue = "20") int size
+      @RequestParam(name = "size", required = false, defaultValue = "20") int size,
+      @RequestParam(name = "q", required = false) String q,
+      @RequestParam(name = "category", required = false) SourceCategory category,
+      @RequestParam(name = "dueDateFrom", required = false) String dueDateFrom,
+      @RequestParam(name = "dueDateTo", required = false) String dueDateTo
   ) {
-    return actionPersistenceService.listActions(sort, page, size);
+    OffsetDateTime from = parseIsoDate(dueDateFrom);
+    OffsetDateTime to = parseIsoDate(dueDateTo);
+    ActionSearchCriteria criteria = new ActionSearchCriteria(q, category, from, to, sort);
+    return actionPersistenceService.listActions(criteria, page, size);
+  }
+
+  private static OffsetDateTime parseIsoDate(String isoString) {
+    if (isoString == null || isoString.isBlank()) {
+      return null;
+    }
+    try {
+      return OffsetDateTime.parse(isoString);
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   @DeleteMapping("/actions/{id}")
