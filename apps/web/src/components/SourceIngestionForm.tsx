@@ -1,6 +1,7 @@
-import { useState, type ReactElement } from 'react';
+import { useCallback, useState, type ReactElement } from 'react';
 import { loadProfile } from '../lib/profile';
 import type { ActionExtractionRequest, SourceCategory } from '../lib/types';
+import { FileDropZone } from './FileDropZone';
 
 type SourceIngestionFormProps = Readonly<{
   onSubmit: (payload: ActionExtractionRequest) => Promise<void>;
@@ -50,15 +51,8 @@ export function SourceIngestionForm({
     return null;
   }
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
+  const validateAndSetFile = useCallback((file: File): void => {
     setFileError(null);
-    const file = event.target.files?.[0] ?? null;
-
-    if (file === null) {
-      setSelectedFile(null);
-      return;
-    }
-
     const fileType = getFileType(file.name);
     if (fileType === null) {
       setFileError('PDF 또는 이미지 파일만 업로드할 수 있습니다. (PDF, PNG, JPG, JPEG, WEBP)');
@@ -75,6 +69,16 @@ export function SourceIngestionForm({
     }
 
     setSelectedFile(file);
+  }, []);
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    setFileError(null);
+    const file = event.target.files?.[0] ?? null;
+    if (file === null) {
+      setSelectedFile(null);
+      return;
+    }
+    validateAndSetFile(file);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
@@ -204,12 +208,14 @@ export function SourceIngestionForm({
       ) : inputMode === 'file' ? (
         <div className="form-row">
           <label htmlFor="uploadFile">파일 (PDF / 스크린샷)</label>
-          <input
-            id="uploadFile"
-            type="file"
-            accept=".pdf,application/pdf,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
-            onChange={handleFileChange}
-          />
+          <FileDropZone onFileSelect={validateAndSetFile} disabled={isSubmitting}>
+            <input
+              id="uploadFile"
+              type="file"
+              accept=".pdf,application/pdf,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+              onChange={handleFileChange}
+            />
+          </FileDropZone>
           {fileError !== null ? <p className="file-error">{fileError}</p> : null}
           {selectedFile !== null ? (
             <p className="file-info">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)</p>

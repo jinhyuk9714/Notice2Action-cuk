@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { deleteAction, fetchActionDetail, fetchActionList, type SearchParams } from '../lib/api';
+import { generateActionsCsv, downloadCsv } from '../lib/csv';
 import { loadProfile, saveProfile, isProfileConfigured } from '../lib/profile';
 import type { UserProfile } from '../lib/profile';
 import { computeRelevance } from '../lib/relevance';
@@ -7,6 +8,7 @@ import type { SavedActionDetail, SavedActionSummary, SourceCategory } from '../l
 import { ActionDetailPanel } from './ActionDetailPanel';
 import { ActionSummaryCard } from './ActionSummaryCard';
 import { ProfileSettings } from './ProfileSettings';
+import { SkeletonCard } from './SkeletonCard';
 
 export function InboxView(): ReactElement {
   const [actions, setActions] = useState<readonly SavedActionSummary[]>([]);
@@ -114,7 +116,13 @@ export function InboxView(): ReactElement {
   }, [actionsWithRelevance, showRelevantOnly]);
 
   if (loading) {
-    return <div className="inbox-state">불러오는 중...</div>;
+    return (
+      <div className="card-list">
+        <SkeletonCard lines={2} />
+        <SkeletonCard lines={3} />
+        <SkeletonCard lines={2} />
+      </div>
+    );
   }
 
   if (error !== null) {
@@ -152,13 +160,25 @@ export function InboxView(): ReactElement {
 
           <ProfileSettings profile={profile} onProfileChange={handleProfileChange} />
 
-          <a
-            className="calendar-btn"
-            href="/api/v1/actions/calendar.ics"
-            download="notice2action.ics"
-          >
-            캘린더 내보내기
-          </a>
+          <div className="export-row">
+            <a
+              className="calendar-btn"
+              href="/api/v1/actions/calendar.ics"
+              download="notice2action.ics"
+            >
+              캘린더 내보내기
+            </a>
+            <button
+              className="calendar-btn"
+              onClick={() => {
+                const csv = generateActionsCsv(actions);
+                downloadCsv(csv, 'notice2action-actions.csv');
+              }}
+              disabled={actions.length === 0}
+            >
+              CSV 내보내기
+            </button>
+          </div>
 
           <div className="filter-row">
             <input

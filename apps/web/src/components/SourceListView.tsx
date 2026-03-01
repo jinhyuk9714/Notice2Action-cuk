@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import { fetchSourceDetail, fetchSourceList } from '../lib/api';
 import { categoryLabel } from '../lib/labels';
 import type { SavedActionSummary, SourceDetail, SourceSummary } from '../lib/types';
+import { SkeletonCard } from './SkeletonCard';
 import { SourceCard } from './SourceCard';
 
 export function SourceListView(): ReactElement {
@@ -51,7 +52,13 @@ export function SourceListView(): ReactElement {
   }
 
   if (loading) {
-    return <div className="inbox-state">불러오는 중...</div>;
+    return (
+      <div className="card-list">
+        <SkeletonCard lines={2} />
+        <SkeletonCard lines={2} />
+        <SkeletonCard lines={2} />
+      </div>
+    );
   }
 
   if (error !== null) {
