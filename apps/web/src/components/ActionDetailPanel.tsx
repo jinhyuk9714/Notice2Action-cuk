@@ -131,6 +131,18 @@ export function ActionDetailPanel({ detail, profile }: ActionDetailPanelProps): 
       </dl>
 
       {detail.dueAtIso !== null ? (
+        <div className="calendar-export-row">
+          <a
+            className="calendar-btn"
+            href={`/api/v1/actions/${encodeURIComponent(detail.id)}/calendar.ics`}
+            download
+          >
+            일정 추가 (.ics)
+          </a>
+        </div>
+      ) : null}
+
+      {detail.dueAtIso !== null ? (
         <div className="reminder-options">
           <span className="reminder-options-label">리마인더</span>
           {REMINDER_OPTIONS.map((option) => (

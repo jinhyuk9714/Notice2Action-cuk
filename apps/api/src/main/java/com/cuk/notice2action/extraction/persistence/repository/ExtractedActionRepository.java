@@ -23,4 +23,6 @@ public interface ExtractedActionRepository extends JpaRepository<ExtractedAction
       + "CASE WHEN e.dueAtIso IS NULL THEN 1 ELSE 0 END ASC, "
       + "e.dueAtIso ASC")
   Page<ExtractedActionEntity> findAllOrderByDueAtIsoAscNullsLast(Pageable pageable);
+
+  List<ExtractedActionEntity> findAllByDueAtIsoIsNotNullOrderByDueAtIsoAsc();
 }

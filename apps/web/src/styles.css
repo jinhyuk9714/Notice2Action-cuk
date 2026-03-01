@@ -410,6 +410,30 @@ textarea {
   cursor: wait;
 }
 
+/* Calendar export */
+
+.calendar-btn {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.calendar-btn:hover {
+  background: #dbeafe;
+}
+
+.calendar-export-row {
+  margin-bottom: 12px;
+}
+
 /* D-day badges */
 
 .dday-badge {

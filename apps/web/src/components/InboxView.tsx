@@ -129,6 +129,14 @@ export function InboxView(): ReactElement {
 
           <ProfileSettings profile={profile} onProfileChange={handleProfileChange} />
 
+          <a
+            className="calendar-btn"
+            href="/api/v1/actions/calendar.ics"
+            download="notice2action.ics"
+          >
+            캘린더 내보내기
+          </a>
+
           <div className="sort-toggle">
             <button
               className={`sort-btn${sort === 'due' ? ' sort-btn-active' : ''}`}

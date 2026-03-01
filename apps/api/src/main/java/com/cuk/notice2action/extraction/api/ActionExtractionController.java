@@ -6,13 +6,17 @@ import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.service.ActionExtractionService;
 import com.cuk.notice2action.extraction.service.ActionPersistenceService;
+import com.cuk.notice2action.extraction.service.ICalendarService;
 import com.cuk.notice2action.extraction.service.PdfTextExtractor;
 import com.cuk.notice2action.extraction.service.ScreenshotTextExtractor;
 import com.cuk.notice2action.extraction.service.UrlContentFetcher;
+import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
+import com.cuk.notice2action.extraction.persistence.repository.ExtractedActionRepository;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,17 +39,23 @@ public class ActionExtractionController {
   private final UrlContentFetcher urlContentFetcher;
   private final PdfTextExtractor pdfTextExtractor;
   private final ScreenshotTextExtractor screenshotTextExtractor;
+  private final ICalendarService iCalendarService;
+  private final ExtractedActionRepository actionRepository;
 
   public ActionExtractionController(ActionExtractionService actionExtractionService,
       ActionPersistenceService actionPersistenceService,
       UrlContentFetcher urlContentFetcher,
       PdfTextExtractor pdfTextExtractor,
-      ScreenshotTextExtractor screenshotTextExtractor) {
+      ScreenshotTextExtractor screenshotTextExtractor,
+      ICalendarService iCalendarService,
+      ExtractedActionRepository actionRepository) {
     this.actionExtractionService = actionExtractionService;
     this.actionPersistenceService = actionPersistenceService;
     this.urlContentFetcher = urlContentFetcher;
     this.pdfTextExtractor = pdfTextExtractor;
     this.screenshotTextExtractor = screenshotTextExtractor;
+    this.iCalendarService = iCalendarService;
+    this.actionRepository = actionRepository;
   }
 
   @GetMapping("/health")
@@ -133,6 +144,27 @@ public class ActionExtractionController {
   @GetMapping("/actions/{id}")
   public SavedActionDetailDto getActionDetail(@PathVariable UUID id) {
     return actionPersistenceService.getActionDetail(id);
+  }
+
+  @GetMapping(value = "/actions/calendar.ics", produces = "text/calendar")
+  public ResponseEntity<String> exportCalendar() {
+    List<ExtractedActionEntity> actions =
+        actionRepository.findAllByDueAtIsoIsNotNullOrderByDueAtIsoAsc();
+    String ics = iCalendarService.generateCalendar(actions);
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"notice2action.ics\"")
+        .body(ics);
+  }
+
+  @GetMapping(value = "/actions/{id}/calendar.ics", produces = "text/calendar")
+  public ResponseEntity<String> exportSingleActionCalendar(@PathVariable UUID id) {
+    ExtractedActionEntity action = actionRepository.findById(id)
+        .orElseThrow(() -> new NoSuchElementException("Action not found: " + id));
+    String ics = iCalendarService.generateSingleEvent(action);
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"action-" + id + ".ics\"")
+        .body(ics);
   }
 
   private static String stripImageExtension(String filename) {
