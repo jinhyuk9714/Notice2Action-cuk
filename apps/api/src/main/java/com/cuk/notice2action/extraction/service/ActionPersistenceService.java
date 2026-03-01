@@ -4,6 +4,7 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionSearchCriteria;
+import com.cuk.notice2action.extraction.api.dto.ActionUpdateRequest;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
@@ -51,6 +52,23 @@ public class ActionPersistenceService {
       ActionExtractionRequest request,
       ActionExtractionResponse extractionResult) {
 
+    // Duplicate detection by content hash
+    String contentHash = ContentHashUtil.sha256(request.sourceText());
+    if (contentHash != null) {
+      var existing = sourceRepository.findByContentHash(contentHash);
+      if (existing.isPresent()) {
+        return buildDuplicateResponse(existing.get());
+      }
+    }
+
+    // Duplicate detection by URL
+    if (request.sourceUrl() != null && !request.sourceUrl().isBlank()) {
+      var existing = sourceRepository.findBySourceUrl(request.sourceUrl());
+      if (existing.isPresent()) {
+        return buildDuplicateResponse(existing.get());
+      }
+    }
+
     OffsetDateTime now = OffsetDateTime.now();
 
     NoticeSourceEntity source = new NoticeSourceEntity(
@@ -61,6 +79,7 @@ public class ActionPersistenceService {
         request.sourceUrl(),
         now
     );
+    source.setContentHash(contentHash);
     sourceRepository.save(source);
 
     List<ExtractedActionDto> savedActions = new ArrayList<>();
@@ -96,6 +115,60 @@ public class ActionPersistenceService {
     }
 
     return new ActionExtractionResponse(savedActions);
+  }
+
+  @Transactional
+  public SavedActionDetailDto updateAction(UUID actionId, ActionUpdateRequest request) {
+    ExtractedActionEntity entity = actionRepository.findById(actionId)
+        .orElseThrow(() -> new NoSuchElementException("Action not found: " + actionId));
+
+    if (request.title() != null) {
+      if (request.title().isBlank()) {
+        throw new IllegalArgumentException("제목은 비워둘 수 없습니다.");
+      }
+      entity.setTitle(request.title());
+    }
+    if (request.actionSummary() != null) {
+      entity.setActionSummary(request.actionSummary());
+    }
+    if (request.dueAtIso() != null) {
+      entity.setDueAtIso(parseDueAtIso(request.dueAtIso()));
+    }
+    if (request.dueAtLabel() != null) {
+      entity.setDueAtLabel(request.dueAtLabel());
+    }
+    if (request.eligibility() != null) {
+      entity.setEligibility(request.eligibility());
+    }
+    if (request.requiredItems() != null) {
+      entity.setRequiredItemsJson(toJson(request.requiredItems()));
+    }
+    if (request.systemHint() != null) {
+      entity.setSystemHint(request.systemHint());
+    }
+
+    actionRepository.save(entity);
+    return toDetailDto(entity);
+  }
+
+  private ActionExtractionResponse buildDuplicateResponse(NoticeSourceEntity existingSource) {
+    List<ExtractedActionDto> actions = actionRepository
+        .findAllBySourceIdOrderByCreatedAtDesc(existingSource.getId()).stream()
+        .map(entity -> new ExtractedActionDto(
+            entity.getId(), existingSource.getId(),
+            entity.getTitle(), entity.getActionSummary(),
+            entity.getDueAtIso() != null ? entity.getDueAtIso().toString() : null,
+            entity.getDueAtLabel(), entity.getEligibility(),
+            fromJson(entity.getRequiredItemsJson()),
+            entity.getSystemHint(),
+            existingSource.getSourceCategory(),
+            entity.getEvidenceSnippets().stream()
+                .map(e -> new EvidenceSnippetDto(e.getFieldName(), e.getSnippet(), e.getConfidence()))
+                .toList(),
+            entity.isInferred(), entity.getCreatedAt()
+        ))
+        .toList();
+    return new ActionExtractionResponse(actions, true);
   }
 
   @Transactional

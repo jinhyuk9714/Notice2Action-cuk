@@ -233,7 +233,20 @@ export function InboxView(): ReactElement {
             >
               &larr; 목록으로
             </button>
-            <ActionDetailPanel detail={detail} profile={profile} />
+            <ActionDetailPanel
+              detail={detail}
+              profile={profile}
+              onActionUpdated={(updated) => {
+                setDetail(updated);
+                setActions((prev) => prev.map((a) =>
+                  a.id === updated.id
+                    ? { ...a, title: updated.title, actionSummary: updated.actionSummary,
+                        dueAtIso: updated.dueAtIso, dueAtLabel: updated.dueAtLabel,
+                        eligibility: updated.eligibility }
+                    : a
+                ));
+              }}
+            />
           </>
         ) : (
           <div className="inbox-state">

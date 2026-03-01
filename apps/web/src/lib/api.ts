@@ -2,6 +2,7 @@ import {
   type ActionExtractionRequest,
   type ActionExtractionResponse,
   type ActionListResponse,
+  type ActionUpdatePayload,
   type SavedActionDetail,
   type SourceCategory,
   type SourceDetail,
@@ -180,6 +181,31 @@ export async function fetchActionDetail(id: string): Promise<SavedActionDetail> 
   const json: unknown = await response.json();
   if (!isSavedActionDetail(json)) {
     throw new Error('Action detail response shape is invalid');
+  }
+
+  return json;
+}
+
+export async function updateAction(
+  id: string,
+  updates: ActionUpdatePayload
+): Promise<SavedActionDetail> {
+  const response = await fetch(`/api/v1/actions/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(updates)
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || '액션 수정에 실패했습니다');
+  }
+
+  const json: unknown = await response.json();
+  if (!isSavedActionDetail(json)) {
+    throw new Error('Action update response shape is invalid');
   }
 
   return json;

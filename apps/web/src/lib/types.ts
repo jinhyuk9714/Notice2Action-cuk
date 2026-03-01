@@ -32,6 +32,17 @@ export type ActionExtractionRequest = Readonly<{
 
 export type ActionExtractionResponse = Readonly<{
   actions: readonly ExtractedAction[];
+  duplicate: boolean;
+}>;
+
+export type ActionUpdatePayload = Readonly<{
+  title?: string;
+  actionSummary?: string;
+  dueAtIso?: string;
+  dueAtLabel?: string;
+  eligibility?: string;
+  requiredItems?: readonly string[];
+  systemHint?: string;
 }>;
 
 function isEvidenceSnippet(value: unknown): value is EvidenceSnippet {

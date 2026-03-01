@@ -4,6 +4,7 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionSearchCriteria;
+import com.cuk.notice2action.extraction.api.dto.ActionUpdateRequest;
 import com.cuk.notice2action.extraction.api.dto.EmailExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SourceDetailDto;
@@ -28,6 +29,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -181,6 +183,14 @@ public class ActionExtractionController {
     } catch (Exception e) {
       return null;
     }
+  }
+
+  @PatchMapping("/actions/{id}")
+  public SavedActionDetailDto updateAction(
+      @PathVariable UUID id,
+      @RequestBody ActionUpdateRequest request
+  ) {
+    return actionPersistenceService.updateAction(id, request);
   }
 
   @DeleteMapping("/actions/{id}")

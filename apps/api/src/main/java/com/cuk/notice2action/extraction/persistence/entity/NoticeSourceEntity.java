@@ -34,6 +34,9 @@ public class NoticeSourceEntity {
   @Column(name = "source_url", columnDefinition = "TEXT")
   private String sourceUrl;
 
+  @Column(name = "content_hash", length = 64)
+  private String contentHash;
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -74,6 +77,14 @@ public class NoticeSourceEntity {
 
   public OffsetDateTime getCreatedAt() {
     return createdAt;
+  }
+
+  public String getContentHash() {
+    return contentHash;
+  }
+
+  public void setContentHash(String contentHash) {
+    this.contentHash = contentHash;
   }
 
   public List<ExtractedActionEntity> getActions() {

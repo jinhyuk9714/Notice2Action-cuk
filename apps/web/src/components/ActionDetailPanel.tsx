@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react';
+import { updateAction } from '../lib/api';
 import { computeDday } from '../lib/dday';
 import { categoryLabel, evidenceFieldLabel, inferredLabel } from '../lib/labels';
 import type { UserProfile } from '../lib/profile';
@@ -15,6 +16,7 @@ import type { SavedActionDetail } from '../lib/types';
 type ActionDetailPanelProps = Readonly<{
   detail: SavedActionDetail;
   profile: UserProfile;
+  onActionUpdated?: (updated: SavedActionDetail) => void;
 }>;
 
 type ReminderOption = Readonly<{
@@ -35,12 +37,60 @@ function getActiveOffsetKeys(actionId: string): Set<ReminderOffsetKey> {
   return new Set(reminders.map((r) => r.offsetKey));
 }
 
-export function ActionDetailPanel({ detail, profile }: ActionDetailPanelProps): ReactElement {
+export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDetailPanelProps): ReactElement {
   const dday = computeDday(detail.dueAtIso);
   const relevance = computeRelevance(detail.eligibility, profile);
   const [activeKeys, setActiveKeys] = useState<Set<ReminderOffsetKey>>(
     () => getActiveOffsetKeys(detail.id),
   );
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(detail.title);
+  const [editSummary, setEditSummary] = useState(detail.actionSummary);
+  const [editDueLabel, setEditDueLabel] = useState(detail.dueAtLabel ?? '');
+  const [editEligibility, setEditEligibility] = useState(detail.eligibility ?? '');
+  const [editSystemHint, setEditSystemHint] = useState(detail.systemHint ?? '');
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  function startEditing(): void {
+    setEditTitle(detail.title);
+    setEditSummary(detail.actionSummary);
+    setEditDueLabel(detail.dueAtLabel ?? '');
+    setEditEligibility(detail.eligibility ?? '');
+    setEditSystemHint(detail.systemHint ?? '');
+    setEditError(null);
+    setEditing(true);
+  }
+
+  function cancelEditing(): void {
+    setEditing(false);
+    setEditError(null);
+  }
+
+  async function handleSave(): Promise<void> {
+    if (editTitle.trim().length === 0) {
+      setEditError('제목은 비워둘 수 없습니다.');
+      return;
+    }
+    setSaving(true);
+    setEditError(null);
+    try {
+      const updated = await updateAction(detail.id, {
+        title: editTitle.trim(),
+        actionSummary: editSummary.trim(),
+        dueAtLabel: editDueLabel.trim().length > 0 ? editDueLabel.trim() : undefined,
+        eligibility: editEligibility.trim().length > 0 ? editEligibility.trim() : undefined,
+        systemHint: editSystemHint.trim().length > 0 ? editSystemHint.trim() : undefined,
+      });
+      setEditing(false);
+      onActionUpdated?.(updated);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '수정 중 오류가 발생했습니다';
+      setEditError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleToggle(option: ReminderOption): Promise<void> {
     if (activeKeys.has(option.key)) {
@@ -88,47 +138,111 @@ export function ActionDetailPanel({ detail, profile }: ActionDetailPanelProps): 
           {detail.source !== null ? (
             <p className="eyebrow">{categoryLabel(detail.source.sourceCategory)}</p>
           ) : null}
-          <h3>{detail.title}</h3>
+          {editing ? (
+            <input
+              className="edit-field"
+              value={editTitle}
+              onChange={(e) => { setEditTitle(e.target.value); }}
+            />
+          ) : (
+            <h3>{detail.title}</h3>
+          )}
         </div>
         <span className={detail.inferred ? 'badge badge-warn' : 'badge'}>
           {inferredLabel(detail.inferred)}
         </span>
       </div>
 
-      <p className="summary">{detail.actionSummary}</p>
+      {editing ? (
+        <textarea
+          className="edit-field edit-textarea"
+          value={editSummary}
+          onChange={(e) => { setEditSummary(e.target.value); }}
+          rows={3}
+        />
+      ) : (
+        <p className="summary">{detail.actionSummary}</p>
+      )}
 
-      <dl className="meta-grid">
-        <div>
-          <dt>마감</dt>
-          <dd>
-            {detail.dueAtLabel ?? '미확인'}
-            {dday !== null ? (
-              <span className={`dday-badge dday-${dday.urgency} dday-inline`}>
-                {dday.label}
-              </span>
-            ) : null}
-          </dd>
+      {editing ? (
+        <div className="edit-form">
+          <div className="edit-row">
+            <label>마감 레이블</label>
+            <input
+              className="edit-field"
+              value={editDueLabel}
+              onChange={(e) => { setEditDueLabel(e.target.value); }}
+              placeholder="예: 3월 12일 18시"
+            />
+          </div>
+          <div className="edit-row">
+            <label>대상/조건</label>
+            <input
+              className="edit-field"
+              value={editEligibility}
+              onChange={(e) => { setEditEligibility(e.target.value); }}
+              placeholder="예: 재학생"
+            />
+          </div>
+          <div className="edit-row">
+            <label>시스템</label>
+            <input
+              className="edit-field"
+              value={editSystemHint}
+              onChange={(e) => { setEditSystemHint(e.target.value); }}
+              placeholder="예: TRINITY"
+            />
+          </div>
+          {editError !== null ? (
+            <p className="edit-error">{editError}</p>
+          ) : null}
+          <div className="edit-btn-row">
+            <button className="edit-save-btn" onClick={() => { void handleSave(); }} disabled={saving}>
+              {saving ? '저장 중...' : '저장'}
+            </button>
+            <button className="edit-cancel-btn" onClick={cancelEditing} disabled={saving}>
+              취소
+            </button>
+          </div>
         </div>
-        <div>
-          <dt>시스템</dt>
-          <dd>{detail.systemHint ?? '미확인'}</dd>
-        </div>
-        <div>
-          <dt>대상/조건</dt>
-          <dd>
-            {detail.eligibility ?? '미확인'}
-            {relevance.level === 'relevant' ? (
-              <span className="relevance-badge relevance-relevant dday-inline" title={relevance.reason ?? undefined}>관련</span>
-            ) : relevance.level === 'not_relevant' ? (
-              <span className="relevance-badge relevance-not-relevant dday-inline" title={relevance.reason ?? undefined}>해당없음</span>
-            ) : null}
-          </dd>
-        </div>
-        <div>
-          <dt>준비물</dt>
-          <dd>{detail.requiredItems.length > 0 ? detail.requiredItems.join(', ') : '없음'}</dd>
-        </div>
-      </dl>
+      ) : (
+        <>
+          <dl className="meta-grid">
+            <div>
+              <dt>마감</dt>
+              <dd>
+                {detail.dueAtLabel ?? '미확인'}
+                {dday !== null ? (
+                  <span className={`dday-badge dday-${dday.urgency} dday-inline`}>
+                    {dday.label}
+                  </span>
+                ) : null}
+              </dd>
+            </div>
+            <div>
+              <dt>시스템</dt>
+              <dd>{detail.systemHint ?? '미확인'}</dd>
+            </div>
+            <div>
+              <dt>대상/조건</dt>
+              <dd>
+                {detail.eligibility ?? '미확인'}
+                {relevance.level === 'relevant' ? (
+                  <span className="relevance-badge relevance-relevant dday-inline" title={relevance.reason ?? undefined}>관련</span>
+                ) : relevance.level === 'not_relevant' ? (
+                  <span className="relevance-badge relevance-not-relevant dday-inline" title={relevance.reason ?? undefined}>해당없음</span>
+                ) : null}
+              </dd>
+            </div>
+            <div>
+              <dt>준비물</dt>
+              <dd>{detail.requiredItems.length > 0 ? detail.requiredItems.join(', ') : '없음'}</dd>
+            </div>
+          </dl>
+
+          <button className="edit-toggle-btn" onClick={startEditing}>편집</button>
+        </>
+      )}
 
       {detail.dueAtIso !== null ? (
         <div className="calendar-export-row">

@@ -32,7 +32,9 @@ export default function App(): ReactElement {
     try {
       const result = await requestActionExtraction(payload);
       setActions(result.actions);
-      setToastMessage(`${result.actions.length}개 액션이 인박스에 저장되었습니다`);
+      setToastMessage(result.duplicate
+        ? '이미 추출된 소스입니다. 기존 결과를 표시합니다.'
+        : `${result.actions.length}개 액션이 인박스에 저장되었습니다`);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
       setError(message);
@@ -48,7 +50,9 @@ export default function App(): ReactElement {
     try {
       const result = await requestEmailExtraction(emailBody, subject);
       setActions(result.actions);
-      setToastMessage(`${result.actions.length}개 액션이 인박스에 저장되었습니다`);
+      setToastMessage(result.duplicate
+        ? '이미 추출된 소스입니다. 기존 결과를 표시합니다.'
+        : `${result.actions.length}개 액션이 인박스에 저장되었습니다`);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
       setError(message);
@@ -67,7 +71,9 @@ export default function App(): ReactElement {
         ? await requestScreenshotExtraction(file, sourceTitle)
         : await requestPdfExtraction(file, sourceTitle);
       setActions(result.actions);
-      setToastMessage(`${result.actions.length}개 액션이 인박스에 저장되었습니다`);
+      setToastMessage(result.duplicate
+        ? '이미 추출된 소스입니다. 기존 결과를 표시합니다.'
+        : `${result.actions.length}개 액션이 인박스에 저장되었습니다`);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
       setError(message);

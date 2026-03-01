@@ -126,4 +126,32 @@ public class ExtractedActionEntity {
   public List<EvidenceSnippetEntity> getEvidenceSnippets() {
     return evidenceSnippets;
   }
+
+  public void setTitle(String title) {
+    this.title = title;
+  }
+
+  public void setActionSummary(String actionSummary) {
+    this.actionSummary = actionSummary;
+  }
+
+  public void setDueAtIso(OffsetDateTime dueAtIso) {
+    this.dueAtIso = dueAtIso;
+  }
+
+  public void setDueAtLabel(String dueAtLabel) {
+    this.dueAtLabel = dueAtLabel;
+  }
+
+  public void setEligibility(String eligibility) {
+    this.eligibility = eligibility;
+  }
+
+  public void setRequiredItemsJson(String requiredItemsJson) {
+    this.requiredItemsJson = requiredItemsJson;
+  }
+
+  public void setSystemHint(String systemHint) {
+    this.systemHint = systemHint;
+  }
 }
