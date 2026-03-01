@@ -3,6 +3,7 @@ package com.cuk.notice2action.extraction.api;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
+import com.cuk.notice2action.extraction.api.dto.EmailExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SourceDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SourceListResponse;
@@ -16,6 +17,7 @@ import com.cuk.notice2action.extraction.service.UrlContentFetcher;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
 import com.cuk.notice2action.extraction.persistence.repository.ExtractedActionRepository;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -103,6 +105,26 @@ public class ActionExtractionController {
 
     ActionExtractionResponse extractionResult = actionExtractionService.extract(request);
     return actionPersistenceService.persistExtraction(request, extractionResult);
+  }
+
+  @PostMapping("/extractions/email")
+  public ActionExtractionResponse extractActionsFromEmail(
+      @Valid @RequestBody EmailExtractionRequest request
+  ) {
+    String resolvedTitle = (request.subject() != null && !request.subject().isBlank())
+        ? request.subject()
+        : "이메일";
+
+    ActionExtractionRequest extractionRequest = new ActionExtractionRequest(
+        request.emailBody(),
+        null,
+        resolvedTitle,
+        SourceCategory.EMAIL,
+        List.of()
+    );
+
+    ActionExtractionResponse extractionResult = actionExtractionService.extract(extractionRequest);
+    return actionPersistenceService.persistExtraction(extractionRequest, extractionResult);
   }
 
   @PostMapping("/extractions/screenshot")

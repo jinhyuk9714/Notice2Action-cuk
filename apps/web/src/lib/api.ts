@@ -92,6 +92,35 @@ export async function requestScreenshotExtraction(
   return json;
 }
 
+export async function requestEmailExtraction(
+  emailBody: string,
+  subject: string | null
+): Promise<ActionExtractionResponse> {
+  const response = await fetch('/api/v1/extractions/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      emailBody,
+      subject,
+      senderAddress: null
+    })
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || 'Email extraction request failed');
+  }
+
+  const json: unknown = await response.json();
+  if (!isActionExtractionResponse(json)) {
+    throw new Error('API response shape is invalid');
+  }
+
+  return json;
+}
+
 export async function fetchActionList(sort: 'recent' | 'due' = 'recent', page: number = 0): Promise<ActionListResponse> {
   const response = await fetch(`/api/v1/actions?sort=${encodeURIComponent(sort)}&page=${page}&size=20`);
 
