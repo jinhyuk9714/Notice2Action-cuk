@@ -85,7 +85,7 @@ export function InboxView(): ReactElement {
   const profileConfigured = isProfileConfigured(profile);
 
   return (
-    <section className="inbox-layout">
+    <section className={`inbox-layout${selectedId !== null ? ' inbox-has-selection' : ''}`}>
       <div className="inbox-list">
         <div className="panel-header">
           <p className="eyebrow">Saved Actions</p>
@@ -132,7 +132,15 @@ export function InboxView(): ReactElement {
 
       <div className="inbox-detail">
         {detail !== null ? (
-          <ActionDetailPanel detail={detail} profile={profile} />
+          <>
+            <button
+              className="mobile-back-btn"
+              onClick={() => { setSelectedId(null); setDetail(null); }}
+            >
+              &larr; 목록으로
+            </button>
+            <ActionDetailPanel detail={detail} profile={profile} />
+          </>
         ) : (
           <div className="inbox-state">
             <p>목록에서 액션을 선택하세요.</p>

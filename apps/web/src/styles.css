@@ -654,6 +654,20 @@ input[type="file"]:hover {
   color: #64748b;
 }
 
+/* Mobile back button — hidden on desktop */
+.mobile-back-btn {
+  display: none;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 12px 0;
+  cursor: pointer;
+  text-align: left;
+}
+
 @media (max-width: 960px) {
   .layout,
   .inbox-layout {
@@ -666,5 +680,234 @@ input[type="file"]:hover {
 
   .detail-panel {
     position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-back-btn {
+    display: block;
+    min-height: 44px;
+  }
+
+  .inbox-has-selection .inbox-list {
+    display: none;
+  }
+
+  .inbox-layout:not(.inbox-has-selection) .inbox-detail {
+    display: none;
+  }
+
+  .page-shell {
+    width: calc(100% - 24px);
+    padding: 24px 0 40px;
+  }
+
+  .hero {
+    margin-bottom: 16px;
+  }
+
+  .card,
+  .panel {
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .inbox-list {
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .summary-card {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .tab {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .toggle {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-shell {
+    width: calc(100% - 16px);
+    padding: 16px 0 32px;
+  }
+
+  .hero h1 {
+    font-size: 1.6rem;
+    line-height: 1.2;
+  }
+
+  .hero-copy {
+    font-size: 0.9rem;
+  }
+
+  .hero {
+    margin-bottom: 12px;
+  }
+
+  .card,
+  .panel {
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+  }
+
+  .inbox-list {
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .summary-card {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .summary-card-header h4 {
+    font-size: 0.95rem;
+  }
+
+  .summary-card-body {
+    font-size: 0.82rem;
+  }
+
+  .card-list {
+    gap: 12px;
+  }
+
+  .meta-grid {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  textarea {
+    font-size: 16px;
+  }
+
+  input,
+  select {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+
+  .tab-nav {
+    margin-top: 14px;
+  }
+
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 8px;
+    font-size: 0.85rem;
+    border-radius: 10px 10px 0 0;
+  }
+
+  .toggle {
+    padding: 10px 8px;
+    font-size: 0.82rem;
+  }
+
+  .sort-btn,
+  .year-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+
+  .reminder-option {
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+
+  .reminder-options {
+    gap: 8px;
+  }
+
+  .chip {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .primary-button {
+    min-height: 48px;
+    border-radius: 12px;
+    font-size: 1rem;
+  }
+
+  .evidence-field {
+    display: block;
+    min-width: unset;
+    margin-right: 0;
+    margin-bottom: 2px;
+  }
+
+  input[type="file"] {
+    padding: 14px 12px;
+    font-size: 0.85rem;
+  }
+
+  .panel-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .card-header h3 {
+    font-size: 1rem;
+  }
+
+  .badge {
+    font-size: 0.8rem;
+    padding: 0 10px;
+    min-height: 28px;
+  }
+
+  .eyebrow {
+    font-size: 0.8rem;
+  }
+
+  .profile-settings-header {
+    min-height: 44px;
+    padding: 4px 0;
+  }
+
+  .profile-field input,
+  .profile-field select {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .year-group {
+    gap: 6px;
+  }
+
+  .year-btn {
+    flex: 1;
+  }
+
+  .error-banner {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+  }
+
+  .layout,
+  .inbox-layout {
+    gap: 14px;
+  }
+
+  .dday-inline {
+    margin-left: 6px;
+  }
+
+  .filter-label {
+    min-height: 44px;
+    font-size: 0.85rem;
   }
 }
