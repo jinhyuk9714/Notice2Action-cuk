@@ -7,6 +7,7 @@ import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.service.ActionExtractionService;
 import com.cuk.notice2action.extraction.service.ActionPersistenceService;
 import com.cuk.notice2action.extraction.service.PdfTextExtractor;
+import com.cuk.notice2action.extraction.service.ScreenshotTextExtractor;
 import com.cuk.notice2action.extraction.service.UrlContentFetcher;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
 import java.io.IOException;
@@ -30,15 +31,18 @@ public class ActionExtractionController {
   private final ActionPersistenceService actionPersistenceService;
   private final UrlContentFetcher urlContentFetcher;
   private final PdfTextExtractor pdfTextExtractor;
+  private final ScreenshotTextExtractor screenshotTextExtractor;
 
   public ActionExtractionController(ActionExtractionService actionExtractionService,
       ActionPersistenceService actionPersistenceService,
       UrlContentFetcher urlContentFetcher,
-      PdfTextExtractor pdfTextExtractor) {
+      PdfTextExtractor pdfTextExtractor,
+      ScreenshotTextExtractor screenshotTextExtractor) {
     this.actionExtractionService = actionExtractionService;
     this.actionPersistenceService = actionPersistenceService;
     this.urlContentFetcher = urlContentFetcher;
     this.pdfTextExtractor = pdfTextExtractor;
+    this.screenshotTextExtractor = screenshotTextExtractor;
   }
 
   @GetMapping("/health")
@@ -82,6 +86,33 @@ public class ActionExtractionController {
     return actionPersistenceService.persistExtraction(request, extractionResult);
   }
 
+  @PostMapping("/extractions/screenshot")
+  public ActionExtractionResponse extractActionsFromScreenshot(
+      @RequestParam("file") MultipartFile file,
+      @RequestParam(name = "sourceTitle", required = false) String sourceTitle
+  ) throws IOException {
+    String extractedText = screenshotTextExtractor.extractText(
+        file.getInputStream(),
+        file.getSize(),
+        file.getOriginalFilename()
+    );
+
+    String resolvedTitle = (sourceTitle != null && !sourceTitle.isBlank())
+        ? sourceTitle
+        : stripImageExtension(file.getOriginalFilename());
+
+    ActionExtractionRequest request = new ActionExtractionRequest(
+        extractedText,
+        null,
+        resolvedTitle,
+        SourceCategory.SCREENSHOT,
+        List.of()
+    );
+
+    ActionExtractionResponse extractionResult = actionExtractionService.extract(request);
+    return actionPersistenceService.persistExtraction(request, extractionResult);
+  }
+
   @GetMapping("/actions")
   public ActionListResponse listActions(
       @RequestParam(name = "sort", required = false, defaultValue = "recent") String sort
@@ -92,6 +123,17 @@ public class ActionExtractionController {
   @GetMapping("/actions/{id}")
   public SavedActionDetailDto getActionDetail(@PathVariable UUID id) {
     return actionPersistenceService.getActionDetail(id);
+  }
+
+  private static String stripImageExtension(String filename) {
+    if (filename == null) return null;
+    String lower = filename.toLowerCase();
+    for (String ext : List.of(".png", ".jpg", ".jpeg", ".webp")) {
+      if (lower.endsWith(ext)) {
+        return filename.substring(0, filename.length() - ext.length());
+      }
+    }
+    return filename;
   }
 
   private static String stripPdfExtension(String filename) {

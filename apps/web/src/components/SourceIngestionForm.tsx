@@ -9,7 +9,10 @@ type SourceIngestionFormProps = Readonly<{
 
 type InputMode = 'text' | 'url' | 'file';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_PDF_SIZE = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
+const PDF_EXTENSIONS = ['.pdf'];
 
 const DEFAULT_TEXT = `2026년 3월 12일 18시까지 TRINITY에서 공결 신청을 완료하고 증빙서류를 업로드해야 합니다.
 신청 대상은 재학생이며, 필요 시 재학증명서를 제출해야 합니다.`;
@@ -33,6 +36,13 @@ export function SourceIngestionForm({
       ? sourceUrl.trim().length === 0
       : selectedFile === null;
 
+  function getFileType(fileName: string): 'pdf' | 'image' | null {
+    const lower = fileName.toLowerCase();
+    if (PDF_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'pdf';
+    if (IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'image';
+    return null;
+  }
+
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
     setFileError(null);
     const file = event.target.files?.[0] ?? null;
@@ -42,14 +52,17 @@ export function SourceIngestionForm({
       return;
     }
 
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setFileError('PDF 파일만 업로드할 수 있습니다.');
+    const fileType = getFileType(file.name);
+    if (fileType === null) {
+      setFileError('PDF 또는 이미지 파일만 업로드할 수 있습니다. (PDF, PNG, JPG, JPEG, WEBP)');
       setSelectedFile(null);
       return;
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      setFileError('파일 크기가 10MB를 초과합니다.');
+    const maxSize = fileType === 'pdf' ? MAX_PDF_SIZE : MAX_IMAGE_SIZE;
+    const maxLabel = fileType === 'pdf' ? '10MB' : '5MB';
+    if (file.size > maxSize) {
+      setFileError(`파일 크기가 ${maxLabel}를 초과합니다.`);
       setSelectedFile(null);
       return;
     }
@@ -132,7 +145,7 @@ export function SourceIngestionForm({
             className={inputMode === 'file' ? 'toggle toggle-active' : 'toggle'}
             onClick={() => { setInputMode('file'); }}
           >
-            PDF 업로드
+            파일 업로드
           </button>
         </div>
       </div>
@@ -161,11 +174,11 @@ export function SourceIngestionForm({
         </div>
       ) : (
         <div className="form-row">
-          <label htmlFor="pdfFile">PDF 파일</label>
+          <label htmlFor="uploadFile">파일 (PDF / 스크린샷)</label>
           <input
-            id="pdfFile"
+            id="uploadFile"
             type="file"
-            accept=".pdf,application/pdf"
+            accept=".pdf,application/pdf,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
             onChange={handleFileChange}
           />
           {fileError !== null ? <p className="file-error">{fileError}</p> : null}

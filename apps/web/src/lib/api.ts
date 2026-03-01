@@ -60,6 +60,34 @@ export async function requestPdfExtraction(
   return json;
 }
 
+export async function requestScreenshotExtraction(
+  file: File,
+  sourceTitle: string | null
+): Promise<ActionExtractionResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (sourceTitle !== null && sourceTitle.trim().length > 0) {
+    formData.append('sourceTitle', sourceTitle);
+  }
+
+  const response = await fetch('/api/v1/extractions/screenshot', {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || 'Screenshot extraction request failed');
+  }
+
+  const json: unknown = await response.json();
+  if (!isActionExtractionResponse(json)) {
+    throw new Error('API response shape is invalid');
+  }
+
+  return json;
+}
+
 export async function fetchActionList(sort: 'recent' | 'due' = 'recent'): Promise<ActionListResponse> {
   const response = await fetch(`/api/v1/actions?sort=${encodeURIComponent(sort)}`);
 

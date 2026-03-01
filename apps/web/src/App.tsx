@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactElement } from 'react';
 import { ActionCard } from './components/ActionCard';
 import { InboxView } from './components/InboxView';
 import { SourceIngestionForm } from './components/SourceIngestionForm';
-import { requestActionExtraction, requestPdfExtraction } from './lib/api';
+import { requestActionExtraction, requestPdfExtraction, requestScreenshotExtraction } from './lib/api';
 import type { ActionExtractionRequest, ExtractedAction } from './lib/types';
 import { useReminderCheck } from './lib/useReminderCheck';
 
@@ -37,7 +37,10 @@ export default function App(): ReactElement {
     setError(null);
 
     try {
-      const result = await requestPdfExtraction(file, sourceTitle);
+      const isImage = /\.(png|jpe?g|webp)$/i.test(file.name);
+      const result = isImage
+        ? await requestScreenshotExtraction(file, sourceTitle)
+        : await requestPdfExtraction(file, sourceTitle);
       setActions(result.actions);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';

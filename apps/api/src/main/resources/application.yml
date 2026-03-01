@@ -36,3 +36,6 @@ management:
 app:
   extraction:
     timezone: Asia/Seoul
+  ocr:
+    tessdata-path: ${TESSDATA_PATH:/opt/homebrew/share/tessdata}
+    languages: kor+eng
