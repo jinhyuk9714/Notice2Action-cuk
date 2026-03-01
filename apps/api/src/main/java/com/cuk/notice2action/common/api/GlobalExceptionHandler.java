@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -55,6 +56,20 @@ public class GlobalExceptionHandler {
         );
 
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+  }
+
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ApiErrorResponse> handleMaxUploadSize(
+      MaxUploadSizeExceededException exception) {
+    ApiErrorResponse response =
+        new ApiErrorResponse(
+            "file_too_large",
+            "파일 크기가 허용 한도를 초과합니다. 최대 10MB까지 업로드 가능합니다.",
+            List.of(),
+            OffsetDateTime.now()
+        );
+
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
   }
 
   private String formatFieldError(FieldError fieldError) {

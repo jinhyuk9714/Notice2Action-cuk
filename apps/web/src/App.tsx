@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactElement } from 'react';
 import { ActionCard } from './components/ActionCard';
 import { InboxView } from './components/InboxView';
 import { SourceIngestionForm } from './components/SourceIngestionForm';
-import { requestActionExtraction } from './lib/api';
+import { requestActionExtraction, requestPdfExtraction } from './lib/api';
 import type { ActionExtractionRequest, ExtractedAction } from './lib/types';
 import { useReminderCheck } from './lib/useReminderCheck';
 
@@ -23,6 +23,21 @@ export default function App(): ReactElement {
 
     try {
       const result = await requestActionExtraction(payload);
+      setActions(result.actions);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleFileSubmit(file: File, sourceTitle: string | null): Promise<void> {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await requestPdfExtraction(file, sourceTitle);
       setActions(result.actions);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
@@ -60,7 +75,7 @@ export default function App(): ReactElement {
 
       {activeView === 'extract' ? (
         <section className="layout">
-          <SourceIngestionForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+          <SourceIngestionForm onSubmit={handleSubmit} onFileSubmit={handleFileSubmit} isSubmitting={isSubmitting} />
 
           <div className="panel">
             <div className="panel-header">

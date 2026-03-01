@@ -3,16 +3,20 @@ import type { ActionExtractionRequest, SourceCategory } from '../lib/types';
 
 type SourceIngestionFormProps = Readonly<{
   onSubmit: (payload: ActionExtractionRequest) => Promise<void>;
+  onFileSubmit: (file: File, sourceTitle: string | null) => Promise<void>;
   isSubmitting: boolean;
 }>;
 
-type InputMode = 'text' | 'url';
+type InputMode = 'text' | 'url' | 'file';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const DEFAULT_TEXT = `2026년 3월 12일 18시까지 TRINITY에서 공결 신청을 완료하고 증빙서류를 업로드해야 합니다.
 신청 대상은 재학생이며, 필요 시 재학증명서를 제출해야 합니다.`;
 
 export function SourceIngestionForm({
   onSubmit,
+  onFileSubmit,
   isSubmitting
 }: SourceIngestionFormProps): ReactElement {
   const [inputMode, setInputMode] = useState<InputMode>('text');
@@ -20,13 +24,47 @@ export function SourceIngestionForm({
   const [sourceText, setSourceText] = useState<string>(DEFAULT_TEXT);
   const [sourceUrl, setSourceUrl] = useState<string>('');
   const [sourceCategory, setSourceCategory] = useState<SourceCategory>('NOTICE');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const isInputEmpty = inputMode === 'text'
     ? sourceText.trim().length === 0
-    : sourceUrl.trim().length === 0;
+    : inputMode === 'url'
+      ? sourceUrl.trim().length === 0
+      : selectedFile === null;
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    setFileError(null);
+    const file = event.target.files?.[0] ?? null;
+
+    if (file === null) {
+      setSelectedFile(null);
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setFileError('PDF 파일만 업로드할 수 있습니다.');
+      setSelectedFile(null);
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError('파일 크기가 10MB를 초과합니다.');
+      setSelectedFile(null);
+      return;
+    }
+
+    setSelectedFile(file);
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+
+    if (inputMode === 'file') {
+      if (selectedFile === null) return;
+      await onFileSubmit(selectedFile, sourceTitle || null);
+      return;
+    }
 
     await onSubmit({
       sourceText: inputMode === 'text' ? sourceText : '',
@@ -37,6 +75,12 @@ export function SourceIngestionForm({
     });
   }
 
+  const titlePlaceholder = inputMode === 'url'
+    ? '비워두면 페이지 제목을 자동으로 가져옵니다'
+    : inputMode === 'file'
+      ? '비워두면 파일명을 사용합니다'
+      : '예: 장학 신청 안내';
+
   return (
     <form className="card form-card" onSubmit={handleSubmit}>
       <div className="form-row">
@@ -45,24 +89,26 @@ export function SourceIngestionForm({
           id="sourceTitle"
           value={sourceTitle}
           onChange={(event) => { setSourceTitle(event.target.value); }}
-          placeholder={inputMode === 'url' ? '비워두면 페이지 제목을 자동으로 가져옵니다' : '예: 장학 신청 안내'}
+          placeholder={titlePlaceholder}
         />
       </div>
 
-      <div className="form-row">
-        <label htmlFor="sourceCategory">카테고리</label>
-        <select
-          id="sourceCategory"
-          value={sourceCategory}
-          onChange={(event) => { setSourceCategory(event.target.value as SourceCategory); }}
-        >
-          <option value="NOTICE">공지</option>
-          <option value="SYLLABUS">강의계획서</option>
-          <option value="EMAIL">이메일</option>
-          <option value="PDF">PDF</option>
-          <option value="SCREENSHOT">스크린샷</option>
-        </select>
-      </div>
+      {inputMode !== 'file' ? (
+        <div className="form-row">
+          <label htmlFor="sourceCategory">카테고리</label>
+          <select
+            id="sourceCategory"
+            value={sourceCategory}
+            onChange={(event) => { setSourceCategory(event.target.value as SourceCategory); }}
+          >
+            <option value="NOTICE">공지</option>
+            <option value="SYLLABUS">강의계획서</option>
+            <option value="EMAIL">이메일</option>
+            <option value="PDF">PDF</option>
+            <option value="SCREENSHOT">스크린샷</option>
+          </select>
+        </div>
+      ) : null}
 
       <div className="form-row">
         <label>입력 방식</label>
@@ -81,6 +127,13 @@ export function SourceIngestionForm({
           >
             URL 입력
           </button>
+          <button
+            type="button"
+            className={inputMode === 'file' ? 'toggle toggle-active' : 'toggle'}
+            onClick={() => { setInputMode('file'); }}
+          >
+            PDF 업로드
+          </button>
         </div>
       </div>
 
@@ -94,7 +147,7 @@ export function SourceIngestionForm({
             rows={10}
           />
         </div>
-      ) : (
+      ) : inputMode === 'url' ? (
         <div className="form-row">
           <label htmlFor="sourceUrl">공지 URL</label>
           <input
@@ -105,6 +158,20 @@ export function SourceIngestionForm({
             placeholder="https://www.catholic.ac.kr/..."
           />
           <p className="url-hint">로그인이 필요한 페이지는 직접 텍스트를 붙여넣어 주세요.</p>
+        </div>
+      ) : (
+        <div className="form-row">
+          <label htmlFor="pdfFile">PDF 파일</label>
+          <input
+            id="pdfFile"
+            type="file"
+            accept=".pdf,application/pdf"
+            onChange={handleFileChange}
+          />
+          {fileError !== null ? <p className="file-error">{fileError}</p> : null}
+          {selectedFile !== null ? (
+            <p className="file-info">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)</p>
+          ) : null}
         </div>
       )}
 
