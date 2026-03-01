@@ -5,7 +5,10 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
-import java.time.Year;
+import java.time.DateTimeException;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -63,6 +66,26 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       "~\\s*(\\d{1,2})[./](\\d{1,2})"
   );
 
+  // P8: Relative day — 내일, 모레, 글피
+  private static final Pattern RELATIVE_DAY = Pattern.compile(
+      "(내일|모레|글피)"
+  );
+
+  // P9: Relative week day — 다음 주 금요일, 이번 주 수요일
+  private static final Pattern RELATIVE_WEEK_DAY = Pattern.compile(
+      "(이번|다음|차주)\\s*주\\s*(월|화|수|목|금|토|일)요일"
+  );
+
+  // P10: N units relative — 3일 이내, 2주 후, 1개월 이내
+  private static final Pattern RELATIVE_N_UNIT = Pattern.compile(
+      "(\\d{1,3})\\s*(일|주|주일|개월|달)\\s*(이내|내|후|뒤|안)"
+  );
+
+  // P11: Period end — 이번 달 말, 이번 주 말
+  private static final Pattern RELATIVE_PERIOD_END = Pattern.compile(
+      "(이번|이|금)\\s*(달|월|주)\\s*말"
+  );
+
   // Deadline proximity keywords
   private static final Pattern DEADLINE_PROXIMITY = Pattern.compile(
       "(까지|마감|기한|이전|이내|내로|내에|자정)"
@@ -108,13 +131,15 @@ public class HeuristicActionExtractionService implements ActionExtractionService
 
   private record DateMatch(String label, DateComponents components) {}
 
+  private record ScoredDateMatch(DateMatch dateMatch, double score) {}
+
   private record ActionSegment(String text, String primaryVerb) {}
 
   // --- Main extraction ---
 
   @Override
   public ActionExtractionResponse extract(ActionExtractionRequest request) {
-    String normalizedText = normalizeWhitespace(request.sourceText());
+    String normalizedText = normalizeText(request.sourceText());
     if (normalizedText.isBlank()) {
       throw new IllegalArgumentException("sourceText must not be blank");
     }
@@ -165,13 +190,53 @@ public class HeuristicActionExtractionService implements ActionExtractionService
     );
   }
 
-  // --- Whitespace normalization ---
+  // --- Text normalization ---
 
-  private String normalizeWhitespace(String text) {
-    return text.replace('\u00A0', ' ')
-        .replaceAll("[ \\t]+", " ")
-        .replaceAll("\\n{3,}", "\n\n")
-        .trim();
+  private String normalizeText(String text) {
+    String result = text;
+
+    // 1. Remove zero-width characters (ZWJ, ZWNJ, ZWSP, BOM, etc.)
+    result = result.replaceAll("[\\u200B-\\u200F\\u2028-\\u202F\\uFEFF]", "");
+
+    // 2. Convert full-width digits/letters/punctuation to ASCII
+    result = convertFullWidthToAscii(result);
+
+    // 3. Normalize bullet-like characters at line start to "- "
+    result = result.replaceAll("(?m)^\\s*[ㅇ○●•★※▶▷◆◇◈]\\s*", "- ");
+
+    // 4. Normalize whitespace characters
+    result = result.replace('\u00A0', ' ');
+    result = result.replace('\t', ' ');
+
+    // 5. Table-row reconstruction: 3+ consecutive spaces → " | "
+    result = result.replaceAll(" {3,}", " | ");
+
+    // 6. Collapse remaining multiple spaces to single space
+    result = result.replaceAll(" {2,}", " ");
+
+    // 7. Collapse excessive newlines (3+) to double newline
+    result = result.replaceAll("\\n{3,}", "\n\n");
+
+    // 8. Trim each line
+    result = result.lines()
+        .map(String::trim)
+        .reduce((a, b) -> a + "\n" + b)
+        .orElse("");
+
+    return result.trim();
+  }
+
+  private static String convertFullWidthToAscii(String text) {
+    StringBuilder sb = new StringBuilder(text.length());
+    for (int i = 0; i < text.length(); i++) {
+      char c = text.charAt(i);
+      if (c >= '\uFF01' && c <= '\uFF5E') {
+        sb.append((char) (c - 0xFF01 + 0x0021));
+      } else {
+        sb.append(c);
+      }
+    }
+    return sb.toString();
   }
 
   // --- Title derivation ---
@@ -197,164 +262,257 @@ public class HeuristicActionExtractionService implements ActionExtractionService
     return base;
   }
 
-  // --- Date extraction ---
+  // --- Date extraction (collect-all-rank approach for absolute dates) ---
 
   private DateMatch extractDateMatch(String text, List<EvidenceSnippetDto> evidence) {
+    List<ScoredDateMatch> candidates = new ArrayList<>();
+
+    // Collect all absolute date matches from all patterns
+    collectKoreanFullDates(text, candidates);
+    collectIsoDates(text, candidates);
+    collectKoreanMonthDay24H(text, candidates);
+    collectKoreanMonthDayTime(text, candidates);
+    collectShortSlashDot(text, candidates);
+    collectRangeEndKorean(text, candidates);
+    collectRangeEndShort(text, candidates);
+
+    // Pick highest-scored absolute date if any
+    if (!candidates.isEmpty()) {
+      candidates.sort((a, b) -> Double.compare(b.score(), a.score()));
+      ScoredDateMatch best = candidates.getFirst();
+      evidence.add(new EvidenceSnippetDto("dueAtLabel", best.dateMatch().label(), best.score()));
+      return best.dateMatch();
+    }
+
+    // Fallback to relative dates (first-match)
     DateMatch match;
 
-    // P1: Korean full date (with year)
-    match = tryKoreanFullDate(text);
+    match = tryRelativeDay(text);
     if (match != null) {
-      double confidence = computeDateConfidence(true, match.components().hour() > 0, text, match.label());
+      double confidence = isNearDeadlineKeyword(text, match.label()) ? 0.58 : 0.50;
       evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), confidence));
       return match;
     }
 
-    // P2: ISO date (with year)
-    match = tryIsoDate(text);
+    match = tryRelativeWeekDay(text);
     if (match != null) {
-      double confidence = computeDateConfidence(true, match.components().hour() > 0, text, match.label());
+      double confidence = isNearDeadlineKeyword(text, match.label()) ? 0.55 : 0.48;
       evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), confidence));
       return match;
     }
 
-    // P4: Korean month-day with 24h clock (try before P3 — more specific)
-    match = tryKoreanMonthDay24H(text);
+    match = tryRelativeNUnit(text);
     if (match != null) {
-      double confidence = computeDateConfidence(false, true, text, match.label());
+      double confidence = isNearDeadlineKeyword(text, match.label()) ? 0.55 : 0.48;
       evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), confidence));
       return match;
     }
 
-    // P3: Korean month-day with optional Korean time
-    match = tryKoreanMonthDayTime(text);
+    match = tryRelativePeriodEnd(text);
     if (match != null) {
-      double confidence = computeDateConfidence(false, match.components().hour() > 0, text, match.label());
+      double confidence = isNearDeadlineKeyword(text, match.label()) ? 0.52 : 0.45;
       evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), confidence));
-      return match;
-    }
-
-    // P5: Short slash/dot
-    match = tryShortSlashDot(text);
-    if (match != null) {
-      boolean nearDeadline = isNearDeadlineKeyword(text, match.label());
-      double confidence = nearDeadline ? 0.70 : 0.60;
-      evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), confidence));
-      return match;
-    }
-
-    // P6: Range-end Korean
-    match = tryRangeEndKorean(text);
-    if (match != null) {
-      evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), 0.85));
-      return match;
-    }
-
-    // P7: Range-end short
-    match = tryRangeEndShort(text);
-    if (match != null) {
-      evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), 0.85));
       return match;
     }
 
     return null;
   }
 
-  private DateMatch tryKoreanFullDate(String text) {
+  // --- Absolute date collectors (loop all matches, score each) ---
+
+  private void collectKoreanFullDates(String text, List<ScoredDateMatch> candidates) {
     Matcher m = KOREAN_FULL_DATE.matcher(text);
-    if (!m.find()) {
-      return null;
+    while (m.find()) {
+      int year = Integer.parseInt(m.group(1));
+      int month = Integer.parseInt(m.group(2));
+      int day = Integer.parseInt(m.group(3));
+      if (!isValidDate(year, month, day)) continue;
+      String ampm = m.group(4);
+      int hour = m.group(5) == null ? 0 : resolveHour(Integer.parseInt(m.group(5)), ampm);
+      int minute = m.group(6) == null ? 0 : Integer.parseInt(m.group(6));
+      if (hour > 0 && !isValidTime(hour, minute)) continue;
+      String label = m.group(0).trim();
+      double score = computeDateConfidence(true, hour > 0, text, label);
+      if (isStartDateContext(text, label)) score -= 0.15;
+      candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(year, month, day, hour, minute)), Math.min(score, 0.95)));
     }
-    int year = Integer.parseInt(m.group(1));
-    int month = Integer.parseInt(m.group(2));
-    int day = Integer.parseInt(m.group(3));
-    String ampm = m.group(4);
-    int hour = m.group(5) == null ? 0 : resolveHour(Integer.parseInt(m.group(5)), ampm);
-    int minute = m.group(6) == null ? 0 : Integer.parseInt(m.group(6));
-    return new DateMatch(m.group(0).trim(), new DateComponents(year, month, day, hour, minute));
   }
 
-  private DateMatch tryIsoDate(String text) {
+  private void collectIsoDates(String text, List<ScoredDateMatch> candidates) {
     Matcher m = ISO_DATE.matcher(text);
-    if (!m.find()) {
-      return null;
+    while (m.find()) {
+      int year = Integer.parseInt(m.group(1));
+      int month = Integer.parseInt(m.group(2));
+      int day = Integer.parseInt(m.group(3));
+      if (!isValidDate(year, month, day)) continue;
+      int hour = m.group(4) == null ? 0 : Integer.parseInt(m.group(4));
+      int minute = m.group(5) == null ? 0 : Integer.parseInt(m.group(5));
+      if (hour > 0 && !isValidTime(hour, minute)) continue;
+      String label = m.group(0).trim();
+      double score = computeDateConfidence(true, hour > 0, text, label);
+      if (isStartDateContext(text, label)) score -= 0.15;
+      candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(year, month, day, hour, minute)), Math.min(score, 0.95)));
     }
-    int year = Integer.parseInt(m.group(1));
-    int month = Integer.parseInt(m.group(2));
-    int day = Integer.parseInt(m.group(3));
-    int hour = m.group(4) == null ? 0 : Integer.parseInt(m.group(4));
-    int minute = m.group(5) == null ? 0 : Integer.parseInt(m.group(5));
-    return new DateMatch(m.group(0).trim(), new DateComponents(year, month, day, hour, minute));
   }
 
-  private DateMatch tryKoreanMonthDayTime(String text) {
-    Matcher m = KOREAN_MONTH_DAY_TIME.matcher(text);
-    if (!m.find()) {
-      return null;
-    }
-    // Skip if this match is part of a full-year Korean date
-    if (isPartOfFullYearKoreanDate(text, m.start())) {
-      return null;
-    }
-    int month = Integer.parseInt(m.group(1));
-    int day = Integer.parseInt(m.group(2));
-    String ampm = m.group(3);
-    int hour = m.group(4) == null ? 0 : resolveHour(Integer.parseInt(m.group(4)), ampm);
-    int minute = m.group(5) == null ? 0 : Integer.parseInt(m.group(5));
-    return new DateMatch(m.group(0).trim(), new DateComponents(currentYear(), month, day, hour, minute));
-  }
-
-  private DateMatch tryKoreanMonthDay24H(String text) {
+  private void collectKoreanMonthDay24H(String text, List<ScoredDateMatch> candidates) {
     Matcher m = KOREAN_MONTH_DAY_24H.matcher(text);
-    if (!m.find()) {
-      return null;
+    while (m.find()) {
+      if (isPartOfFullYearKoreanDate(text, m.start())) continue;
+      int month = Integer.parseInt(m.group(1));
+      int day = Integer.parseInt(m.group(2));
+      if (!isValidDate(currentYear(), month, day)) continue;
+      int hour = Integer.parseInt(m.group(3));
+      int minute = Integer.parseInt(m.group(4));
+      if (!isValidTime(hour, minute)) continue;
+      String label = m.group(0).trim();
+      double score = computeDateConfidence(false, true, text, label);
+      if (isStartDateContext(text, label)) score -= 0.15;
+      candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, hour, minute)), Math.min(score, 0.95)));
     }
-    if (isPartOfFullYearKoreanDate(text, m.start())) {
-      return null;
-    }
-    int month = Integer.parseInt(m.group(1));
-    int day = Integer.parseInt(m.group(2));
-    int hour = Integer.parseInt(m.group(3));
-    int minute = Integer.parseInt(m.group(4));
-    return new DateMatch(m.group(0).trim(), new DateComponents(currentYear(), month, day, hour, minute));
   }
 
-  private DateMatch tryShortSlashDot(String text) {
+  private void collectKoreanMonthDayTime(String text, List<ScoredDateMatch> candidates) {
+    Matcher m = KOREAN_MONTH_DAY_TIME.matcher(text);
+    while (m.find()) {
+      if (isPartOfFullYearKoreanDate(text, m.start())) continue;
+      int month = Integer.parseInt(m.group(1));
+      int day = Integer.parseInt(m.group(2));
+      if (!isValidDate(currentYear(), month, day)) continue;
+      String ampm = m.group(3);
+      int hour = m.group(4) == null ? 0 : resolveHour(Integer.parseInt(m.group(4)), ampm);
+      int minute = m.group(5) == null ? 0 : Integer.parseInt(m.group(5));
+      if (hour > 0 && !isValidTime(hour, minute)) continue;
+      String label = m.group(0).trim();
+      double score = computeDateConfidence(false, hour > 0, text, label);
+      if (isStartDateContext(text, label)) score -= 0.15;
+      candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, hour, minute)), Math.min(score, 0.95)));
+    }
+  }
+
+  private void collectShortSlashDot(String text, List<ScoredDateMatch> candidates) {
     Matcher m = SHORT_SLASH_DOT.matcher(text);
-    if (!m.find()) {
-      return null;
+    while (m.find()) {
+      int month = Integer.parseInt(m.group(1));
+      int day = Integer.parseInt(m.group(2));
+      if (!isValidDate(currentYear(), month, day)) continue;
+      int hour = m.group(3) == null ? 0 : Integer.parseInt(m.group(3));
+      int minute = m.group(4) == null ? 0 : Integer.parseInt(m.group(4));
+      if (hour > 0 && !isValidTime(hour, minute)) continue;
+      String label = m.group(0).trim();
+      boolean nearDeadline = isNearDeadlineKeyword(text, label);
+      double score = nearDeadline ? 0.70 : 0.60;
+      if (isStartDateContext(text, label)) score -= 0.15;
+      candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, hour, minute)), Math.min(score, 0.95)));
     }
-    int month = Integer.parseInt(m.group(1));
-    int day = Integer.parseInt(m.group(2));
-    if (month < 1 || month > 12 || day < 1 || day > 31) {
-      return null;
-    }
-    int hour = m.group(3) == null ? 0 : Integer.parseInt(m.group(3));
-    int minute = m.group(4) == null ? 0 : Integer.parseInt(m.group(4));
-    return new DateMatch(m.group(0).trim(), new DateComponents(currentYear(), month, day, hour, minute));
   }
 
-  private DateMatch tryRangeEndKorean(String text) {
+  private void collectRangeEndKorean(String text, List<ScoredDateMatch> candidates) {
     Matcher m = RANGE_END_KOREAN.matcher(text);
-    if (!m.find()) {
-      return null;
+    while (m.find()) {
+      int month = Integer.parseInt(m.group(1));
+      int day = Integer.parseInt(m.group(2));
+      if (!isValidDate(currentYear(), month, day)) continue;
+      String label = m.group(0).trim();
+      candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, 0, 0)), 0.85));
     }
-    int month = Integer.parseInt(m.group(1));
-    int day = Integer.parseInt(m.group(2));
-    return new DateMatch(m.group(0).trim(), new DateComponents(currentYear(), month, day, 0, 0));
   }
 
-  private DateMatch tryRangeEndShort(String text) {
+  private void collectRangeEndShort(String text, List<ScoredDateMatch> candidates) {
     Matcher m = RANGE_END_SHORT.matcher(text);
-    if (!m.find()) {
-      return null;
+    while (m.find()) {
+      int month = Integer.parseInt(m.group(1));
+      int day = Integer.parseInt(m.group(2));
+      if (!isValidDate(currentYear(), month, day)) continue;
+      String label = m.group(0).trim();
+      candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, 0, 0)), 0.85));
     }
-    int month = Integer.parseInt(m.group(1));
-    int day = Integer.parseInt(m.group(2));
-    if (month < 1 || month > 12 || day < 1 || day > 31) {
-      return null;
+  }
+
+  private boolean isStartDateContext(String text, String matchLabel) {
+    int idx = text.indexOf(matchLabel);
+    if (idx < 0) return false;
+    int afterEnd = idx + matchLabel.length();
+    int searchEnd = Math.min(text.length(), afterEnd + 8);
+    String after = text.substring(afterEnd, searchEnd);
+    return after.contains("부터") || after.trim().startsWith("~") || after.trim().startsWith("～");
+  }
+
+  private DateMatch tryRelativeDay(String text) {
+    Matcher m = RELATIVE_DAY.matcher(text);
+    if (!m.find()) return null;
+    String keyword = m.group(1);
+    LocalDate target = switch (keyword) {
+      case "내일" -> today().plusDays(1);
+      case "모레" -> today().plusDays(2);
+      case "글피" -> today().plusDays(3);
+      default -> null;
+    };
+    if (target == null) return null;
+    return new DateMatch(m.group(0).trim(),
+        new DateComponents(target.getYear(), target.getMonthValue(), target.getDayOfMonth(), 0, 0));
+  }
+
+  private DateMatch tryRelativeWeekDay(String text) {
+    Matcher m = RELATIVE_WEEK_DAY.matcher(text);
+    if (!m.find()) return null;
+    String weekRef = m.group(1);
+    DayOfWeek targetDow = koreanDayOfWeek(m.group(2));
+    if (targetDow == null) return null;
+
+    LocalDate target;
+    if ("이번".equals(weekRef)) {
+      target = today().with(TemporalAdjusters.nextOrSame(targetDow));
+    } else {
+      // 다음 or 차주: next week
+      LocalDate nextMonday = today().with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+      target = nextMonday.with(TemporalAdjusters.nextOrSame(targetDow));
     }
-    return new DateMatch(m.group(0).trim(), new DateComponents(currentYear(), month, day, 0, 0));
+    return new DateMatch(m.group(0).trim(),
+        new DateComponents(target.getYear(), target.getMonthValue(), target.getDayOfMonth(), 0, 0));
+  }
+
+  private DateMatch tryRelativeNUnit(String text) {
+    Matcher m = RELATIVE_N_UNIT.matcher(text);
+    if (!m.find()) return null;
+    int n = Integer.parseInt(m.group(1));
+    String unit = m.group(2);
+    LocalDate target = switch (unit) {
+      case "일" -> today().plusDays(n);
+      case "주", "주일" -> today().plusWeeks(n);
+      case "개월", "달" -> today().plusMonths(n);
+      default -> null;
+    };
+    if (target == null) return null;
+    return new DateMatch(m.group(0).trim(),
+        new DateComponents(target.getYear(), target.getMonthValue(), target.getDayOfMonth(), 0, 0));
+  }
+
+  private DateMatch tryRelativePeriodEnd(String text) {
+    Matcher m = RELATIVE_PERIOD_END.matcher(text);
+    if (!m.find()) return null;
+    String period = m.group(2);
+    LocalDate target = switch (period) {
+      case "달", "월" -> today().withDayOfMonth(today().lengthOfMonth());
+      case "주" -> today().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+      default -> null;
+    };
+    if (target == null) return null;
+    return new DateMatch(m.group(0).trim(),
+        new DateComponents(target.getYear(), target.getMonthValue(), target.getDayOfMonth(), 0, 0));
+  }
+
+  private static DayOfWeek koreanDayOfWeek(String name) {
+    return switch (name) {
+      case "월" -> DayOfWeek.MONDAY;
+      case "화" -> DayOfWeek.TUESDAY;
+      case "수" -> DayOfWeek.WEDNESDAY;
+      case "목" -> DayOfWeek.THURSDAY;
+      case "금" -> DayOfWeek.FRIDAY;
+      case "토" -> DayOfWeek.SATURDAY;
+      case "일" -> DayOfWeek.SUNDAY;
+      default -> null;
+    };
   }
 
   private boolean isPartOfFullYearKoreanDate(String text, int matchStart) {
@@ -364,8 +522,13 @@ public class HeuristicActionExtractionService implements ActionExtractionService
     return prefix.contains("년");
   }
 
-  private static int currentYear() {
-    return Year.now().getValue();
+  // Package-private for test override
+  LocalDate today() {
+    return LocalDate.now();
+  }
+
+  private int currentYear() {
+    return today().getYear();
   }
 
   private static int resolveHour(int rawHour, String ampm) {
@@ -379,6 +542,19 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       return 0;
     }
     return rawHour;
+  }
+
+  private static boolean isValidDate(int year, int month, int day) {
+    try {
+      LocalDate.of(year, month, day);
+      return true;
+    } catch (DateTimeException e) {
+      return false;
+    }
+  }
+
+  private static boolean isValidTime(int hour, int minute) {
+    return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
   }
 
   private double computeDateConfidence(boolean hasYear, boolean hasTime, String text, String matchLabel) {

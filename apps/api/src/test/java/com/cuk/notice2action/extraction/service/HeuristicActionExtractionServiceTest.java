@@ -7,14 +7,21 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
-import java.time.Year;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class HeuristicActionExtractionServiceTest {
 
-  private final HeuristicActionExtractionService service = new HeuristicActionExtractionService();
+  private static final LocalDate FIXED_TODAY = LocalDate.of(2026, 3, 1); // Sunday
+
+  private final HeuristicActionExtractionService service = new HeuristicActionExtractionService() {
+    @Override
+    LocalDate today() {
+      return FIXED_TODAY;
+    }
+  };
 
   private ActionExtractionRequest request(String text) {
     return new ActionExtractionRequest(text, null, null, SourceCategory.NOTICE, List.of());
@@ -25,7 +32,7 @@ class HeuristicActionExtractionServiceTest {
   }
 
   private String currentYearPrefix() {
-    return String.valueOf(Year.now().getValue());
+    return String.valueOf(FIXED_TODAY.getYear());
   }
 
   // --- Backward compatibility: existing test must still pass ---
@@ -158,6 +165,278 @@ class HeuristicActionExtractionServiceTest {
 
       assertThat(response.actions().getFirst().dueAtIso()).isNull();
       assertThat(response.actions().getFirst().dueAtLabel()).isNull();
+    }
+  }
+
+  // --- Text Normalization Tests ---
+
+  @Nested
+  class TextNormalizationTests {
+
+    @Test
+    void full_width_digits_normalized() {
+      // ３월 １２일 (full-width digits with Korean month/day markers)
+      ActionExtractionResponse response =
+          service.extract(request("\uFF13월 \uFF11\uFF12일까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNotNull();
+    }
+
+    @Test
+    void bullet_characters_normalized() {
+      ActionExtractionResponse response =
+          service.extract(request("ㅇ 신청서 제출\nㅇ 성적증명서 첨부"));
+      assertThat(response.actions().getFirst().requiredItems())
+          .contains("신청서", "성적증명서");
+    }
+
+    @Test
+    void zero_width_characters_removed() {
+      ActionExtractionResponse response =
+          service.extract(request("TRIN\u200BITY에서 신청"));
+      assertThat(response.actions().getFirst().systemHint()).isEqualTo("TRINITY");
+    }
+
+    @Test
+    void tab_separated_table_text_handled() {
+      ActionExtractionResponse response =
+          service.extract(request("제출기한\t\t\t3월 12일\n준비물\t\t\t성적증명서"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNotNull();
+      assertThat(response.actions().getFirst().requiredItems()).contains("성적증명서");
+    }
+
+    @Test
+    void multiple_spaces_collapsed() {
+      ActionExtractionResponse response =
+          service.extract(request("TRINITY 에서     신청서     제출하세요"));
+      assertThat(response.actions().getFirst().systemHint()).isEqualTo("TRINITY");
+      assertThat(response.actions().getFirst().requiredItems()).contains("신청서");
+    }
+
+    @Test
+    void excessive_newlines_collapsed() {
+      ActionExtractionResponse response =
+          service.extract(request("공지사항\n\n\n\n\n3월 12일까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNotNull();
+    }
+  }
+
+  // --- Relative Date Tests ---
+
+  @Nested
+  class RelativeDateTests {
+
+    // FIXED_TODAY = 2026-03-01 (Sunday)
+
+    @Test
+    void 내일_resolves_to_tomorrow() {
+      ActionExtractionResponse response =
+          service.extract(request("내일까지 제출하세요"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-02T00:00");
+    }
+
+    @Test
+    void 모레_resolves_to_day_after_tomorrow() {
+      ActionExtractionResponse response =
+          service.extract(request("모레까지 신청서 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-03T00:00");
+    }
+
+    @Test
+    void 글피_resolves_to_three_days_later() {
+      ActionExtractionResponse response =
+          service.extract(request("글피까지 완료해야 합니다"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-04T00:00");
+    }
+
+    @Test
+    void 다음_주_금요일_resolves_correctly() {
+      // 2026-03-01 is Sunday. Next Monday = 03-02, next Friday = 03-06
+      ActionExtractionResponse response =
+          service.extract(request("다음 주 금요일까지 등록"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-06");
+    }
+
+    @Test
+    void 이번_주_수요일_resolves_to_this_week() {
+      // 2026-03-01 is Sunday. nextOrSame(WED) = 03-04
+      ActionExtractionResponse response =
+          service.extract(request("이번 주 수요일까지 접수"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-04");
+    }
+
+    @Test
+    void three_days_이내_resolves() {
+      ActionExtractionResponse response =
+          service.extract(request("3일 이내 제출하세요"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-04T00:00");
+    }
+
+    @Test
+    void two_weeks_후_resolves() {
+      ActionExtractionResponse response =
+          service.extract(request("2주 후까지 신청"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-15T00:00");
+    }
+
+    @Test
+    void one_month_이내_resolves() {
+      ActionExtractionResponse response =
+          service.extract(request("1개월 이내 등록 완료"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-04-01T00:00");
+    }
+
+    @Test
+    void 이번_달_말_resolves_to_end_of_month() {
+      ActionExtractionResponse response =
+          service.extract(request("이번 달 말까지 서류 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-31T00:00");
+    }
+
+    @Test
+    void 이번_주_말_resolves_to_sunday() {
+      // 2026-03-01 is Sunday. nextOrSame(SUNDAY) = 03-01
+      ActionExtractionResponse response =
+          service.extract(request("이번 주 말까지 확인"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-01T00:00");
+    }
+
+    @Test
+    void relative_date_confidence_lower_than_absolute() {
+      ActionExtractionResponse relResponse =
+          service.extract(request("내일까지 제출"));
+      ActionExtractionResponse absResponse =
+          service.extract(request("3월 12일까지 제출"));
+
+      double relConf = relResponse.actions().getFirst().evidence().stream()
+          .filter(e -> "dueAtLabel".equals(e.fieldName()))
+          .mapToDouble(EvidenceSnippetDto::confidence).findFirst().orElse(0);
+      double absConf = absResponse.actions().getFirst().evidence().stream()
+          .filter(e -> "dueAtLabel".equals(e.fieldName()))
+          .mapToDouble(EvidenceSnippetDto::confidence).findFirst().orElse(0);
+
+      assertThat(relConf).isLessThan(absConf);
+    }
+
+    @Test
+    void absolute_date_takes_priority_over_relative() {
+      // P3 (3월 15일) matches before P8 (내일)
+      ActionExtractionResponse response =
+          service.extract(request("내일 확인하고 3월 15일까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-15");
+    }
+  }
+
+  // --- Multi-Date Ranking Tests ---
+
+  @Nested
+  class MultiDateRankingTests {
+
+    @Test
+    void prefers_deadline_date_over_start_date() {
+      ActionExtractionResponse response =
+          service.extract(request("접수기간: 2026.3.1 ~ 2026.3.15 18:00 마감"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-15T18:00");
+    }
+
+    @Test
+    void prefers_까지_date() {
+      ActionExtractionResponse response =
+          service.extract(request("3월 1일부터 접수 시작, 3월 15일까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso())
+          .startsWith(currentYearPrefix() + "-03-15");
+    }
+
+    @Test
+    void prefers_마감_keyword_date() {
+      ActionExtractionResponse response =
+          service.extract(request("3월 10일 설명회 예정이며 서류 마감은 3월 20일까지입니다"));
+      assertThat(response.actions().getFirst().dueAtIso())
+          .startsWith(currentYearPrefix() + "-03-20");
+    }
+
+    @Test
+    void 부터_까지_format_prefers_end_date() {
+      ActionExtractionResponse response =
+          service.extract(request("3월 1일부터 3월 15일까지 신청"));
+      assertThat(response.actions().getFirst().dueAtIso())
+          .startsWith(currentYearPrefix() + "-03-15");
+    }
+
+    @Test
+    void year_date_wins_over_yearless_when_both_near_deadline() {
+      ActionExtractionResponse response =
+          service.extract(request("3월 12일까지 확인, 2026년 3월 15일까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-15");
+    }
+
+    @Test
+    void single_date_still_works() {
+      ActionExtractionResponse response =
+          service.extract(request("3월 12일까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso())
+          .startsWith(currentYearPrefix() + "-03-12");
+    }
+
+    @Test
+    void start_date_penalized_with_tilde() {
+      ActionExtractionResponse response =
+          service.extract(request("2026.3.1 ~ 2026.3.15 접수"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2026-03-15");
+    }
+  }
+
+  // --- Date Validation Tests ---
+
+  @Nested
+  class DateValidationTests {
+
+    @Test
+    void rejects_feb_30() {
+      ActionExtractionResponse response =
+          service.extract(request("2026년 2월 30일까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNull();
+    }
+
+    @Test
+    void rejects_feb_29_non_leap_year() {
+      ActionExtractionResponse response =
+          service.extract(request("2025년 2월 29일까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNull();
+    }
+
+    @Test
+    void accepts_feb_29_leap_year() {
+      ActionExtractionResponse response =
+          service.extract(request("2028년 2월 29일까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).startsWith("2028-02-29");
+    }
+
+    @Test
+    void rejects_apr_31() {
+      ActionExtractionResponse response =
+          service.extract(request("2026.4.31 마감"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNull();
+    }
+
+    @Test
+    void rejects_month_13() {
+      ActionExtractionResponse response =
+          service.extract(request("2026.13.1 마감"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNull();
+    }
+
+    @Test
+    void rejects_invalid_time_hour_25() {
+      ActionExtractionResponse response =
+          service.extract(request("2026년 3월 12일 25시까지 접수"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNull();
+    }
+
+    @Test
+    void rejects_short_slash_feb_30() {
+      ActionExtractionResponse response =
+          service.extract(request("2/30까지 제출"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNull();
     }
   }
 
@@ -389,6 +668,306 @@ class HeuristicActionExtractionServiceTest {
 
       assertThat(response.actions().get(0).title()).contains("(1/2)");
       assertThat(response.actions().get(1).title()).contains("(2/2)");
+    }
+  }
+
+  // --- Comprehensive Keyword Tests ---
+
+  @Nested
+  class ComprehensiveSystemHintTests {
+
+    @Test
+    void detects_사이버캠퍼스() {
+      assertThat(service.extract(request("사이버캠퍼스에서 과제 제출")).actions().getFirst().systemHint())
+          .isEqualTo("사이버캠퍼스");
+    }
+
+    @Test
+    void detects_웹메일() {
+      assertThat(service.extract(request("웹메일로 서류 발송")).actions().getFirst().systemHint())
+          .isEqualTo("웹메일");
+    }
+
+    @Test
+    void detects_우리WON() {
+      assertThat(service.extract(request("우리WON에서 등록금 납부")).actions().getFirst().systemHint())
+          .isEqualTo("우리WON");
+    }
+
+    @Test
+    void detects_eClass() {
+      assertThat(service.extract(request("e-class에 레포트 업로드")).actions().getFirst().systemHint())
+          .isEqualTo("e-class");
+    }
+
+    @Test
+    void detects_eCampus() {
+      assertThat(service.extract(request("e-Campus에서 출석 확인")).actions().getFirst().systemHint())
+          .isEqualTo("e-Campus");
+    }
+
+    @Test
+    void detects_학생생활관() {
+      assertThat(service.extract(request("학생생활관 입사 신청")).actions().getFirst().systemHint())
+          .isEqualTo("학생생활관");
+    }
+
+    @Test
+    void detects_국제교류원() {
+      assertThat(service.extract(request("국제교류원에서 교환학생 신청")).actions().getFirst().systemHint())
+          .isEqualTo("국제교류원");
+    }
+
+    @Test
+    void detects_취업지원센터() {
+      assertThat(service.extract(request("취업지원센터에서 상담 예약")).actions().getFirst().systemHint())
+          .isEqualTo("취업지원센터");
+    }
+
+    @Test
+    void detects_학과사무실() {
+      assertThat(service.extract(request("학과사무실에 서류 제출")).actions().getFirst().systemHint())
+          .isEqualTo("학과사무실");
+    }
+
+    @Test
+    void detects_통합정보시스템() {
+      assertThat(service.extract(request("통합정보시스템에서 성적 확인")).actions().getFirst().systemHint())
+          .isEqualTo("통합정보시스템");
+    }
+
+    @Test
+    void detects_도서관() {
+      assertThat(service.extract(request("도서관에서 좌석 예약")).actions().getFirst().systemHint())
+          .isEqualTo("도서관");
+    }
+
+    @Test
+    void detects_포털() {
+      assertThat(service.extract(request("포털에서 공지 확인")).actions().getFirst().systemHint())
+          .isEqualTo("포털");
+    }
+  }
+
+  @Nested
+  class ComprehensiveRequiredItemTests {
+
+    @Test
+    void detects_증빙서류() {
+      assertThat(service.extract(request("증빙서류를 제출하세요")).actions().getFirst().requiredItems())
+          .contains("증빙서류");
+    }
+
+    @Test
+    void detects_재학증명서() {
+      assertThat(service.extract(request("재학증명서 첨부 후 제출")).actions().getFirst().requiredItems())
+          .contains("재학증명서");
+    }
+
+    @Test
+    void detects_학생증() {
+      assertThat(service.extract(request("학생증 지참하여 참석")).actions().getFirst().requiredItems())
+          .contains("학생증");
+    }
+
+    @Test
+    void detects_통장사본() {
+      assertThat(service.extract(request("통장사본 제출 필수")).actions().getFirst().requiredItems())
+          .contains("통장사본");
+    }
+
+    @Test
+    void detects_사유서() {
+      assertThat(service.extract(request("사유서를 작성하여 제출")).actions().getFirst().requiredItems())
+          .contains("사유서");
+    }
+
+    @Test
+    void detects_등록금납입증명서() {
+      assertThat(service.extract(request("등록금납입증명서 발급 후 제출")).actions().getFirst().requiredItems())
+          .contains("등록금납입증명서");
+    }
+
+    @Test
+    void detects_졸업증명서() {
+      assertThat(service.extract(request("졸업증명서 첨부 필요")).actions().getFirst().requiredItems())
+          .contains("졸업증명서");
+    }
+
+    @Test
+    void detects_추천서() {
+      assertThat(service.extract(request("교수 추천서를 제출하세요")).actions().getFirst().requiredItems())
+          .contains("추천서");
+    }
+
+    @Test
+    void detects_이력서() {
+      assertThat(service.extract(request("이력서와 자기소개서 준비")).actions().getFirst().requiredItems())
+          .contains("이력서");
+    }
+
+    @Test
+    void detects_사진() {
+      assertThat(service.extract(request("증명사진 제출 바랍니다")).actions().getFirst().requiredItems())
+          .contains("사진");
+    }
+
+    @Test
+    void detects_지원서() {
+      assertThat(service.extract(request("지원서 작성 완료 후 제출")).actions().getFirst().requiredItems())
+          .contains("지원서");
+    }
+
+    @Test
+    void detects_계획서() {
+      assertThat(service.extract(request("연구 계획서 제출 요망")).actions().getFirst().requiredItems())
+          .contains("계획서");
+    }
+
+    @Test
+    void detects_보고서() {
+      assertThat(service.extract(request("활동 보고서 작성하여 제출")).actions().getFirst().requiredItems())
+          .contains("보고서");
+    }
+
+    @Test
+    void detects_반명함판() {
+      assertThat(service.extract(request("반명함판 사진 제출")).actions().getFirst().requiredItems())
+          .contains("반명함판");
+    }
+
+    @Test
+    void detects_가족관계증명서() {
+      assertThat(service.extract(request("가족관계증명서를 첨부하여 제출")).actions().getFirst().requiredItems())
+          .contains("가족관계증명서");
+    }
+  }
+
+  @Nested
+  class ComprehensiveEligibilityTests {
+
+    @Test
+    void detects_지원자격() {
+      assertThat(service.extract(request("지원자격은 재학생입니다")).actions().getFirst().eligibility())
+          .contains("지원자격");
+    }
+
+    @Test
+    void detects_참여자격() {
+      assertThat(service.extract(request("참여자격: 2학년 이상")).actions().getFirst().eligibility())
+          .contains("참여자격");
+    }
+
+    @Test
+    void detects_대학원생() {
+      assertThat(service.extract(request("대학원생도 신청 가능합니다")).actions().getFirst().eligibility())
+          .contains("대학원생");
+    }
+
+    @Test
+    void detects_해당_학과() {
+      assertThat(service.extract(request("해당 학과 학생만 신청 가능")).actions().getFirst().eligibility())
+          .contains("해당 학과");
+    }
+
+    @Test
+    void detects_복학생() {
+      assertThat(service.extract(request("복학생 대상 안내입니다")).actions().getFirst().eligibility())
+          .contains("복학생");
+    }
+
+    @Test
+    void detects_신입생() {
+      assertThat(service.extract(request("신입생 오리엔테이션 안내")).actions().getFirst().eligibility())
+          .contains("신입생");
+    }
+
+    @Test
+    void detects_수료자() {
+      assertThat(service.extract(request("수료자 대상 특별 안내")).actions().getFirst().eligibility())
+          .contains("수료자");
+    }
+
+    @Test
+    void detects_휴학생() {
+      assertThat(service.extract(request("휴학생은 별도 절차 필요")).actions().getFirst().eligibility())
+          .contains("휴학생");
+    }
+
+    @Test
+    void detects_전공() {
+      assertThat(service.extract(request("해당 전공 학생 신청 가능")).actions().getFirst().eligibility())
+          .contains("전공");
+    }
+  }
+
+  @Nested
+  class ComprehensiveActionVerbTests {
+
+    @Test
+    void detects_완료() {
+      assertThat(service.extract(request("수강신청을 완료하세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_등록() {
+      assertThat(service.extract(request("프로그램 등록 바랍니다")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_납부() {
+      assertThat(service.extract(request("등록금을 납부하세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_수강() {
+      assertThat(service.extract(request("안전교육을 수강하세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_접수() {
+      assertThat(service.extract(request("온라인으로 접수해주세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_지원() {
+      assertThat(service.extract(request("장학금에 지원하세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_작성() {
+      assertThat(service.extract(request("설문조사를 작성하세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_출석() {
+      assertThat(service.extract(request("특강에 출석해주세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_발급() {
+      assertThat(service.extract(request("증명서를 발급받으세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_예약() {
+      assertThat(service.extract(request("상담 시간을 예약하세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
+    }
+
+    @Test
+    void detects_다운로드() {
+      assertThat(service.extract(request("양식을 다운로드하세요")).actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName())).findFirst()).isPresent();
     }
   }
 
