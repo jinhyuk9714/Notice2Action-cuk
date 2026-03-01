@@ -90,26 +90,30 @@ describe('isActionListResponse', () => {
   });
 
   it('returns true for empty actions array', () => {
-    expect(isActionListResponse({ actions: [] })).toBe(true);
+    expect(isActionListResponse({ actions: [], currentPage: 0, pageSize: 20, totalElements: 0, totalPages: 0, hasNext: false })).toBe(true);
   });
 
   it('returns true for valid summary', () => {
-    expect(isActionListResponse({ actions: [VALID_SUMMARY] })).toBe(true);
+    expect(isActionListResponse({ actions: [VALID_SUMMARY], currentPage: 0, pageSize: 20, totalElements: 1, totalPages: 1, hasNext: false })).toBe(true);
   });
 
   it('returns false when summary missing id', () => {
     const { id: _, ...noId } = VALID_SUMMARY;
-    expect(isActionListResponse({ actions: [noId] })).toBe(false);
+    expect(isActionListResponse({ actions: [noId], currentPage: 0, totalPages: 1, hasNext: false })).toBe(false);
   });
 
   it('returns false when summary missing title', () => {
     const { title: _, ...noTitle } = VALID_SUMMARY;
-    expect(isActionListResponse({ actions: [noTitle] })).toBe(false);
+    expect(isActionListResponse({ actions: [noTitle], currentPage: 0, totalPages: 1, hasNext: false })).toBe(false);
   });
 
   it('returns false when summary missing createdAt', () => {
     const { createdAt: _, ...noCreatedAt } = VALID_SUMMARY;
-    expect(isActionListResponse({ actions: [noCreatedAt] })).toBe(false);
+    expect(isActionListResponse({ actions: [noCreatedAt], currentPage: 0, totalPages: 1, hasNext: false })).toBe(false);
+  });
+
+  it('returns false when missing pagination fields', () => {
+    expect(isActionListResponse({ actions: [VALID_SUMMARY] })).toBe(false);
   });
 });
 

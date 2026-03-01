@@ -21,6 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,20 +94,36 @@ public class ActionPersistenceService {
     return new ActionExtractionResponse(savedActions);
   }
 
+  @Transactional
+  public void deleteAction(UUID actionId) {
+    if (!actionRepository.existsById(actionId)) {
+      throw new NoSuchElementException("Action not found: " + actionId);
+    }
+    actionRepository.deleteById(actionId);
+  }
+
   @Transactional(readOnly = true)
-  public ActionListResponse listActions(String sort) {
-    List<ExtractedActionEntity> entities;
+  public ActionListResponse listActions(String sort, int page, int size) {
+    Pageable pageable = PageRequest.of(page, size);
+    Page<ExtractedActionEntity> pageResult;
     if ("due".equals(sort)) {
-      entities = actionRepository.findAllOrderByDueAtIsoAscNullsLast();
+      pageResult = actionRepository.findAllOrderByDueAtIsoAscNullsLast(pageable);
     } else {
-      entities = actionRepository.findAllByOrderByCreatedAtDesc();
+      pageResult = actionRepository.findAllByOrderByCreatedAtDesc(pageable);
     }
 
-    List<SavedActionSummaryDto> summaries = entities.stream()
+    List<SavedActionSummaryDto> summaries = pageResult.getContent().stream()
         .map(this::toSummaryDto)
         .toList();
 
-    return new ActionListResponse(summaries);
+    return new ActionListResponse(
+        summaries,
+        pageResult.getNumber(),
+        pageResult.getSize(),
+        pageResult.getTotalElements(),
+        pageResult.getTotalPages(),
+        pageResult.hasNext()
+    );
   }
 
   @Transactional(readOnly = true)

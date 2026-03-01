@@ -94,6 +94,11 @@ export type SavedActionSummary = Readonly<{
 
 export type ActionListResponse = Readonly<{
   actions: readonly SavedActionSummary[];
+  currentPage: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
 }>;
 
 export type SourceInfo = Readonly<{
@@ -138,7 +143,13 @@ export function isActionListResponse(value: unknown): value is ActionListRespons
   }
 
   const record = value as Record<string, unknown>;
-  return Array.isArray(record.actions) && record.actions.every(isSavedActionSummary);
+  return (
+    Array.isArray(record.actions) &&
+    record.actions.every(isSavedActionSummary) &&
+    typeof record.currentPage === 'number' &&
+    typeof record.totalPages === 'number' &&
+    typeof record.hasNext === 'boolean'
+  );
 }
 
 export function isSavedActionDetail(value: unknown): value is SavedActionDetail {

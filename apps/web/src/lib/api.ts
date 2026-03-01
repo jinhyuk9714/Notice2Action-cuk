@@ -88,8 +88,8 @@ export async function requestScreenshotExtraction(
   return json;
 }
 
-export async function fetchActionList(sort: 'recent' | 'due' = 'recent'): Promise<ActionListResponse> {
-  const response = await fetch(`/api/v1/actions?sort=${encodeURIComponent(sort)}`);
+export async function fetchActionList(sort: 'recent' | 'due' = 'recent', page: number = 0): Promise<ActionListResponse> {
+  const response = await fetch(`/api/v1/actions?sort=${encodeURIComponent(sort)}&page=${page}&size=20`);
 
   if (!response.ok) {
     const body = await response.text();
@@ -102,6 +102,17 @@ export async function fetchActionList(sort: 'recent' | 'due' = 'recent'): Promis
   }
 
   return json;
+}
+
+export async function deleteAction(id: string): Promise<void> {
+  const response = await fetch(`/api/v1/actions/${encodeURIComponent(id)}`, {
+    method: 'DELETE'
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || '액션 삭제에 실패했습니다');
+  }
 }
 
 export async function fetchActionDetail(id: string): Promise<SavedActionDetail> {

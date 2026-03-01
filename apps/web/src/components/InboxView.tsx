@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
-import { fetchActionDetail, fetchActionList } from '../lib/api';
+import { deleteAction, fetchActionDetail, fetchActionList } from '../lib/api';
 import { loadProfile, saveProfile, isProfileConfigured } from '../lib/profile';
 import type { UserProfile } from '../lib/profile';
 import { computeRelevance } from '../lib/relevance';
@@ -17,24 +17,60 @@ export function InboxView(): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile>(() => loadProfile());
   const [showRelevantOnly, setShowRelevantOnly] = useState<boolean>(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [hasNext, setHasNext] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
 
   useEffect(() => {
-    setLoading(true);
-    fetchActionList(sort)
+    setActions([]);
+    setCurrentPage(0);
+    setHasNext(false);
+  }, [sort]);
+
+  useEffect(() => {
+    const isFirstPage = currentPage === 0;
+    if (isFirstPage) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    fetchActionList(sort, currentPage)
       .then((result) => {
-        setActions(result.actions);
+        setActions((prev) => isFirstPage ? result.actions : [...prev, ...result.actions]);
+        setHasNext(result.hasNext);
         setLoading(false);
+        setLoadingMore(false);
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Failed to load actions';
+        const message = err instanceof Error ? err.message : '액션 목록을 불러오지 못했습니다';
         setError(message);
         setLoading(false);
+        setLoadingMore(false);
       });
-  }, [sort]);
+  }, [sort, currentPage]);
 
   function handleProfileChange(newProfile: UserProfile): void {
     saveProfile(newProfile);
     setProfile(newProfile);
+  }
+
+  async function handleDelete(id: string): Promise<void> {
+    if (!window.confirm('이 액션을 삭제하시겠습니까?')) return;
+    setDeletingId(id);
+    try {
+      await deleteAction(id);
+      setActions((prev) => prev.filter((a) => a.id !== id));
+      if (selectedId === id) {
+        setSelectedId(null);
+        setDetail(null);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다';
+      setError(message);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   function handleSelect(id: string): void {
@@ -46,7 +82,7 @@ export function InboxView(): ReactElement {
         setDetail(result);
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Failed to load detail';
+        const message = err instanceof Error ? err.message : '상세 정보를 불러오지 못했습니다';
         setError(message);
       });
   }
@@ -88,7 +124,7 @@ export function InboxView(): ReactElement {
     <section className={`inbox-layout${selectedId !== null ? ' inbox-has-selection' : ''}`}>
       <div className="inbox-list">
         <div className="panel-header">
-          <p className="eyebrow">Saved Actions</p>
+          <p className="eyebrow">저장된 액션</p>
           <h2>{filteredActions.length}개</h2>
 
           <ProfileSettings profile={profile} onProfileChange={handleProfileChange} />
@@ -124,9 +160,20 @@ export function InboxView(): ReactElement {
               action={action}
               selected={action.id === selectedId}
               onSelect={handleSelect}
+              onDelete={handleDelete}
+              isDeleting={deletingId === action.id}
               relevance={relevance}
             />
           ))}
+          {hasNext ? (
+            <button
+              className="load-more-btn"
+              onClick={() => { setCurrentPage((p) => p + 1); }}
+              disabled={loadingMore}
+            >
+              {loadingMore ? '불러오는 중...' : '더 보기'}
+            </button>
+          ) : null}
         </div>
       </div>
 

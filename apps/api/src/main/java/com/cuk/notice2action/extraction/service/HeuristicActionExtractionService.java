@@ -4,7 +4,6 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
-import com.cuk.notice2action.extraction.domain.SourceCategory;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -186,7 +185,7 @@ public class HeuristicActionExtractionService implements ActionExtractionService
         dueAtIso, dueAtLabel,
         eligibility, requiredItems, systemHint,
         request.sourceCategory(),
-        evidence, true, null
+        evidence, computeInferred(evidence), null
     );
   }
 
@@ -542,6 +541,11 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       return 0;
     }
     return rawHour;
+  }
+
+  private static boolean computeInferred(List<EvidenceSnippetDto> evidence) {
+    if (evidence.isEmpty()) return true;
+    return evidence.stream().anyMatch(e -> e.confidence() < 0.75);
   }
 
   private static boolean isValidDate(int year, int month, int day) {

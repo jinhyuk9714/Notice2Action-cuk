@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActionCard } from './components/ActionCard';
 import { InboxView } from './components/InboxView';
 import { SourceIngestionForm } from './components/SourceIngestionForm';
@@ -14,6 +14,13 @@ export default function App(): ReactElement {
   const [actions, setActions] = useState<readonly ExtractedAction[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (toastMessage === null) return;
+    const timer = setTimeout(() => { setToastMessage(null); }, 3000);
+    return () => { clearTimeout(timer); };
+  }, [toastMessage]);
 
   const actionCountLabel = useMemo(() => `${actions.length}개 액션`, [actions.length]);
 
@@ -24,6 +31,7 @@ export default function App(): ReactElement {
     try {
       const result = await requestActionExtraction(payload);
       setActions(result.actions);
+      setToastMessage(`${result.actions.length}개 액션이 인박스에 저장되었습니다`);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
       setError(message);
@@ -42,6 +50,7 @@ export default function App(): ReactElement {
         ? await requestScreenshotExtraction(file, sourceTitle)
         : await requestPdfExtraction(file, sourceTitle);
       setActions(result.actions);
+      setToastMessage(`${result.actions.length}개 액션이 인박스에 저장되었습니다`);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
       setError(message);
@@ -71,7 +80,7 @@ export default function App(): ReactElement {
             className={activeView === 'inbox' ? 'tab tab-active' : 'tab'}
             onClick={() => { setActiveView('inbox'); }}
           >
-            Action Inbox
+            액션 인박스
           </button>
         </nav>
       </section>
@@ -104,6 +113,12 @@ export default function App(): ReactElement {
       ) : (
         <InboxView />
       )}
+
+      {toastMessage !== null ? (
+        <div className="toast" role="status" aria-live="polite">
+          {toastMessage}
+        </div>
+      ) : null}
     </main>
   );
 }

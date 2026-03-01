@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { computeDday } from '../lib/dday';
+import { categoryLabel, evidenceFieldLabel, inferredLabel } from '../lib/labels';
 import type { UserProfile } from '../lib/profile';
 import { computeRelevance } from '../lib/relevance';
 import type { ReminderOffsetKey } from '../lib/reminder';
@@ -85,12 +86,12 @@ export function ActionDetailPanel({ detail, profile }: ActionDetailPanelProps): 
       <div className="card-header">
         <div>
           {detail.source !== null ? (
-            <p className="eyebrow">{detail.source.sourceCategory}</p>
+            <p className="eyebrow">{categoryLabel(detail.source.sourceCategory)}</p>
           ) : null}
           <h3>{detail.title}</h3>
         </div>
         <span className={detail.inferred ? 'badge badge-warn' : 'badge'}>
-          {detail.inferred ? 'inferred' : 'confirmed'}
+          {inferredLabel(detail.inferred)}
         </span>
       </div>
 
@@ -147,7 +148,7 @@ export function ActionDetailPanel({ detail, profile }: ActionDetailPanelProps): 
       {detail.source !== null ? (
         <div className="source-info">
           <strong>출처</strong>
-          <p>{detail.source.title ?? '제목 없음'} ({detail.source.sourceCategory})</p>
+          <p>{detail.source.title ?? '제목 없음'} ({categoryLabel(detail.source.sourceCategory)})</p>
         </div>
       ) : null}
 
@@ -157,7 +158,7 @@ export function ActionDetailPanel({ detail, profile }: ActionDetailPanelProps): 
           {detail.evidence.length > 0 ? (
             detail.evidence.map((item) => (
               <li key={`${item.fieldName}-${item.snippet}`}>
-                <span className="evidence-field">{item.fieldName}</span>
+                <span className="evidence-field">{evidenceFieldLabel(item.fieldName)}</span>
                 <span>{item.snippet}</span>
               </li>
             ))

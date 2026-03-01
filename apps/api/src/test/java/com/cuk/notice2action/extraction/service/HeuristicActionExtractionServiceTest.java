@@ -971,6 +971,43 @@ class HeuristicActionExtractionServiceTest {
     }
   }
 
+  // --- Inferred Logic Tests ---
+
+  @Nested
+  class InferredLogicTests {
+
+    @Test
+    void confirmed_when_all_evidence_high_confidence() {
+      // Absolute date with year (0.80+) + system hint (0.78) + action verb (0.76) → all >= 0.75
+      ActionExtractionResponse response =
+          service.extract(request("2026년 3월 12일까지 TRINITY에서 신청하세요"));
+      assertThat(response.actions().getFirst().inferred()).isFalse();
+    }
+
+    @Test
+    void inferred_when_relative_date_only() {
+      // Relative date confidence 0.50 < 0.75
+      ActionExtractionResponse response =
+          service.extract(request("내일까지 제출하세요"));
+      assertThat(response.actions().getFirst().inferred()).isTrue();
+    }
+
+    @Test
+    void inferred_when_required_item_only() {
+      // Required item confidence 0.72 < 0.75
+      ActionExtractionResponse response =
+          service.extract(request("성적증명서를 준비하세요"));
+      assertThat(response.actions().getFirst().inferred()).isTrue();
+    }
+
+    @Test
+    void inferred_when_no_evidence() {
+      ActionExtractionResponse response =
+          service.extract(request("학교 공지사항입니다"));
+      assertThat(response.actions().getFirst().inferred()).isTrue();
+    }
+  }
+
   // --- End-to-End Tests ---
 
   @Nested

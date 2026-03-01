@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { categoryLabel, evidenceFieldLabel, inferredLabel } from '../lib/labels';
 import type { ExtractedAction } from '../lib/types';
 
 type ActionCardProps = Readonly<{
@@ -10,11 +11,11 @@ export function ActionCard({ action }: ActionCardProps): ReactElement {
     <article className="card">
       <div className="card-header">
         <div>
-          <p className="eyebrow">{action.sourceCategory}</p>
+          <p className="eyebrow">{categoryLabel(action.sourceCategory)}</p>
           <h3>{action.title}</h3>
         </div>
         <span className={action.inferred ? 'badge badge-warn' : 'badge'}>
-          {action.inferred ? 'inferred' : 'confirmed'}
+          {inferredLabel(action.inferred)}
         </span>
       </div>
 
@@ -45,7 +46,7 @@ export function ActionCard({ action }: ActionCardProps): ReactElement {
           {action.evidence.length > 0 ? (
             action.evidence.map((item) => (
               <li key={`${item.fieldName}-${item.snippet}`}>
-                <span className="evidence-field">{item.fieldName}</span>
+                <span className="evidence-field">{evidenceFieldLabel(item.fieldName)}</span>
                 <span>{item.snippet}</span>
               </li>
             ))

@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { computeDday } from '../lib/dday';
+import { categoryLabel } from '../lib/labels';
 import { hasActiveReminders } from '../lib/reminder';
 import type { RelevanceResult } from '../lib/relevance';
 import type { SavedActionSummary } from '../lib/types';
@@ -8,10 +9,12 @@ type ActionSummaryCardProps = Readonly<{
   action: SavedActionSummary;
   selected: boolean;
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+  isDeleting: boolean;
   relevance: RelevanceResult;
 }>;
 
-export function ActionSummaryCard({ action, selected, onSelect, relevance }: ActionSummaryCardProps): ReactElement {
+export function ActionSummaryCard({ action, selected, onSelect, onDelete, isDeleting, relevance }: ActionSummaryCardProps): ReactElement {
   const dday = computeDday(action.dueAtIso);
   const hasReminder = hasActiveReminders(action.id);
 
@@ -23,7 +26,7 @@ export function ActionSummaryCard({ action, selected, onSelect, relevance }: Act
       <div className="summary-card-header">
         <div>
           {action.sourceCategory !== null ? (
-            <span className="eyebrow">{action.sourceCategory}</span>
+            <span className="eyebrow">{categoryLabel(action.sourceCategory)}</span>
           ) : null}
           <h4>{action.title}</h4>
         </div>
@@ -48,6 +51,17 @@ export function ActionSummaryCard({ action, selected, onSelect, relevance }: Act
         <span className="summary-card-date">
           {hasReminder ? <span className="reminder-indicator" title="리마인더 설정됨">&#128276;</span> : null}
           {new Date(action.createdAt).toLocaleDateString('ko-KR')}
+          <button
+            className="delete-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(action.id);
+            }}
+            disabled={isDeleting}
+            aria-label="액션 삭제"
+          >
+            {isDeleting ? '삭제 중...' : '삭제'}
+          </button>
         </span>
       </div>
     </article>

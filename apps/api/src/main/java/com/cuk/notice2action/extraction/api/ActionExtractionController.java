@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -115,9 +117,17 @@ public class ActionExtractionController {
 
   @GetMapping("/actions")
   public ActionListResponse listActions(
-      @RequestParam(name = "sort", required = false, defaultValue = "recent") String sort
+      @RequestParam(name = "sort", required = false, defaultValue = "recent") String sort,
+      @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+      @RequestParam(name = "size", required = false, defaultValue = "20") int size
   ) {
-    return actionPersistenceService.listActions(sort);
+    return actionPersistenceService.listActions(sort, page, size);
+  }
+
+  @DeleteMapping("/actions/{id}")
+  public ResponseEntity<Void> deleteAction(@PathVariable UUID id) {
+    actionPersistenceService.deleteAction(id);
+    return ResponseEntity.noContent().build();
   }
 
   @GetMapping("/actions/{id}")

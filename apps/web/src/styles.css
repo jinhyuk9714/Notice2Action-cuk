@@ -360,6 +360,56 @@ textarea {
   gap: 6px;
 }
 
+/* Delete button */
+
+.delete-btn {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin-left: 8px;
+  background: #fff;
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.delete-btn:hover {
+  background: #fef2f2;
+}
+
+.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* Load more button */
+
+.load-more-btn {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.load-more-btn:hover {
+  background: #f8fafc;
+  border-color: #93c5fd;
+}
+
+.load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* D-day badges */
 
 .dday-badge {
@@ -625,6 +675,35 @@ textarea {
   color: #94a3b8;
   text-align: center;
   padding: 32px 0;
+}
+
+/* Toast notification */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  z-index: 1000;
+  animation: toast-in 0.25s ease;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.25);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 /* File upload */

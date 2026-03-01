@@ -55,11 +55,13 @@ class ActionPersistenceServiceTest {
     ActionExtractionResponse extracted = extractionService.extract(request);
     persistenceService.persistExtraction(request, extracted);
 
-    ActionListResponse list = persistenceService.listActions("recent");
+    ActionListResponse list = persistenceService.listActions("recent", 0, 100);
 
     assertThat(list.actions()).isNotEmpty();
     assertThat(list.actions().getFirst().title()).isEqualTo("공결 신청 안내");
     assertThat(list.actions().getFirst().sourceCategory()).isEqualTo(SourceCategory.NOTICE);
+    assertThat(list.currentPage()).isZero();
+    assertThat(list.totalElements()).isGreaterThanOrEqualTo(1);
   }
 
   @Test
@@ -88,7 +90,7 @@ class ActionPersistenceServiceTest {
     ActionExtractionResponse noDueExtracted = extractionService.extract(noDueReq);
     persistenceService.persistExtraction(noDueReq, noDueExtracted);
 
-    ActionListResponse list = persistenceService.listActions("due");
+    ActionListResponse list = persistenceService.listActions("due", 0, 100);
 
     assertThat(list.actions()).hasSizeGreaterThanOrEqualTo(3);
     // Earlier due date comes first

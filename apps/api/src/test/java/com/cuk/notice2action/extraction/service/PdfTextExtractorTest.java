@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 
 class PdfTextExtractorTest {
 
-  private final PdfTextExtractor extractor = new PdfTextExtractor();
+  private final PdfTextExtractor extractor = new PdfTextExtractor(
+      "/opt/homebrew/share/tessdata", "kor+eng");
 
   @Test
   void rejects_file_exceeding_10mb() {

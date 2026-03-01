@@ -84,7 +84,7 @@ export function SourceIngestionForm({
       sourceUrl: inputMode === 'url' ? sourceUrl : null,
       sourceTitle: sourceTitle || null,
       sourceCategory,
-      focusProfile: ['성심교정', '복학생']
+      focusProfile: []
     });
   }
 
