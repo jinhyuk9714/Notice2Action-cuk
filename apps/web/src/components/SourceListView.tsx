@@ -55,7 +55,16 @@ export function SourceListView(): ReactElement {
   }
 
   if (error !== null) {
-    return <div className="error-banner">{error}</div>;
+    return (
+      <div className="error-banner">
+        {error}
+        <button className="retry-btn" onClick={() => {
+          setError(null);
+          setSources([]);
+          setCurrentPage(0);
+        }}>다시 시도</button>
+      </div>
+    );
   }
 
   if (sources.length === 0) {

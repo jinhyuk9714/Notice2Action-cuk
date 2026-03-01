@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { ActionCard } from './components/ActionCard';
 import { InboxView } from './components/InboxView';
 import { SourceIngestionForm } from './components/SourceIngestionForm';
@@ -16,6 +16,14 @@ export default function App(): ReactElement {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const lastSubmitRef = useRef<(() => Promise<void>) | null>(null);
+
+  const handleRetry = useCallback(() => {
+    setError(null);
+    if (lastSubmitRef.current !== null) {
+      void lastSubmitRef.current();
+    }
+  }, []);
 
   useEffect(() => {
     if (toastMessage === null) return;
@@ -26,6 +34,7 @@ export default function App(): ReactElement {
   const actionCountLabel = useMemo(() => `${actions.length}개 액션`, [actions.length]);
 
   async function handleSubmit(payload: ActionExtractionRequest): Promise<void> {
+    lastSubmitRef.current = () => handleSubmit(payload);
     setIsSubmitting(true);
     setError(null);
 
@@ -44,6 +53,7 @@ export default function App(): ReactElement {
   }
 
   async function handleEmailSubmit(emailBody: string, subject: string | null): Promise<void> {
+    lastSubmitRef.current = () => handleEmailSubmit(emailBody, subject);
     setIsSubmitting(true);
     setError(null);
 
@@ -62,6 +72,7 @@ export default function App(): ReactElement {
   }
 
   async function handleFileSubmit(file: File, sourceTitle: string | null): Promise<void> {
+    lastSubmitRef.current = () => handleFileSubmit(file, sourceTitle);
     setIsSubmitting(true);
     setError(null);
 
@@ -126,7 +137,12 @@ export default function App(): ReactElement {
               </div>
             </div>
 
-            {error !== null ? <div className="error-banner">{error}</div> : null}
+            {error !== null ? (
+              <div className="error-banner">
+                {error}
+                <button className="retry-btn" onClick={handleRetry}>다시 시도</button>
+              </div>
+            ) : null}
 
             <div className="card-list">
               {actions.length > 0 ? (

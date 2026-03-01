@@ -260,6 +260,27 @@ textarea {
   color: #991b1b;
   border-radius: 12px;
   padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.retry-btn {
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 6px 14px;
+  background: #fff;
+  color: #dc2626;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.retry-btn:hover {
+  background: #fef2f2;
 }
 
 /* Tab navigation */

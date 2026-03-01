@@ -118,7 +118,16 @@ export function InboxView(): ReactElement {
   }
 
   if (error !== null) {
-    return <div className="error-banner">{error}</div>;
+    return (
+      <div className="error-banner">
+        {error}
+        <button className="retry-btn" onClick={() => {
+          setError(null);
+          setActions([]);
+          setCurrentPage(0);
+        }}>다시 시도</button>
+      </div>
+    );
   }
 
   const hasActiveSearch = searchQuery.length > 0 || categoryFilter !== '';

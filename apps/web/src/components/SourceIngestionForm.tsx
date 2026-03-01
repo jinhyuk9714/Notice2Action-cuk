@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react';
+import { loadProfile } from '../lib/profile';
 import type { ActionExtractionRequest, SourceCategory } from '../lib/types';
 
 type SourceIngestionFormProps = Readonly<{
@@ -90,12 +91,18 @@ export function SourceIngestionForm({
       return;
     }
 
+    const profile = loadProfile();
+    const focusKeywords: string[] = [];
+    if (profile.status !== null && profile.status.length > 0) focusKeywords.push(profile.status);
+    if (profile.year !== null) focusKeywords.push(`${profile.year}학년`);
+    if (profile.department !== null && profile.department.length > 0) focusKeywords.push(profile.department);
+
     await onSubmit({
       sourceText: inputMode === 'text' ? sourceText : '',
       sourceUrl: inputMode === 'url' ? sourceUrl : null,
       sourceTitle: sourceTitle || null,
       sourceCategory,
-      focusProfile: []
+      focusProfile: focusKeywords
     });
   }
 

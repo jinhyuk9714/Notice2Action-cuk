@@ -146,9 +146,9 @@ public class HeuristicActionExtractionService implements ActionExtractionService
     List<ActionSegment> segments = segmentIntoActions(normalizedText);
 
     if (segments.size() <= 1) {
-      return new ActionExtractionResponse(
-          List.of(extractSingleAction(request, normalizedText, null, 0, 1))
-      );
+      List<ExtractedActionDto> result =
+          List.of(extractSingleAction(request, normalizedText, null, 0, 1));
+      return new ActionExtractionResponse(sortByProfile(result, request.focusProfile()));
     }
 
     List<ExtractedActionDto> actions = new ArrayList<>();
@@ -157,7 +157,38 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       ActionSegment seg = segments.get(i);
       actions.add(extractSingleAction(request, seg.text(), seg.primaryVerb(), i + 1, total));
     }
-    return new ActionExtractionResponse(actions);
+    return new ActionExtractionResponse(sortByProfile(actions, request.focusProfile()));
+  }
+
+  private List<ExtractedActionDto> sortByProfile(
+      List<ExtractedActionDto> actions, List<String> focusProfile) {
+    if (focusProfile == null || focusProfile.isEmpty()) {
+      return actions;
+    }
+    List<String> lowerKeywords = focusProfile.stream()
+        .filter(k -> k != null && !k.isBlank())
+        .map(k -> k.toLowerCase(Locale.ROOT))
+        .toList();
+    if (lowerKeywords.isEmpty()) {
+      return actions;
+    }
+    // Stable sort: profile-matching actions first
+    List<ExtractedActionDto> sorted = new ArrayList<>(actions);
+    sorted.sort((a, b) -> {
+      boolean aMatch = matchesProfile(a, lowerKeywords);
+      boolean bMatch = matchesProfile(b, lowerKeywords);
+      return Boolean.compare(bMatch, aMatch); // true first
+    });
+    return sorted;
+  }
+
+  private boolean matchesProfile(ExtractedActionDto action, List<String> lowerKeywords) {
+    String eligibility = action.eligibility();
+    if (eligibility == null || eligibility.isBlank()) {
+      return false;
+    }
+    String lowerEligibility = eligibility.toLowerCase(Locale.ROOT);
+    return lowerKeywords.stream().anyMatch(lowerEligibility::contains);
   }
 
   private ExtractedActionDto extractSingleAction(
