@@ -3,20 +3,22 @@ import { ActionCard } from './components/ActionCard';
 import { InboxView } from './components/InboxView';
 import { SourceIngestionForm } from './components/SourceIngestionForm';
 import { SourceListView } from './components/SourceListView';
+import { ThemeToggle } from './components/ThemeToggle';
 import { requestActionExtraction, requestEmailExtraction, requestPdfExtraction, requestScreenshotExtraction } from './lib/api';
 import type { ActionExtractionRequest, ExtractedAction } from './lib/types';
+import { useHashRoute } from './lib/useHashRoute';
 import { useReminderCheck } from './lib/useReminderCheck';
-
-type ActiveView = 'extract' | 'inbox' | 'sources';
 
 export default function App(): ReactElement {
   useReminderCheck();
-  const [activeView, setActiveView] = useState<ActiveView>('extract');
+  const [route, navigate] = useHashRoute();
   const [actions, setActions] = useState<readonly ExtractedAction[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const lastSubmitRef = useRef<(() => Promise<void>) | null>(null);
+
+  const activeView = route.view;
 
   const handleRetry = useCallback(() => {
     setError(null);
@@ -96,7 +98,10 @@ export default function App(): ReactElement {
   return (
     <main className="page-shell">
       <section className="hero">
-        <p className="eyebrow">Notice2Action CUK</p>
+        <div className="hero-top">
+          <p className="eyebrow">Notice2Action CUK</p>
+          <ThemeToggle />
+        </div>
         <h1>성심교정용 Campus Action Inbox</h1>
         <p className="hero-copy">
           공지, 메일, PDF, 스크린샷에서 <strong>내가 지금 해야 할 일</strong>만 구조화합니다.
@@ -106,60 +111,68 @@ export default function App(): ReactElement {
         <nav className="tab-nav">
           <button
             className={activeView === 'extract' ? 'tab tab-active' : 'tab'}
-            onClick={() => { setActiveView('extract'); }}
+            onClick={() => { navigate({ view: 'extract' }); }}
           >
             액션 추출
           </button>
           <button
             className={activeView === 'inbox' ? 'tab tab-active' : 'tab'}
-            onClick={() => { setActiveView('inbox'); }}
+            onClick={() => { navigate({ view: 'inbox', actionId: null }); }}
           >
             액션 인박스
           </button>
           <button
             className={activeView === 'sources' ? 'tab tab-active' : 'tab'}
-            onClick={() => { setActiveView('sources'); }}
+            onClick={() => { navigate({ view: 'sources', sourceId: null }); }}
           >
             소스 히스토리
           </button>
         </nav>
       </section>
 
-      {activeView === 'extract' ? (
-        <section className="layout">
-          <SourceIngestionForm onSubmit={handleSubmit} onFileSubmit={handleFileSubmit} onEmailSubmit={handleEmailSubmit} isSubmitting={isSubmitting} />
+      <div className="view-transition" key={activeView}>
+        {activeView === 'extract' ? (
+          <section className="layout">
+            <SourceIngestionForm onSubmit={handleSubmit} onFileSubmit={handleFileSubmit} onEmailSubmit={handleEmailSubmit} isSubmitting={isSubmitting} />
 
-          <div className="panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">추출 결과</p>
-                <h2>{actionCountLabel}</h2>
+            <div className="panel">
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow">추출 결과</p>
+                  <h2>{actionCountLabel}</h2>
+                </div>
+              </div>
+
+              {error !== null ? (
+                <div className="error-banner">
+                  {error}
+                  <button className="retry-btn" onClick={handleRetry}>다시 시도</button>
+                </div>
+              ) : null}
+
+              <div className="card-list">
+                {actions.length > 0 ? (
+                  actions.map((action) => (
+                    <ActionCard key={`${action.title}-${action.dueAtIso ?? 'none'}`} action={action} />
+                  ))
+                ) : (
+                  <p className="empty-hint">텍스트를 입력하고 추출하면 결과가 여기에 표시됩니다.</p>
+                )}
               </div>
             </div>
-
-            {error !== null ? (
-              <div className="error-banner">
-                {error}
-                <button className="retry-btn" onClick={handleRetry}>다시 시도</button>
-              </div>
-            ) : null}
-
-            <div className="card-list">
-              {actions.length > 0 ? (
-                actions.map((action) => (
-                  <ActionCard key={`${action.title}-${action.dueAtIso ?? 'none'}`} action={action} />
-                ))
-              ) : (
-                <p className="empty-hint">텍스트를 입력하고 추출하면 결과가 여기에 표시됩니다.</p>
-              )}
-            </div>
-          </div>
-        </section>
-      ) : activeView === 'inbox' ? (
-        <InboxView />
-      ) : (
-        <SourceListView />
-      )}
+          </section>
+        ) : activeView === 'inbox' ? (
+          <InboxView
+            initialActionId={route.view === 'inbox' ? route.actionId : null}
+            onActionSelect={(id) => { navigate({ view: 'inbox', actionId: id }); }}
+          />
+        ) : (
+          <SourceListView
+            initialSourceId={route.view === 'sources' ? route.sourceId : null}
+            onSourceSelect={(id) => { navigate({ view: 'sources', sourceId: id }); }}
+          />
+        )}
+      </div>
 
       {toastMessage !== null ? (
         <div className="toast" role="status" aria-live="polite">

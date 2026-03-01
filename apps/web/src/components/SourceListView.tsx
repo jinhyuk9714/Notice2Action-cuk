@@ -5,15 +5,30 @@ import type { SavedActionSummary, SourceDetail, SourceSummary } from '../lib/typ
 import { SkeletonCard } from './SkeletonCard';
 import { SourceCard } from './SourceCard';
 
-export function SourceListView(): ReactElement {
+type SourceListViewProps = Readonly<{
+  initialSourceId: string | null;
+  onSourceSelect: (id: string | null) => void;
+}>;
+
+export function SourceListView({ initialSourceId, onSourceSelect }: SourceListViewProps): ReactElement {
   const [sources, setSources] = useState<readonly SourceSummary[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSourceId);
   const [detail, setDetail] = useState<SourceDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [hasNext, setHasNext] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (initialSourceId !== null && initialSourceId !== selectedId) {
+      setSelectedId(initialSourceId);
+      setDetail(null);
+      fetchSourceDetail(initialSourceId)
+        .then((result) => { setDetail(result); })
+        .catch(() => { /* handled by select */ });
+    }
+  }, [initialSourceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const isFirstPage = currentPage === 0;
@@ -40,6 +55,7 @@ export function SourceListView(): ReactElement {
   function handleSelect(id: string): void {
     setSelectedId(id);
     setDetail(null);
+    onSourceSelect(id);
 
     fetchSourceDetail(id)
       .then((result) => {
@@ -116,7 +132,7 @@ export function SourceListView(): ReactElement {
           <>
             <button
               className="mobile-back-btn"
-              onClick={() => { setSelectedId(null); setDetail(null); }}
+              onClick={() => { setSelectedId(null); setDetail(null); onSourceSelect(null); }}
             >
               &larr; 목록으로
             </button>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { deleteAction, fetchActionDetail, fetchActionList, type SearchParams } from '../lib/api';
 import { generateActionsCsv, downloadCsv } from '../lib/csv';
+import { computeDateRange, getPresetLabel, type DateRangePreset } from '../lib/dateRange';
 import { loadProfile, saveProfile, isProfileConfigured } from '../lib/profile';
 import type { UserProfile } from '../lib/profile';
 import { computeRelevance } from '../lib/relevance';
@@ -10,10 +11,15 @@ import { ActionSummaryCard } from './ActionSummaryCard';
 import { ProfileSettings } from './ProfileSettings';
 import { SkeletonCard } from './SkeletonCard';
 
-export function InboxView(): ReactElement {
+type InboxViewProps = Readonly<{
+  initialActionId: string | null;
+  onActionSelect: (id: string | null) => void;
+}>;
+
+export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): ReactElement {
   const [actions, setActions] = useState<readonly SavedActionSummary[]>([]);
   const [sort, setSort] = useState<'recent' | 'due'>('due');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialActionId);
   const [detail, setDetail] = useState<SavedActionDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,17 +32,35 @@ export function InboxView(): ReactElement {
   const [searchInput, setSearchInput] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<SourceCategory | ''>('');
+  const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>('all');
+  const [customFrom, setCustomFrom] = useState<string>('');
+  const [customTo, setCustomTo] = useState<string>('');
+
+  useEffect(() => {
+    if (initialActionId !== null && initialActionId !== selectedId) {
+      setSelectedId(initialActionId);
+      setDetail(null);
+      fetchActionDetail(initialActionId)
+        .then((result) => { setDetail(result); })
+        .catch(() => { /* handled by select */ });
+    }
+  }, [initialActionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const timer = setTimeout(() => { setSearchQuery(searchInput); }, 300);
     return () => { clearTimeout(timer); };
   }, [searchInput]);
 
+  const dateRange = useMemo(
+    () => computeDateRange(dateRangePreset, customFrom, customTo),
+    [dateRangePreset, customFrom, customTo],
+  );
+
   useEffect(() => {
     setActions([]);
     setCurrentPage(0);
     setHasNext(false);
-  }, [sort, searchQuery, categoryFilter]);
+  }, [sort, searchQuery, categoryFilter, dateRange]);
 
   useEffect(() => {
     const isFirstPage = currentPage === 0;
@@ -48,6 +72,8 @@ export function InboxView(): ReactElement {
     const search: SearchParams = {
       ...(searchQuery.length > 0 ? { q: searchQuery } : {}),
       ...(categoryFilter !== '' ? { category: categoryFilter } : {}),
+      ...(dateRange.from !== undefined ? { dueDateFrom: dateRange.from } : {}),
+      ...(dateRange.to !== undefined ? { dueDateTo: dateRange.to } : {}),
     };
     fetchActionList(sort, currentPage, search)
       .then((result) => {
@@ -62,7 +88,7 @@ export function InboxView(): ReactElement {
         setLoading(false);
         setLoadingMore(false);
       });
-  }, [sort, currentPage, searchQuery, categoryFilter]);
+  }, [sort, currentPage, searchQuery, categoryFilter, dateRange]);
 
   function handleProfileChange(newProfile: UserProfile): void {
     saveProfile(newProfile);
@@ -78,6 +104,7 @@ export function InboxView(): ReactElement {
       if (selectedId === id) {
         setSelectedId(null);
         setDetail(null);
+        onActionSelect(null);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다';
@@ -90,6 +117,7 @@ export function InboxView(): ReactElement {
   function handleSelect(id: string): void {
     setSelectedId(id);
     setDetail(null);
+    onActionSelect(id);
 
     fetchActionDetail(id)
       .then((result) => {
@@ -138,7 +166,7 @@ export function InboxView(): ReactElement {
     );
   }
 
-  const hasActiveSearch = searchQuery.length > 0 || categoryFilter !== '';
+  const hasActiveSearch = searchQuery.length > 0 || categoryFilter !== '' || dateRangePreset !== 'all';
 
   if (actions.length === 0 && !hasActiveSearch) {
     return (
@@ -213,6 +241,38 @@ export function InboxView(): ReactElement {
             >최신순</button>
           </div>
 
+          <div className="date-range-row">
+            {(['all', 'this-week', 'this-month', 'overdue', 'custom'] as const).map((preset) => (
+              <button
+                key={preset}
+                className={`sort-btn${dateRangePreset === preset ? ' sort-btn-active' : ''}`}
+                onClick={() => { setDateRangePreset(preset); }}
+              >
+                {getPresetLabel(preset)}
+              </button>
+            ))}
+          </div>
+
+          {dateRangePreset === 'custom' ? (
+            <div className="date-range-custom">
+              <input
+                type="date"
+                className="date-input"
+                value={customFrom}
+                onChange={(e) => { setCustomFrom(e.target.value); }}
+                aria-label="시작일"
+              />
+              <span className="date-range-sep">~</span>
+              <input
+                type="date"
+                className="date-input"
+                value={customTo}
+                onChange={(e) => { setCustomTo(e.target.value); }}
+                aria-label="종료일"
+              />
+            </div>
+          ) : null}
+
           {profileConfigured ? (
             <div className="filter-toggle">
               <label className="filter-label">
@@ -258,7 +318,7 @@ export function InboxView(): ReactElement {
           <>
             <button
               className="mobile-back-btn"
-              onClick={() => { setSelectedId(null); setDetail(null); }}
+              onClick={() => { setSelectedId(null); setDetail(null); onActionSelect(null); }}
             >
               &larr; 목록으로
             </button>
