@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { computeDday } from '../lib/dday';
+import { hasActiveReminders } from '../lib/reminder';
 import type { SavedActionSummary } from '../lib/types';
 
 type ActionSummaryCardProps = Readonly<{
@@ -10,6 +11,7 @@ type ActionSummaryCardProps = Readonly<{
 
 export function ActionSummaryCard({ action, selected, onSelect }: ActionSummaryCardProps): ReactElement {
   const dday = computeDday(action.dueAtIso);
+  const hasReminder = hasActiveReminders(action.id);
 
   return (
     <article
@@ -35,6 +37,7 @@ export function ActionSummaryCard({ action, selected, onSelect }: ActionSummaryC
           ) : null}
         </span>
         <span className="summary-card-date">
+          {hasReminder ? <span className="reminder-indicator" title="리마인더 설정됨">&#128276;</span> : null}
           {new Date(action.createdAt).toLocaleDateString('ko-KR')}
         </span>
       </div>

@@ -1,7 +1,8 @@
 import { useState, type ReactElement } from 'react';
 import { computeDday } from '../lib/dday';
+import type { ReminderOffsetKey } from '../lib/reminder';
 import {
-  loadReminders,
+  getRemindersForAction,
   saveReminder,
   removeReminder,
   requestNotificationPermission,
@@ -12,15 +13,38 @@ type ActionDetailPanelProps = Readonly<{
   detail: SavedActionDetail;
 }>;
 
+type ReminderOption = Readonly<{
+  key: ReminderOffsetKey;
+  label: string;
+  offsetMs: number;
+}>;
+
+const REMINDER_OPTIONS: readonly ReminderOption[] = [
+  { key: 'D-7', label: 'D-7', offsetMs: 7 * 24 * 60 * 60 * 1000 },
+  { key: 'D-3', label: 'D-3', offsetMs: 3 * 24 * 60 * 60 * 1000 },
+  { key: 'D-1', label: 'D-1', offsetMs: 1 * 24 * 60 * 60 * 1000 },
+  { key: 'D-Day', label: '당일', offsetMs: 0 },
+];
+
+function getActiveOffsetKeys(actionId: string): Set<ReminderOffsetKey> {
+  const reminders = getRemindersForAction(actionId);
+  return new Set(reminders.map((r) => r.offsetKey));
+}
+
 export function ActionDetailPanel({ detail }: ActionDetailPanelProps): ReactElement {
   const dday = computeDday(detail.dueAtIso);
-  const existingReminder = loadReminders().find(r => r.actionId === detail.id);
-  const [hasReminder, setHasReminder] = useState(existingReminder !== undefined && !existingReminder.dismissed);
+  const [activeKeys, setActiveKeys] = useState<Set<ReminderOffsetKey>>(
+    () => getActiveOffsetKeys(detail.id),
+  );
 
-  async function handleToggleReminder(): Promise<void> {
-    if (hasReminder) {
-      removeReminder(detail.id);
-      setHasReminder(false);
+  async function handleToggle(option: ReminderOption): Promise<void> {
+    if (activeKeys.has(option.key)) {
+      removeReminder(detail.id, option.key);
+      setActiveKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(option.key);
+        return next;
+      });
       return;
     }
 
@@ -29,21 +53,28 @@ export function ActionDetailPanel({ detail }: ActionDetailPanelProps): ReactElem
     if (detail.dueAtIso === null) return;
 
     const dueDate = new Date(detail.dueAtIso);
-    const remindAt = new Date(dueDate.getTime() - 24 * 60 * 60 * 1000);
 
-    const remindAtIso = remindAt.getTime() < Date.now()
-      ? new Date().toISOString()
-      : remindAt.toISOString();
+    let remindAt: Date;
+    if (option.offsetMs === 0) {
+      // D-Day: remind at 09:00 KST on the due date
+      remindAt = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate(), 0, 0, 0);
+    } else {
+      remindAt = new Date(dueDate.getTime() - option.offsetMs);
+    }
+
+    const remindAtIso =
+      remindAt.getTime() < Date.now() ? new Date().toISOString() : remindAt.toISOString();
 
     saveReminder({
       actionId: detail.id,
+      offsetKey: option.key,
       remindAtIso,
       title: detail.title,
       dueLabel: detail.dueAtLabel ?? dueDate.toLocaleDateString('ko-KR'),
       dismissed: false,
     });
 
-    setHasReminder(true);
+    setActiveKeys((prev) => new Set([...prev, option.key]));
   }
 
   return (
@@ -89,12 +120,18 @@ export function ActionDetailPanel({ detail }: ActionDetailPanelProps): ReactElem
       </dl>
 
       {detail.dueAtIso !== null ? (
-        <button
-          className={`reminder-btn${hasReminder ? ' reminder-btn-active' : ''}`}
-          onClick={() => { void handleToggleReminder(); }}
-        >
-          {hasReminder ? '리마인더 해제' : '리마인더 설정 (D-1)'}
-        </button>
+        <div className="reminder-options">
+          <span className="reminder-options-label">리마인더</span>
+          {REMINDER_OPTIONS.map((option) => (
+            <button
+              key={option.key}
+              className={`reminder-option${activeKeys.has(option.key) ? ' reminder-option-active' : ''}`}
+              onClick={() => { void handleToggle(option); }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       ) : null}
 
       {detail.source !== null ? (
