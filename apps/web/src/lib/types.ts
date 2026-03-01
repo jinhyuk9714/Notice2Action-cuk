@@ -19,6 +19,7 @@ export type ExtractedAction = Readonly<{
   sourceCategory: SourceCategory;
   evidence: readonly EvidenceSnippet[];
   inferred: boolean;
+  confidenceScore: number;
   createdAt: string | null;
 }>;
 
@@ -100,6 +101,7 @@ export type SavedActionSummary = Readonly<{
   eligibility: string | null;
   sourceCategory: SourceCategory | null;
   sourceTitle: string | null;
+  confidenceScore: number;
   createdAt: string;
 }>;
 
@@ -129,6 +131,7 @@ export type SavedActionDetail = Readonly<{
   requiredItems: readonly string[];
   systemHint: string | null;
   inferred: boolean;
+  confidenceScore: number;
   createdAt: string;
   source: SourceInfo | null;
   evidence: readonly EvidenceSnippet[];

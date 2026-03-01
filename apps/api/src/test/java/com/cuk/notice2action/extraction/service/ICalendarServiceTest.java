@@ -24,7 +24,7 @@ class ICalendarServiceTest {
     return new ExtractedActionEntity(
         UUID.randomUUID(), source, title, summary,
         dueAt, dueAt != null ? dueAt.toLocalDate().toString() : null,
-        "재학생", "[]", systemHint, false, OffsetDateTime.now()
+        "재학생", "[]", systemHint, false, 0.0, OffsetDateTime.now()
     );
   }
 

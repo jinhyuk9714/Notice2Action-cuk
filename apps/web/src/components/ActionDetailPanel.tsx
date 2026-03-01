@@ -148,9 +148,14 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
             <h3>{detail.title}</h3>
           )}
         </div>
-        <span className={detail.inferred ? 'badge badge-warn' : 'badge'}>
-          {inferredLabel(detail.inferred)}
-        </span>
+        <div className="badge-group">
+          <span className={`confidence-badge ${detail.confidenceScore >= 0.75 ? 'confidence-high' : detail.confidenceScore >= 0.5 ? 'confidence-medium' : 'confidence-low'}`}>
+            {Math.round(detail.confidenceScore * 100)}% 신뢰도
+          </span>
+          <span className={detail.inferred ? 'badge badge-warn' : 'badge'}>
+            {inferredLabel(detail.inferred)}
+          </span>
+        </div>
       </div>
 
       {editing ? (

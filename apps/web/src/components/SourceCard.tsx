@@ -21,7 +21,7 @@ export function SourceCard({ source, selected, onSelect }: SourceCardProps): Rea
       onClick={() => { onSelect(source.id); }}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') onSelect(source.id); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(source.id); } }}
     >
       <div className="source-card-header">
         <span className="badge">{categoryLabel(source.sourceCategory)}</span>

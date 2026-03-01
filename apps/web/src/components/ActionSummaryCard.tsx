@@ -22,6 +22,9 @@ export function ActionSummaryCard({ action, selected, onSelect, onDelete, isDele
     <article
       className={`summary-card${selected ? ' summary-card-selected' : ''}`}
       onClick={() => { onSelect(action.id); }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(action.id); } }}
     >
       <div className="summary-card-header">
         <div>

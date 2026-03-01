@@ -92,7 +92,8 @@ public class ActionPersistenceService {
       ExtractedActionEntity actionEntity = new ExtractedActionEntity(
           actionId, source, dto.title(), dto.actionSummary(),
           dueAtIso, dto.dueAtLabel(), dto.eligibility(),
-          requiredItemsJson, dto.systemHint(), dto.inferred(), now
+          requiredItemsJson, dto.systemHint(), dto.inferred(),
+          dto.confidenceScore(), now
       );
 
       for (EvidenceSnippetDto ev : dto.evidence()) {
@@ -110,7 +111,7 @@ public class ActionPersistenceService {
           dto.title(), dto.actionSummary(), dto.dueAtIso(),
           dto.dueAtLabel(), dto.eligibility(), dto.requiredItems(),
           dto.systemHint(), dto.sourceCategory(), dto.evidence(),
-          dto.inferred(), now
+          dto.inferred(), dto.confidenceScore(), now
       ));
     }
 
@@ -165,7 +166,7 @@ public class ActionPersistenceService {
             entity.getEvidenceSnippets().stream()
                 .map(e -> new EvidenceSnippetDto(e.getFieldName(), e.getSnippet(), e.getConfidence()))
                 .toList(),
-            entity.isInferred(), entity.getCreatedAt()
+            entity.isInferred(), entity.getConfidenceScore(), entity.getCreatedAt()
         ))
         .toList();
     return new ActionExtractionResponse(actions, true);
@@ -272,6 +273,7 @@ public class ActionPersistenceService {
         entity.getEligibility(),
         source != null ? source.getSourceCategory() : null,
         source != null ? source.getTitle() : null,
+        entity.getConfidenceScore(),
         entity.getCreatedAt()
     );
   }
@@ -298,6 +300,7 @@ public class ActionPersistenceService {
         fromJson(entity.getRequiredItemsJson()),
         entity.getSystemHint(),
         entity.isInferred(),
+        entity.getConfidenceScore(),
         entity.getCreatedAt(),
         sourceInfo,
         evidence

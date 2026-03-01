@@ -203,6 +203,36 @@ textarea {
   color: #c2410c;
 }
 
+.badge-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.confidence-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.confidence-high {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.confidence-medium {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.confidence-low {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .evidence-block {
   border-top: 1px solid #eef2f7;
   padding-top: 14px;
@@ -908,6 +938,19 @@ textarea {
 .source-info p {
   margin: 6px 0 0;
   color: #475569;
+}
+
+/* Focus-visible accessibility */
+
+.summary-card:focus-visible,
+.source-card:focus-visible,
+.tab:focus-visible,
+.sort-btn:focus-visible,
+.toggle:focus-visible,
+.edit-toggle-btn:focus-visible,
+.retry-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 /* States */

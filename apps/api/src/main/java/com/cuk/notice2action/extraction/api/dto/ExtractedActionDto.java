@@ -18,6 +18,7 @@ public record ExtractedActionDto(
     SourceCategory sourceCategory,
     List<EvidenceSnippetDto> evidence,
     boolean inferred,
+    double confidenceScore,
     OffsetDateTime createdAt
 ) {
   public ExtractedActionDto {

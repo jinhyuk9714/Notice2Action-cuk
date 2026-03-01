@@ -49,6 +49,9 @@ public class ExtractedActionEntity {
   @Column(name = "inferred", nullable = false)
   private boolean inferred;
 
+  @Column(name = "confidence_score", nullable = false)
+  private double confidenceScore;
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -60,7 +63,7 @@ public class ExtractedActionEntity {
   public ExtractedActionEntity(UUID id, NoticeSourceEntity source, String title,
       String actionSummary, OffsetDateTime dueAtIso, String dueAtLabel,
       String eligibility, String requiredItemsJson, String systemHint,
-      boolean inferred, OffsetDateTime createdAt) {
+      boolean inferred, double confidenceScore, OffsetDateTime createdAt) {
     this.id = id;
     this.source = source;
     this.title = title;
@@ -71,6 +74,7 @@ public class ExtractedActionEntity {
     this.requiredItemsJson = requiredItemsJson;
     this.systemHint = systemHint;
     this.inferred = inferred;
+    this.confidenceScore = confidenceScore;
     this.createdAt = createdAt;
   }
 
@@ -117,6 +121,10 @@ public class ExtractedActionEntity {
 
   public boolean isInferred() {
     return inferred;
+  }
+
+  public double getConfidenceScore() {
+    return confidenceScore;
   }
 
   public OffsetDateTime getCreatedAt() {

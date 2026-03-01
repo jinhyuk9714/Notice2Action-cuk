@@ -210,14 +210,21 @@ public class HeuristicActionExtractionService implements ActionExtractionService
     String title = deriveTitle(request.sourceTitle(), text, actionIndex, totalActions);
     String actionSummary = buildActionSummary(actionVerb, dueAtLabel, systemHint, requiredItems, text);
 
+    double confidenceScore = computeConfidenceScore(evidence);
+
     return new ExtractedActionDto(
         null, null,
         title, actionSummary,
         dueAtIso, dueAtLabel,
         eligibility, requiredItems, systemHint,
         request.sourceCategory(),
-        evidence, computeInferred(evidence), null
+        evidence, computeInferred(evidence), confidenceScore, null
     );
+  }
+
+  private static double computeConfidenceScore(List<EvidenceSnippetDto> evidence) {
+    if (evidence.isEmpty()) return 0.0;
+    return evidence.stream().mapToDouble(EvidenceSnippetDto::confidence).average().orElse(0.0);
   }
 
   // --- Text normalization ---

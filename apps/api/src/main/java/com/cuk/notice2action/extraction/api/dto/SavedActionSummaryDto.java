@@ -13,5 +13,6 @@ public record SavedActionSummaryDto(
     String eligibility,
     SourceCategory sourceCategory,
     String sourceTitle,
+    double confidenceScore,
     OffsetDateTime createdAt
 ) {}

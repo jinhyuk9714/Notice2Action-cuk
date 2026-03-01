@@ -92,6 +92,7 @@ public class SourceHistoryService {
         entity.getEligibility(),
         source != null ? source.getSourceCategory() : null,
         source != null ? source.getTitle() : null,
+        entity.getConfidenceScore(),
         entity.getCreatedAt()
     );
   }

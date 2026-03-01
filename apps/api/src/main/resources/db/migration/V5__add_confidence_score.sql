@@ -1,0 +1,1 @@
+ALTER TABLE extracted_action ADD COLUMN confidence_score DOUBLE PRECISION NOT NULL DEFAULT 0.0;

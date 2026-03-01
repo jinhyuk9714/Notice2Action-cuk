@@ -14,6 +14,7 @@ public record SavedActionDetailDto(
     List<String> requiredItems,
     String systemHint,
     boolean inferred,
+    double confidenceScore,
     OffsetDateTime createdAt,
     SourceInfoDto source,
     List<EvidenceSnippetDto> evidence
