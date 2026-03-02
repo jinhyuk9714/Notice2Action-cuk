@@ -7,6 +7,15 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
+import com.cuk.notice2action.extraction.service.extractor.ActionSegmenter;
+import com.cuk.notice2action.extraction.service.extractor.ActionSummaryBuilder;
+import com.cuk.notice2action.extraction.service.extractor.ActionVerbExtractor;
+import com.cuk.notice2action.extraction.service.extractor.DateExtractor;
+import com.cuk.notice2action.extraction.service.extractor.EligibilityExtractor;
+import com.cuk.notice2action.extraction.service.extractor.RequiredItemExtractor;
+import com.cuk.notice2action.extraction.service.extractor.SystemHintExtractor;
+import com.cuk.notice2action.extraction.service.extractor.TextNormalizer;
+import com.cuk.notice2action.extraction.service.extractor.TitleDeriver;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Nested;
@@ -16,12 +25,26 @@ class HeuristicActionExtractionServiceTest {
 
   private static final LocalDate FIXED_TODAY = LocalDate.of(2026, 3, 1); // Sunday
 
-  private final HeuristicActionExtractionService service = new HeuristicActionExtractionService() {
+  private final DateExtractor dateExtractor = new DateExtractor() {
     @Override
-    LocalDate today() {
+    protected LocalDate today() {
       return FIXED_TODAY;
     }
   };
+
+  private final ActionVerbExtractor actionVerbExtractor = new ActionVerbExtractor();
+
+  private final HeuristicActionExtractionService service = new HeuristicActionExtractionService(
+      new TextNormalizer(),
+      dateExtractor,
+      new SystemHintExtractor(),
+      new RequiredItemExtractor(),
+      actionVerbExtractor,
+      new EligibilityExtractor(),
+      new ActionSegmenter(actionVerbExtractor),
+      new ActionSummaryBuilder(),
+      new TitleDeriver()
+  );
 
   private ActionExtractionRequest request(String text) {
     return new ActionExtractionRequest(text, null, null, SourceCategory.NOTICE, List.of());
