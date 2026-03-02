@@ -1,29 +1,17 @@
-import { useEffect, useState, type ReactElement } from 'react';
-import { revertActionField, updateAction } from '../lib/api';
+import { type ReactElement } from 'react';
 import { computeDday } from '../lib/dday';
 import { categoryLabel, evidenceFieldLabel, inferredLabel } from '../lib/labels';
 import type { UserProfile } from '../lib/profile';
 import { computeRelevance } from '../lib/relevance';
-import type { ReminderOffsetKey } from '../lib/reminder';
-import {
-  getRemindersForAction,
-  saveReminder,
-  removeReminder,
-  requestNotificationPermission,
-} from '../lib/reminder';
 import type { SavedActionDetail } from '../lib/types';
+import { useActionEditor } from '../lib/useActionEditor';
+import { type ReminderOption, useActionReminderToggle } from '../lib/useActionReminderToggle';
 import { OverrideBadge } from './OverrideBadge';
 
 type ActionDetailPanelProps = Readonly<{
   detail: SavedActionDetail;
   profile: UserProfile;
   onActionUpdated?: (updated: SavedActionDetail) => void;
-}>;
-
-type ReminderOption = Readonly<{
-  key: ReminderOffsetKey;
-  label: string;
-  offsetMs: number;
 }>;
 
 const REMINDER_OPTIONS: readonly ReminderOption[] = [
@@ -33,131 +21,11 @@ const REMINDER_OPTIONS: readonly ReminderOption[] = [
   { key: 'D-Day', label: '당일', offsetMs: 0 },
 ];
 
-function getActiveOffsetKeys(actionId: string): Set<ReminderOffsetKey> {
-  const reminders = getRemindersForAction(actionId);
-  return new Set(reminders.map((r) => r.offsetKey));
-}
-
 export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDetailPanelProps): ReactElement {
   const dday = computeDday(detail.dueAtIso);
   const relevance = computeRelevance(detail.eligibility, profile);
-  const [activeKeys, setActiveKeys] = useState<Set<ReminderOffsetKey>>(
-    () => getActiveOffsetKeys(detail.id),
-  );
-  const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(detail.title);
-  const [editSummary, setEditSummary] = useState(detail.actionSummary);
-  const [editDueLabel, setEditDueLabel] = useState(detail.dueAtLabel ?? '');
-  const [editEligibility, setEditEligibility] = useState(detail.eligibility ?? '');
-  const [editSystemHint, setEditSystemHint] = useState(detail.systemHint ?? '');
-  const [saving, setSaving] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [reverting, setReverting] = useState<string | null>(null);
-
-  useEffect(() => {
-    setActiveKeys(getActiveOffsetKeys(detail.id));
-    setEditing(false);
-    setEditTitle(detail.title);
-    setEditSummary(detail.actionSummary);
-    setEditDueLabel(detail.dueAtLabel ?? '');
-    setEditEligibility(detail.eligibility ?? '');
-    setEditSystemHint(detail.systemHint ?? '');
-    setEditError(null);
-    setSaving(false);
-    setReverting(null);
-  }, [detail]);
-
-  function startEditing(): void {
-    setEditTitle(detail.title);
-    setEditSummary(detail.actionSummary);
-    setEditDueLabel(detail.dueAtLabel ?? '');
-    setEditEligibility(detail.eligibility ?? '');
-    setEditSystemHint(detail.systemHint ?? '');
-    setEditError(null);
-    setEditing(true);
-  }
-
-  function cancelEditing(): void {
-    setEditing(false);
-    setEditError(null);
-  }
-
-  async function handleSave(): Promise<void> {
-    if (editTitle.trim().length === 0) {
-      setEditError('제목은 비워둘 수 없습니다.');
-      return;
-    }
-    setSaving(true);
-    setEditError(null);
-    try {
-      const updated = await updateAction(detail.id, {
-        title: editTitle.trim(),
-        actionSummary: editSummary.trim(),
-        dueAtLabel: editDueLabel.trim().length > 0 ? editDueLabel.trim() : undefined,
-        eligibility: editEligibility.trim().length > 0 ? editEligibility.trim() : undefined,
-        systemHint: editSystemHint.trim().length > 0 ? editSystemHint.trim() : undefined,
-      });
-      setEditing(false);
-      onActionUpdated?.(updated);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '수정 중 오류가 발생했습니다';
-      setEditError(message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleToggle(option: ReminderOption): Promise<void> {
-    if (activeKeys.has(option.key)) {
-      removeReminder(detail.id, option.key);
-      setActiveKeys((prev) => {
-        const next = new Set(prev);
-        next.delete(option.key);
-        return next;
-      });
-      return;
-    }
-
-    const granted = await requestNotificationPermission();
-    if (!granted) return;
-    if (detail.dueAtIso === null) return;
-
-    const dueDate = new Date(detail.dueAtIso);
-
-    let remindAt: Date;
-    if (option.offsetMs === 0) {
-      remindAt = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate(), 0, 0, 0);
-    } else {
-      remindAt = new Date(dueDate.getTime() - option.offsetMs);
-    }
-
-    const remindAtIso =
-      remindAt.getTime() < Date.now() ? new Date().toISOString() : remindAt.toISOString();
-
-    saveReminder({
-      actionId: detail.id,
-      offsetKey: option.key,
-      remindAtIso,
-      title: detail.title,
-      dueLabel: detail.dueAtLabel ?? dueDate.toLocaleDateString('ko-KR'),
-      dismissed: false,
-    });
-
-    setActiveKeys((prev) => new Set([...prev, option.key]));
-  }
-
-  async function handleRevert(fieldName: string): Promise<void> {
-    setReverting(fieldName);
-    try {
-      const updated = await revertActionField(detail.id, fieldName);
-      onActionUpdated?.(updated);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '되돌리기 중 오류가 발생했습니다';
-      setEditError(message);
-    } finally {
-      setReverting(null);
-    }
-  }
+  const editor = useActionEditor({ detail, onActionUpdated });
+  const reminder = useActionReminderToggle({ detail });
 
   return (
     <article className="card detail-panel">
@@ -166,11 +34,11 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
           {detail.source !== null ? (
             <p className="eyebrow">{categoryLabel(detail.source.sourceCategory)}</p>
           ) : null}
-          {editing ? (
+          {editor.editing ? (
             <input
               className="edit-field"
-              value={editTitle}
-              onChange={(e) => { setEditTitle(e.target.value); }}
+              value={editor.editTitle}
+              onChange={(e) => { editor.setEditTitle(e.target.value); }}
               aria-label="제목 수정"
             />
           ) : (
@@ -179,8 +47,8 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
               <OverrideBadge
                 overrides={detail.overrides}
                 fieldName="title"
-                reverting={reverting}
-                onRevert={(f) => { void handleRevert(f); }}
+                reverting={editor.reverting}
+                onRevert={(f) => { void editor.revertField(f); }}
                 showOriginalTitle={true}
               />
             </h3>
@@ -196,11 +64,11 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
         </div>
       </div>
 
-      {editing ? (
+      {editor.editing ? (
         <textarea
           className="edit-field edit-textarea"
-          value={editSummary}
-          onChange={(e) => { setEditSummary(e.target.value); }}
+          value={editor.editSummary}
+          onChange={(e) => { editor.setEditSummary(e.target.value); }}
           rows={3}
           aria-label="요약 수정"
         />
@@ -210,21 +78,21 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
           <OverrideBadge
             overrides={detail.overrides}
             fieldName="actionSummary"
-            reverting={reverting}
-            onRevert={(f) => { void handleRevert(f); }}
+            reverting={editor.reverting}
+            onRevert={(f) => { void editor.revertField(f); }}
           />
         </p>
       )}
 
-      {editing ? (
+      {editor.editing ? (
         <div className="edit-form">
           <div className="edit-row">
             <label htmlFor="editDueLabel">마감 레이블</label>
             <input
               id="editDueLabel"
               className="edit-field"
-              value={editDueLabel}
-              onChange={(e) => { setEditDueLabel(e.target.value); }}
+              value={editor.editDueLabel}
+              onChange={(e) => { editor.setEditDueLabel(e.target.value); }}
               placeholder="예: 3월 12일 18시"
             />
           </div>
@@ -233,8 +101,8 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
             <input
               id="editEligibility"
               className="edit-field"
-              value={editEligibility}
-              onChange={(e) => { setEditEligibility(e.target.value); }}
+              value={editor.editEligibility}
+              onChange={(e) => { editor.setEditEligibility(e.target.value); }}
               placeholder="예: 재학생"
             />
           </div>
@@ -243,19 +111,19 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
             <input
               id="editSystemHint"
               className="edit-field"
-              value={editSystemHint}
-              onChange={(e) => { setEditSystemHint(e.target.value); }}
+              value={editor.editSystemHint}
+              onChange={(e) => { editor.setEditSystemHint(e.target.value); }}
               placeholder="예: TRINITY"
             />
           </div>
-          {editError !== null ? (
-            <p className="edit-error">{editError}</p>
+          {editor.editError !== null ? (
+            <p className="edit-error">{editor.editError}</p>
           ) : null}
           <div className="edit-btn-row">
-            <button className="edit-save-btn" onClick={() => { void handleSave(); }} disabled={saving}>
-              {saving ? '저장 중...' : '저장'}
+            <button className="edit-save-btn" onClick={() => { void editor.save(); }} disabled={editor.saving}>
+              {editor.saving ? '저장 중...' : '저장'}
             </button>
-            <button className="edit-cancel-btn" onClick={cancelEditing} disabled={saving}>
+            <button className="edit-cancel-btn" onClick={editor.cancelEditing} disabled={editor.saving}>
               취소
             </button>
           </div>
@@ -275,8 +143,8 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                 <OverrideBadge
                   overrides={detail.overrides}
                   fieldName="dueAtLabel"
-                  reverting={reverting}
-                  onRevert={(f) => { void handleRevert(f); }}
+                  reverting={editor.reverting}
+                  onRevert={(f) => { void editor.revertField(f); }}
                 />
               </dd>
             </div>
@@ -287,8 +155,8 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                 <OverrideBadge
                   overrides={detail.overrides}
                   fieldName="systemHint"
-                  reverting={reverting}
-                  onRevert={(f) => { void handleRevert(f); }}
+                  reverting={editor.reverting}
+                  onRevert={(f) => { void editor.revertField(f); }}
                 />
               </dd>
             </div>
@@ -304,8 +172,8 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                 <OverrideBadge
                   overrides={detail.overrides}
                   fieldName="eligibility"
-                  reverting={reverting}
-                  onRevert={(f) => { void handleRevert(f); }}
+                  reverting={editor.reverting}
+                  onRevert={(f) => { void editor.revertField(f); }}
                 />
               </dd>
             </div>
@@ -316,14 +184,14 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                 <OverrideBadge
                   overrides={detail.overrides}
                   fieldName="requiredItems"
-                  reverting={reverting}
-                  onRevert={(f) => { void handleRevert(f); }}
+                  reverting={editor.reverting}
+                  onRevert={(f) => { void editor.revertField(f); }}
                 />
               </dd>
             </div>
           </dl>
 
-          <button className="edit-toggle-btn" onClick={startEditing}>편집</button>
+          <button className="edit-toggle-btn" onClick={editor.startEditing}>편집</button>
         </>
       )}
 
@@ -345,9 +213,9 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
           {REMINDER_OPTIONS.map((option) => (
             <button
               key={option.key}
-              className={`reminder-option${activeKeys.has(option.key) ? ' reminder-option-active' : ''}`}
-              onClick={() => { void handleToggle(option); }}
-              aria-pressed={activeKeys.has(option.key)}
+              className={`reminder-option${reminder.activeKeys.has(option.key) ? ' reminder-option-active' : ''}`}
+              onClick={() => { void reminder.toggleReminder(option); }}
+              aria-pressed={reminder.activeKeys.has(option.key)}
             >
               {option.label}
             </button>

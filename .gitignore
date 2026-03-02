@@ -13,11 +13,15 @@
 # Web
 apps/web/node_modules/
 apps/web/dist/
+apps/web/coverage/
 
 # API
 apps/api/.gradle/
 apps/api/build/
 apps/api/out/
+
+# Workspace artifacts
+/node_modules/
 
 # Env
 .env
