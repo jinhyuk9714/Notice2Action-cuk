@@ -119,6 +119,22 @@ describe('useActionDetail', () => {
     expect(result.current.detailError).toBeNull();
   });
 
+  it('sets detailError when initialActionId fetch fails', async () => {
+    mockFetchDetail.mockRejectedValue(new Error('초기 오류'));
+    const onActionSelect = vi.fn();
+    let actionId: string | null = null;
+    const { result, rerender } = renderHook(() =>
+      useActionDetail({ initialActionId: actionId, onActionSelect }),
+    );
+
+    actionId = 'a5';
+    rerender();
+
+    await waitFor(() => {
+      expect(result.current.detailError).toBe('초기 오류');
+    });
+  });
+
   it('updates detail via setDetail', async () => {
     const detail = makeActionDetail({ id: 'a1', title: '원래' });
     mockFetchDetail.mockResolvedValue(detail);

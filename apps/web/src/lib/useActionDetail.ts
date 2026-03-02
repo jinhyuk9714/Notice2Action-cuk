@@ -41,7 +41,10 @@ export function useActionDetail({ initialActionId, onActionSelect }: UseActionDe
     setDetailError(null);
     fetchActionDetail(initialActionId)
       .then((result) => { setDetail(result); })
-      .catch(() => { /* handled by select */ });
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : '상세 정보를 불러오지 못했습니다';
+        setDetailError(message);
+      });
   }, [initialActionId]);
 
   function handleSelect(id: string): void {

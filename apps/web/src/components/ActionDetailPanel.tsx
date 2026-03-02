@@ -177,6 +177,7 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
               className="edit-field"
               value={editTitle}
               onChange={(e) => { setEditTitle(e.target.value); }}
+              aria-label="제목 수정"
             />
           ) : (
             <h3>
@@ -213,6 +214,7 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
           value={editSummary}
           onChange={(e) => { setEditSummary(e.target.value); }}
           rows={3}
+          aria-label="요약 수정"
         />
       ) : (
         <p className="summary">
@@ -384,6 +386,7 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
               key={option.key}
               className={`reminder-option${activeKeys.has(option.key) ? ' reminder-option-active' : ''}`}
               onClick={() => { void handleToggle(option); }}
+              aria-pressed={activeKeys.has(option.key)}
             >
               {option.label}
             </button>

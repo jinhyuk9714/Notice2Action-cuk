@@ -156,6 +156,7 @@ export function SourceIngestionForm({
             type="button"
             className={inputMode === 'text' ? 'toggle toggle-active' : 'toggle'}
             onClick={() => { setInputMode('text'); }}
+            aria-pressed={inputMode === 'text'}
           >
             직접 입력
           </button>
@@ -163,6 +164,7 @@ export function SourceIngestionForm({
             type="button"
             className={inputMode === 'url' ? 'toggle toggle-active' : 'toggle'}
             onClick={() => { setInputMode('url'); }}
+            aria-pressed={inputMode === 'url'}
           >
             URL 입력
           </button>
@@ -170,6 +172,7 @@ export function SourceIngestionForm({
             type="button"
             className={inputMode === 'file' ? 'toggle toggle-active' : 'toggle'}
             onClick={() => { setInputMode('file'); }}
+            aria-pressed={inputMode === 'file'}
           >
             파일 업로드
           </button>
@@ -177,6 +180,7 @@ export function SourceIngestionForm({
             type="button"
             className={inputMode === 'email' ? 'toggle toggle-active' : 'toggle'}
             onClick={() => { setInputMode('email'); }}
+            aria-pressed={inputMode === 'email'}
           >
             이메일
           </button>

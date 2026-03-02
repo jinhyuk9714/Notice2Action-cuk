@@ -589,3 +589,46 @@ describe('InboxView - URL sync', () => {
     expect(props.onActionSelect).toHaveBeenCalledWith('a1');
   });
 });
+
+// --- Accessibility ---
+
+describe('InboxView - accessibility', () => {
+  it('list error banner has role="alert"', async () => {
+    mockFetchActionList.mockRejectedValue(new Error('네트워크 오류'));
+    renderInbox();
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('네트워크 오류');
+    });
+  });
+
+  it('loading state has role="status"', () => {
+    mockFetchActionList.mockReturnValue(new Promise(() => {}));
+    renderInbox();
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('sort buttons have aria-pressed', async () => {
+    mockFetchActionList.mockResolvedValue(makeActionListResponse([makeActionSummary()]));
+    renderInbox();
+    await waitFor(() => { screen.getByText('1개'); });
+
+    const dueBtn = screen.getByText('마감순');
+    const recentBtn = screen.getByText('최신순');
+    expect(dueBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(recentBtn).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('detail error banner has role="alert"', async () => {
+    mockFetchActionList.mockResolvedValue(
+      makeActionListResponse([makeActionSummary({ id: 'a1', title: '클릭' })]),
+    );
+    mockFetchActionDetail.mockRejectedValue(new Error('상세 오류'));
+    renderInbox();
+    await waitFor(() => { screen.getByText('클릭'); });
+
+    fireEvent.click(screen.getByText('클릭'));
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('상세 오류');
+    });
+  });
+});

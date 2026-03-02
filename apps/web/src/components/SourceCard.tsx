@@ -21,6 +21,7 @@ export function SourceCard({ source, selected, onSelect }: SourceCardProps): Rea
       onClick={() => { onSelect(source.id); }}
       role="button"
       tabIndex={0}
+      aria-label={source.title ?? '제목 없음'}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(source.id); } }}
     >
       <div className="source-card-header">

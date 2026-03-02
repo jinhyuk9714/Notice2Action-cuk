@@ -14,6 +14,7 @@ type SourceListViewProps = Readonly<{
 export function SourceListView({ initialSourceId, onSourceSelect }: SourceListViewProps): ReactElement {
   const [selectedId, setSelectedId] = useState<string | null>(initialSourceId);
   const [detail, setDetail] = useState<SourceDetail | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const fetchPage = useCallback(
     (page: number) =>
@@ -35,6 +36,7 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
     if (initialSourceId === null) {
       setSelectedId(null);
       setDetail(null);
+      setDetailError(null);
       return;
     }
     if (initialSourceId === selectedIdRef.current) {
@@ -42,14 +44,19 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
     }
     setSelectedId(initialSourceId);
     setDetail(null);
+    setDetailError(null);
     fetchSourceDetail(initialSourceId)
       .then((result) => { setDetail(result); })
-      .catch(() => { /* handled by select */ });
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : '소스 상세 정보를 불러오지 못했습니다';
+        setDetailError(message);
+      });
   }, [initialSourceId]);
 
   function handleSelect(id: string): void {
     setSelectedId(id);
     setDetail(null);
+    setDetailError(null);
     onSourceSelect(id);
 
     fetchSourceDetail(id)
@@ -58,13 +65,13 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : '소스 상세 정보를 불러오지 못했습니다';
-        void message;
+        setDetailError(message);
       });
   }
 
   if (list.loading) {
     return (
-      <div className="card-list">
+      <div className="card-list" role="status" aria-label="로딩 중">
         <SkeletonCard lines={2} />
         <SkeletonCard lines={2} />
         <SkeletonCard lines={2} />
@@ -74,7 +81,7 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
 
   if (list.error !== null) {
     return (
-      <div className="error-banner">
+      <div className="error-banner" role="alert">
         {list.error}
         <button className="retry-btn" onClick={list.retry}>다시 시도</button>
       </div>
@@ -127,11 +134,15 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
       </div>
 
       <div className="inbox-detail">
-        {detail !== null ? (
+        {detailError !== null ? (
+          <div className="error-banner" role="alert">
+            {detailError}
+          </div>
+        ) : detail !== null ? (
           <>
             <button
               className="mobile-back-btn"
-              onClick={() => { setSelectedId(null); setDetail(null); onSourceSelect(null); }}
+              onClick={() => { setSelectedId(null); setDetail(null); setDetailError(null); onSourceSelect(null); }}
             >
               &larr; 목록으로
             </button>

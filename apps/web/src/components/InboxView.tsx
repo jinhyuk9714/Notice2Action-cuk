@@ -92,7 +92,7 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
 
   if (list.loading) {
     return (
-      <div className="card-list">
+      <div className="card-list" role="status" aria-label="로딩 중">
         <SkeletonCard lines={2} />
         <SkeletonCard lines={3} />
         <SkeletonCard lines={2} />
@@ -102,7 +102,7 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
 
   if (list.error !== null) {
     return (
-      <div className="error-banner">
+      <div className="error-banner" role="alert">
         {list.error}
         <button className="retry-btn" onClick={list.retry}>다시 시도</button>
       </div>
@@ -111,7 +111,7 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
 
   if (del.deleteError !== null) {
     return (
-      <div className="error-banner">
+      <div className="error-banner" role="alert">
         {del.deleteError}
         <button className="retry-btn" onClick={list.retry}>다시 시도</button>
       </div>
@@ -190,10 +190,12 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
             <button
               className={`sort-btn${filters.sort === 'due' ? ' sort-btn-active' : ''}`}
               onClick={() => { filters.setSort('due'); }}
+              aria-pressed={filters.sort === 'due'}
             >마감순</button>
             <button
               className={`sort-btn${filters.sort === 'recent' ? ' sort-btn-active' : ''}`}
               onClick={() => { filters.setSort('recent'); }}
+              aria-pressed={filters.sort === 'recent'}
             >최신순</button>
           </div>
 
@@ -203,6 +205,7 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
                 key={preset}
                 className={`sort-btn${filters.dateRangePreset === preset ? ' sort-btn-active' : ''}`}
                 onClick={() => { filters.setDateRangePreset(preset); }}
+                aria-pressed={filters.dateRangePreset === preset}
               >
                 {getPresetLabel(preset)}
               </button>
@@ -281,7 +284,7 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
 
       <div className="inbox-detail">
         {detail.detailError !== null ? (
-          <div className="error-banner">
+          <div className="error-banner" role="alert">
             {detail.detailError}
           </div>
         ) : detail.detail !== null ? (

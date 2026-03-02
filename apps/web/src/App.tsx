@@ -147,7 +147,7 @@ export default function App(): ReactElement {
                 </div>
 
                 {error !== null ? (
-                  <div className="error-banner">
+                  <div className="error-banner" role="alert">
                     {error}
                     <button className="retry-btn" onClick={handleRetry}>다시 시도</button>
                   </div>

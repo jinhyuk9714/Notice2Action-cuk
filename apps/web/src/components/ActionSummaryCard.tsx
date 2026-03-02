@@ -24,6 +24,7 @@ export function ActionSummaryCard({ action, selected, onSelect, onDelete, isDele
       onClick={() => { onSelect(action.id); }}
       role="button"
       tabIndex={0}
+      aria-label={action.title}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(action.id); } }}
     >
       <div className="summary-card-header">

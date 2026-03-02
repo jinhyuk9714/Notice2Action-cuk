@@ -286,3 +286,78 @@ describe('SourceListView - detail panel', () => {
     });
   });
 });
+
+// --- Detail fetch error ---
+
+describe('SourceListView - detail fetch error', () => {
+  it('shows error banner when detail fetch fails', async () => {
+    const src = makeSourceSummary({ id: 'src-1', title: '소스 A' });
+    mockFetchSourceList.mockResolvedValue(makeSourceListResponse([src]));
+    mockFetchSourceDetail.mockRejectedValue(new Error('상세 조회 실패'));
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('소스 A')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('소스 A'));
+
+    await waitFor(() => {
+      expect(screen.getByText('상세 조회 실패')).toBeInTheDocument();
+    });
+  });
+
+  it('detail error banner has role="alert"', async () => {
+    const src = makeSourceSummary({ id: 'src-1', title: '소스 A' });
+    mockFetchSourceList.mockResolvedValue(makeSourceListResponse([src]));
+    mockFetchSourceDetail.mockRejectedValue(new Error('오류'));
+    renderView();
+
+    await waitFor(() => { screen.getByText('소스 A'); });
+    fireEvent.click(screen.getByText('소스 A'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('오류');
+    });
+  });
+
+  it('clears error banner when new source is selected', async () => {
+    const sources = [
+      makeSourceSummary({ id: 'src-1', title: '소스 A' }),
+      makeSourceSummary({ id: 'src-2', title: '소스 B' }),
+    ];
+    mockFetchSourceList.mockResolvedValue(makeSourceListResponse(sources));
+    mockFetchSourceDetail
+      .mockRejectedValueOnce(new Error('실패'))
+      .mockResolvedValueOnce(makeSourceDetail({ id: 'src-2', title: '소스 B' }));
+    renderView();
+
+    await waitFor(() => { screen.getByText('소스 A'); });
+    fireEvent.click(screen.getByText('소스 A'));
+    await waitFor(() => {
+      expect(screen.getByText('실패')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('소스 B'));
+    expect(screen.queryByText('실패')).not.toBeInTheDocument();
+  });
+});
+
+// --- Accessibility ---
+
+describe('SourceListView - accessibility', () => {
+  it('list error banner has role="alert"', async () => {
+    mockFetchSourceList.mockRejectedValue(new Error('네트워크 오류'));
+    renderView();
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('네트워크 오류');
+    });
+  });
+
+  it('loading state has role="status"', () => {
+    mockFetchSourceList.mockReturnValue(new Promise(() => {}));
+    render(
+      <SourceListView initialSourceId={null} onSourceSelect={vi.fn()} />,
+    );
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+});

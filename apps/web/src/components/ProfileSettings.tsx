@@ -32,13 +32,15 @@ export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsPro
       <button
         className="profile-settings-header"
         onClick={() => { setExpanded((prev) => !prev); }}
+        aria-expanded={expanded}
+        aria-controls="profile-settings-body"
       >
         <span>내 프로필</span>
-        <span>{expanded ? '\u25B2' : '\u25BC'}</span>
+        <span aria-hidden="true">{expanded ? '\u25B2' : '\u25BC'}</span>
       </button>
 
       {expanded ? (
-        <div className="profile-settings-body">
+        <div className="profile-settings-body" id="profile-settings-body">
           <div className="profile-field">
             <label>학과</label>
             <input
@@ -57,6 +59,7 @@ export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsPro
                   key={y}
                   className={`year-btn${profile.year === y ? ' year-btn-active' : ''}`}
                   onClick={() => { handleYearToggle(y); }}
+                  aria-pressed={profile.year === y}
                 >
                   {y}
                 </button>
