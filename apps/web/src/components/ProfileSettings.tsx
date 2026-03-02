@@ -42,8 +42,9 @@ export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsPro
       {expanded ? (
         <div className="profile-settings-body" id="profile-settings-body">
           <div className="profile-field">
-            <label>학과</label>
+            <label htmlFor="profileDepartment">학과</label>
             <input
+              id="profileDepartment"
               type="text"
               placeholder="예: 컴퓨터공학과"
               value={profile.department ?? ''}
@@ -52,8 +53,8 @@ export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsPro
           </div>
 
           <div className="profile-field">
-            <label>학년</label>
-            <div className="year-group">
+            <label id="yearLabel">학년</label>
+            <div className="year-group" role="group" aria-labelledby="yearLabel">
               {YEARS.map((y) => (
                 <button
                   key={y}
@@ -68,8 +69,9 @@ export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsPro
           </div>
 
           <div className="profile-field">
-            <label>신분</label>
+            <label htmlFor="profileStatus">신분</label>
             <select
+              id="profileStatus"
               value={profile.status ?? ''}
               onChange={(e) => { handleStatusChange(e.target.value); }}
             >

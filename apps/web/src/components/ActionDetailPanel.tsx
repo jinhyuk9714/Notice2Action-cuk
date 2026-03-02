@@ -219,8 +219,9 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
       {editing ? (
         <div className="edit-form">
           <div className="edit-row">
-            <label>마감 레이블</label>
+            <label htmlFor="editDueLabel">마감 레이블</label>
             <input
+              id="editDueLabel"
               className="edit-field"
               value={editDueLabel}
               onChange={(e) => { setEditDueLabel(e.target.value); }}
@@ -228,8 +229,9 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
             />
           </div>
           <div className="edit-row">
-            <label>대상/조건</label>
+            <label htmlFor="editEligibility">대상/조건</label>
             <input
+              id="editEligibility"
               className="edit-field"
               value={editEligibility}
               onChange={(e) => { setEditEligibility(e.target.value); }}
@@ -237,8 +239,9 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
             />
           </div>
           <div className="edit-row">
-            <label>시스템</label>
+            <label htmlFor="editSystemHint">시스템</label>
             <input
+              id="editSystemHint"
               className="edit-field"
               value={editSystemHint}
               onChange={(e) => { setEditSystemHint(e.target.value); }}
