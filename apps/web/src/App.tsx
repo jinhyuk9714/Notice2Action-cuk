@@ -108,7 +108,7 @@ export default function App(): ReactElement {
           </button>
           <button
             className={activeView === 'inbox' ? 'tab tab-active' : 'tab'}
-            onClick={() => { navigate({ view: 'inbox', actionId: null }); }}
+            onClick={() => { navigate({ view: 'inbox', actionId: null, filters: {} }); }}
           >
             액션 인박스
           </button>
@@ -155,7 +155,11 @@ export default function App(): ReactElement {
         ) : activeView === 'inbox' ? (
           <InboxView
             initialActionId={route.view === 'inbox' ? route.actionId : null}
-            onActionSelect={(id) => { navigate({ view: 'inbox', actionId: id }); }}
+            initialFilters={route.view === 'inbox' ? route.filters : {}}
+            onActionSelect={(id) => {
+              const filters = route.view === 'inbox' ? route.filters : {};
+              navigate({ view: 'inbox', actionId: id, filters });
+            }}
           />
         ) : (
           <SourceListView

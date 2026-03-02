@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactElement } from 'react';
-import { updateAction } from '../lib/api';
+import { revertActionField, updateAction } from '../lib/api';
 import { computeDday } from '../lib/dday';
 import { categoryLabel, evidenceFieldLabel, inferredLabel } from '../lib/labels';
 import type { UserProfile } from '../lib/profile';
@@ -11,7 +11,14 @@ import {
   removeReminder,
   requestNotificationPermission,
 } from '../lib/reminder';
-import type { SavedActionDetail } from '../lib/types';
+import type { FieldOverrideInfo, SavedActionDetail } from '../lib/types';
+
+function getOverride(
+  overrides: readonly FieldOverrideInfo[],
+  fieldName: string,
+): FieldOverrideInfo | undefined {
+  return overrides.find((o) => o.fieldName === fieldName);
+}
 
 type ActionDetailPanelProps = Readonly<{
   detail: SavedActionDetail;
@@ -51,6 +58,7 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
   const [editSystemHint, setEditSystemHint] = useState(detail.systemHint ?? '');
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [reverting, setReverting] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveKeys(getActiveOffsetKeys(detail.id));
@@ -62,6 +70,7 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
     setEditSystemHint(detail.systemHint ?? '');
     setEditError(null);
     setSaving(false);
+    setReverting(null);
   }, [detail]);
 
   function startEditing(): void {
@@ -143,6 +152,19 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
     setActiveKeys((prev) => new Set([...prev, option.key]));
   }
 
+  async function handleRevert(fieldName: string): Promise<void> {
+    setReverting(fieldName);
+    try {
+      const updated = await revertActionField(detail.id, fieldName);
+      onActionUpdated?.(updated);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '되돌리기 중 오류가 발생했습니다';
+      setEditError(message);
+    } finally {
+      setReverting(null);
+    }
+  }
+
   return (
     <article className="card detail-panel">
       <div className="card-header">
@@ -157,7 +179,22 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
               onChange={(e) => { setEditTitle(e.target.value); }}
             />
           ) : (
-            <h3>{detail.title}</h3>
+            <h3>
+              {detail.title}
+              {getOverride(detail.overrides, 'title') !== undefined ? (
+                <span className="override-badge">
+                  <span className="override-label">수정됨</span>
+                  <button
+                    className="override-revert-btn"
+                    onClick={() => { void handleRevert('title'); }}
+                    disabled={reverting === 'title'}
+                    title={`원래 값: ${getOverride(detail.overrides, 'title')?.machineValue ?? ''}`}
+                  >
+                    되돌리기
+                  </button>
+                </span>
+              ) : null}
+            </h3>
           )}
         </div>
         <div className="badge-group">
@@ -178,7 +215,21 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
           rows={3}
         />
       ) : (
-        <p className="summary">{detail.actionSummary}</p>
+        <p className="summary">
+          {detail.actionSummary}
+          {getOverride(detail.overrides, 'actionSummary') !== undefined ? (
+            <span className="override-badge">
+              <span className="override-label">수정됨</span>
+              <button
+                className="override-revert-btn"
+                onClick={() => { void handleRevert('actionSummary'); }}
+                disabled={reverting === 'actionSummary'}
+              >
+                되돌리기
+              </button>
+            </span>
+          ) : null}
+        </p>
       )}
 
       {editing ? (
@@ -234,11 +285,37 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                     {dday.label}
                   </span>
                 ) : null}
+                {getOverride(detail.overrides, 'dueAtLabel') !== undefined ? (
+                  <span className="override-badge">
+                    <span className="override-label">수정됨</span>
+                    <button
+                      className="override-revert-btn"
+                      onClick={() => { void handleRevert('dueAtLabel'); }}
+                      disabled={reverting === 'dueAtLabel'}
+                    >
+                      되돌리기
+                    </button>
+                  </span>
+                ) : null}
               </dd>
             </div>
             <div>
               <dt>시스템</dt>
-              <dd>{detail.systemHint ?? '미확인'}</dd>
+              <dd>
+                {detail.systemHint ?? '미확인'}
+                {getOverride(detail.overrides, 'systemHint') !== undefined ? (
+                  <span className="override-badge">
+                    <span className="override-label">수정됨</span>
+                    <button
+                      className="override-revert-btn"
+                      onClick={() => { void handleRevert('systemHint'); }}
+                      disabled={reverting === 'systemHint'}
+                    >
+                      되돌리기
+                    </button>
+                  </span>
+                ) : null}
+              </dd>
             </div>
             <div>
               <dt>대상/조건</dt>
@@ -249,11 +326,37 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                 ) : relevance.level === 'not_relevant' ? (
                   <span className="relevance-badge relevance-not-relevant dday-inline" title={relevance.reason ?? undefined}>해당없음</span>
                 ) : null}
+                {getOverride(detail.overrides, 'eligibility') !== undefined ? (
+                  <span className="override-badge">
+                    <span className="override-label">수정됨</span>
+                    <button
+                      className="override-revert-btn"
+                      onClick={() => { void handleRevert('eligibility'); }}
+                      disabled={reverting === 'eligibility'}
+                    >
+                      되돌리기
+                    </button>
+                  </span>
+                ) : null}
               </dd>
             </div>
             <div>
               <dt>준비물</dt>
-              <dd>{detail.requiredItems.length > 0 ? detail.requiredItems.join(', ') : '없음'}</dd>
+              <dd>
+                {detail.requiredItems.length > 0 ? detail.requiredItems.join(', ') : '없음'}
+                {getOverride(detail.overrides, 'requiredItems') !== undefined ? (
+                  <span className="override-badge">
+                    <span className="override-label">수정됨</span>
+                    <button
+                      className="override-revert-btn"
+                      onClick={() => { void handleRevert('requiredItems'); }}
+                      disabled={reverting === 'requiredItems'}
+                    >
+                      되돌리기
+                    </button>
+                  </span>
+                ) : null}
+              </dd>
             </div>
           </dl>
 

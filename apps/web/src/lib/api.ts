@@ -4,14 +4,15 @@ import {
   type ActionListResponse,
   type ActionUpdatePayload,
   type SavedActionDetail,
+  type SavedActionSummary,
   type SourceCategory,
   type SourceDetail,
   type SourceListResponse,
-  isActionExtractionResponse,
-  isActionListResponse,
-  isSavedActionDetail,
-  isSourceDetail,
-  isSourceListResponse
+  parseActionExtractionResponse,
+  parseActionListResponse,
+  parseSavedActionDetail,
+  parseSourceDetail,
+  parseSourceListResponse
 } from './types';
 
 function parseApiError(body: string, fallback: string): string {
@@ -61,11 +62,7 @@ export async function requestActionExtraction(
   }
 
   const json: unknown = await response.json();
-  if (!isActionExtractionResponse(json)) {
-    throw new Error('API response shape is invalid');
-  }
-
-  return json;
+  return parseActionExtractionResponse(json);
 }
 
 export async function requestPdfExtraction(
@@ -89,11 +86,7 @@ export async function requestPdfExtraction(
   }
 
   const json: unknown = await response.json();
-  if (!isActionExtractionResponse(json)) {
-    throw new Error('API response shape is invalid');
-  }
-
-  return json;
+  return parseActionExtractionResponse(json);
 }
 
 export async function requestScreenshotExtraction(
@@ -117,11 +110,7 @@ export async function requestScreenshotExtraction(
   }
 
   const json: unknown = await response.json();
-  if (!isActionExtractionResponse(json)) {
-    throw new Error('API response shape is invalid');
-  }
-
-  return json;
+  return parseActionExtractionResponse(json);
 }
 
 export async function requestEmailExtraction(
@@ -146,11 +135,7 @@ export async function requestEmailExtraction(
   }
 
   const json: unknown = await response.json();
-  if (!isActionExtractionResponse(json)) {
-    throw new Error('API response shape is invalid');
-  }
-
-  return json;
+  return parseActionExtractionResponse(json);
 }
 
 export async function fetchActionList(
@@ -175,11 +160,25 @@ export async function fetchActionList(
   }
 
   const json: unknown = await response.json();
-  if (!isActionListResponse(json)) {
-    throw new Error('Action list response shape is invalid');
+  return parseActionListResponse(json);
+}
+
+export async function fetchAllMatchingActions(
+  sort: 'recent' | 'due',
+  search?: SearchParams
+): Promise<readonly SavedActionSummary[]> {
+  const all: SavedActionSummary[] = [];
+  let page = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const result = await fetchActionList(sort, page, search);
+    all.push(...result.actions);
+    hasMore = result.hasNext;
+    page++;
   }
 
-  return json;
+  return all;
 }
 
 export async function deleteAction(id: string): Promise<void> {
@@ -202,11 +201,7 @@ export async function fetchActionDetail(id: string): Promise<SavedActionDetail> 
   }
 
   const json: unknown = await response.json();
-  if (!isSavedActionDetail(json)) {
-    throw new Error('Action detail response shape is invalid');
-  }
-
-  return json;
+  return parseSavedActionDetail(json);
 }
 
 export async function updateAction(
@@ -227,11 +222,14 @@ export async function updateAction(
   }
 
   const json: unknown = await response.json();
-  if (!isSavedActionDetail(json)) {
-    throw new Error('Action update response shape is invalid');
-  }
+  return parseSavedActionDetail(json);
+}
 
-  return json;
+export async function revertActionField(
+  id: string,
+  fieldName: string
+): Promise<SavedActionDetail> {
+  return updateAction(id, { revertFields: [fieldName] });
 }
 
 export async function fetchSourceList(page: number = 0): Promise<SourceListResponse> {
@@ -243,11 +241,7 @@ export async function fetchSourceList(page: number = 0): Promise<SourceListRespo
   }
 
   const json: unknown = await response.json();
-  if (!isSourceListResponse(json)) {
-    throw new Error('Source list response shape is invalid');
-  }
-
-  return json;
+  return parseSourceListResponse(json);
 }
 
 export async function fetchSourceDetail(id: string): Promise<SourceDetail> {
@@ -259,9 +253,5 @@ export async function fetchSourceDetail(id: string): Promise<SourceDetail> {
   }
 
   const json: unknown = await response.json();
-  if (!isSourceDetail(json)) {
-    throw new Error('Source detail response shape is invalid');
-  }
-
-  return json;
+  return parseSourceDetail(json);
 }

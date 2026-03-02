@@ -26,6 +26,7 @@ function makeDetail(id: string, title: string): SavedActionDetail {
     createdAt: '2026-03-01T00:00:00+09:00',
     source: null,
     evidence: [],
+    overrides: [],
   };
 }
 
@@ -71,5 +72,39 @@ describe('ActionDetailPanel', () => {
     const d3After = screen.getByRole('button', { name: 'D-3' });
     expect(d1After).not.toHaveClass('reminder-option-active');
     expect(d3After).toHaveClass('reminder-option-active');
+  });
+
+  it('shows override badge when field is user-edited', () => {
+    const detail: SavedActionDetail = {
+      ...makeDetail('action-1', '수정된 제목'),
+      overrides: [{ fieldName: 'title', machineValue: '원래 제목' }],
+    };
+    render(<ActionDetailPanel detail={detail} profile={EMPTY_PROFILE} />);
+
+    expect(screen.getByText('수정됨')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '되돌리기' })).toBeInTheDocument();
+  });
+
+  it('does not show override badge when no overrides', () => {
+    render(<ActionDetailPanel detail={makeDetail('action-1', '제목')} profile={EMPTY_PROFILE} />);
+
+    expect(screen.queryByText('수정됨')).toBeNull();
+  });
+
+  it('shows multiple override badges for multiple overridden fields', () => {
+    const detail: SavedActionDetail = {
+      ...makeDetail('action-1', '수정된 제목'),
+      overrides: [
+        { fieldName: 'title', machineValue: '원래 제목' },
+        { fieldName: 'eligibility', machineValue: '재학생' },
+        { fieldName: 'systemHint', machineValue: 'TRINITY' },
+      ],
+    };
+    render(<ActionDetailPanel detail={detail} profile={EMPTY_PROFILE} />);
+
+    const badges = screen.getAllByText('수정됨');
+    expect(badges).toHaveLength(3);
+    const revertButtons = screen.getAllByRole('button', { name: '되돌리기' });
+    expect(revertButtons).toHaveLength(3);
   });
 });

@@ -1,27 +1,42 @@
-export type SourceCategory = 'NOTICE' | 'SYLLABUS' | 'EMAIL' | 'PDF' | 'SCREENSHOT';
+import { z } from 'zod';
 
-export type EvidenceSnippet = Readonly<{
-  fieldName: string;
-  snippet: string;
-  confidence: number;
-}>;
+// --- Schemas ---
 
-export type ExtractedAction = Readonly<{
-  id: string | null;
-  sourceId: string | null;
-  title: string;
-  actionSummary: string;
-  dueAtIso: string | null;
-  dueAtLabel: string | null;
-  eligibility: string | null;
-  requiredItems: readonly string[];
-  systemHint: string | null;
-  sourceCategory: SourceCategory;
-  evidence: readonly EvidenceSnippet[];
-  inferred: boolean;
-  confidenceScore: number;
-  createdAt: string | null;
-}>;
+export const SourceCategorySchema = z.enum(['NOTICE', 'SYLLABUS', 'EMAIL', 'PDF', 'SCREENSHOT']);
+export type SourceCategory = z.infer<typeof SourceCategorySchema>;
+
+export const EvidenceSnippetSchema = z.object({
+  fieldName: z.string(),
+  snippet: z.string(),
+  confidence: z.number(),
+});
+export type EvidenceSnippet = z.infer<typeof EvidenceSnippetSchema>;
+
+export const ExtractedActionSchema = z.object({
+  id: z.string().nullable(),
+  sourceId: z.string().nullable(),
+  title: z.string(),
+  actionSummary: z.string(),
+  dueAtIso: z.string().nullable(),
+  dueAtLabel: z.string().nullable(),
+  eligibility: z.string().nullable(),
+  requiredItems: z.array(z.string()),
+  systemHint: z.string().nullable(),
+  sourceCategory: SourceCategorySchema,
+  evidence: z.array(EvidenceSnippetSchema),
+  inferred: z.boolean(),
+  confidenceScore: z.number(),
+  createdAt: z.string().nullable(),
+});
+export type ExtractedAction = z.infer<typeof ExtractedActionSchema>;
+
+export const ActionExtractionResponseSchema = z.object({
+  actions: z.array(ExtractedActionSchema),
+  duplicate: z.boolean(),
+});
+export type ActionExtractionResponse = z.infer<typeof ActionExtractionResponseSchema>;
+
+// --- Send-only types (no schema needed) ---
 
 export type ActionExtractionRequest = Readonly<{
   sourceText: string;
@@ -29,11 +44,6 @@ export type ActionExtractionRequest = Readonly<{
   sourceTitle: string | null;
   sourceCategory: SourceCategory;
   focusProfile: readonly string[];
-}>;
-
-export type ActionExtractionResponse = Readonly<{
-  actions: readonly ExtractedAction[];
-  duplicate: boolean;
 }>;
 
 export type ActionUpdatePayload = Readonly<{
@@ -44,253 +54,124 @@ export type ActionUpdatePayload = Readonly<{
   eligibility?: string;
   requiredItems?: readonly string[];
   systemHint?: string;
+  revertFields?: readonly string[];
 }>;
-
-function isEvidenceSnippet(value: unknown): value is EvidenceSnippet {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const record = value as Record<string, unknown>;
-  return (
-    typeof record.fieldName === 'string' &&
-    typeof record.snippet === 'string' &&
-    typeof record.confidence === 'number'
-  );
-}
-
-function isExtractedAction(value: unknown): value is ExtractedAction {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const record = value as Record<string, unknown>;
-  return (
-    typeof record.title === 'string' &&
-    typeof record.actionSummary === 'string' &&
-    (typeof record.dueAtIso === 'string' || record.dueAtIso === null) &&
-    (typeof record.dueAtLabel === 'string' || record.dueAtLabel === null) &&
-    (typeof record.eligibility === 'string' || record.eligibility === null) &&
-    Array.isArray(record.requiredItems) &&
-    record.requiredItems.every((item) => typeof item === 'string') &&
-    (typeof record.systemHint === 'string' || record.systemHint === null) &&
-    typeof record.sourceCategory === 'string' &&
-    Array.isArray(record.evidence) &&
-    record.evidence.every(isEvidenceSnippet) &&
-    typeof record.inferred === 'boolean'
-  );
-}
-
-export function isActionExtractionResponse(value: unknown): value is ActionExtractionResponse {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const record = value as Record<string, unknown>;
-  return typeof record.duplicate === 'boolean'
-    && Array.isArray(record.actions)
-    && record.actions.every(isExtractedAction);
-}
 
 // --- Inbox types ---
 
-export type SavedActionSummary = Readonly<{
-  id: string;
-  title: string;
-  actionSummary: string;
-  dueAtIso: string | null;
-  dueAtLabel: string | null;
-  eligibility: string | null;
-  sourceCategory: SourceCategory | null;
-  sourceTitle: string | null;
-  confidenceScore: number;
-  createdAt: string;
-}>;
+const PaginationSchema = z.object({
+  currentPage: z.number(),
+  pageSize: z.number(),
+  totalElements: z.number(),
+  totalPages: z.number(),
+  hasNext: z.boolean(),
+});
 
-export type ActionListResponse = Readonly<{
-  actions: readonly SavedActionSummary[];
-  currentPage: number;
-  pageSize: number;
-  totalElements: number;
-  totalPages: number;
-  hasNext: boolean;
-}>;
+export const SavedActionSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  actionSummary: z.string(),
+  dueAtIso: z.string().nullable(),
+  dueAtLabel: z.string().nullable(),
+  eligibility: z.string().nullable(),
+  sourceCategory: SourceCategorySchema.nullable(),
+  sourceTitle: z.string().nullable(),
+  confidenceScore: z.number(),
+  createdAt: z.string(),
+});
+export type SavedActionSummary = z.infer<typeof SavedActionSummarySchema>;
 
-export type SourceInfo = Readonly<{
-  id: string;
-  title: string | null;
-  sourceCategory: SourceCategory;
-  createdAt: string;
-}>;
+export const ActionListResponseSchema = PaginationSchema.extend({
+  actions: z.array(SavedActionSummarySchema),
+});
+export type ActionListResponse = z.infer<typeof ActionListResponseSchema>;
 
-export type SavedActionDetail = Readonly<{
-  id: string;
-  title: string;
-  actionSummary: string;
-  dueAtIso: string | null;
-  dueAtLabel: string | null;
-  eligibility: string | null;
-  requiredItems: readonly string[];
-  systemHint: string | null;
-  inferred: boolean;
-  confidenceScore: number;
-  createdAt: string;
-  source: SourceInfo | null;
-  evidence: readonly EvidenceSnippet[];
-}>;
+export const SourceInfoSchema = z.object({
+  id: z.string(),
+  title: z.string().nullable(),
+  sourceCategory: SourceCategorySchema,
+  createdAt: z.string(),
+});
+export type SourceInfo = z.infer<typeof SourceInfoSchema>;
 
-function isSavedActionSummary(value: unknown): value is SavedActionSummary {
-  if (typeof value !== 'object' || value === null) {
-    console.warn('[type-guard] isSavedActionSummary: not an object', value);
-    return false;
-  }
+export const FieldOverrideInfoSchema = z.object({
+  fieldName: z.string(),
+  machineValue: z.string().nullable(),
+});
+export type FieldOverrideInfo = z.infer<typeof FieldOverrideInfoSchema>;
 
-  const record = value as Record<string, unknown>;
-  const valid = (
-    typeof record.id === 'string' &&
-    typeof record.title === 'string' &&
-    typeof record.actionSummary === 'string' &&
-    typeof record.createdAt === 'string'
-  );
-  if (!valid) {
-    console.warn('[type-guard] isSavedActionSummary: field mismatch', {
-      id: typeof record.id,
-      title: typeof record.title,
-      actionSummary: typeof record.actionSummary,
-      createdAt: typeof record.createdAt,
-    });
-  }
-  return valid;
-}
-
-export function isActionListResponse(value: unknown): value is ActionListResponse {
-  if (typeof value !== 'object' || value === null) {
-    console.warn('[type-guard] isActionListResponse: not an object', value);
-    return false;
-  }
-
-  const record = value as Record<string, unknown>;
-  const valid = (
-    Array.isArray(record.actions) &&
-    record.actions.every(isSavedActionSummary) &&
-    typeof record.currentPage === 'number' &&
-    typeof record.pageSize === 'number' &&
-    typeof record.totalElements === 'number' &&
-    typeof record.totalPages === 'number' &&
-    typeof record.hasNext === 'boolean'
-  );
-  if (!valid) {
-    console.warn('[type-guard] isActionListResponse: field mismatch', {
-      actions: Array.isArray(record.actions) ? `Array(${record.actions.length})` : typeof record.actions,
-      currentPage: typeof record.currentPage,
-      pageSize: typeof record.pageSize,
-      totalElements: typeof record.totalElements,
-      totalPages: typeof record.totalPages,
-      hasNext: typeof record.hasNext,
-    });
-  }
-  return valid;
-}
+export const SavedActionDetailSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  actionSummary: z.string(),
+  dueAtIso: z.string().nullable(),
+  dueAtLabel: z.string().nullable(),
+  eligibility: z.string().nullable(),
+  requiredItems: z.array(z.string()),
+  systemHint: z.string().nullable(),
+  inferred: z.boolean(),
+  confidenceScore: z.number(),
+  createdAt: z.string(),
+  source: SourceInfoSchema.nullable(),
+  evidence: z.array(EvidenceSnippetSchema),
+  overrides: z.array(FieldOverrideInfoSchema).default([]),
+});
+export type SavedActionDetail = z.infer<typeof SavedActionDetailSchema>;
 
 // --- Source history types ---
 
-export type SourceSummary = Readonly<{
-  id: string;
-  title: string | null;
-  sourceCategory: SourceCategory;
-  sourceUrl: string | null;
-  createdAt: string;
-  actionCount: number;
-}>;
+export const SourceSummarySchema = z.object({
+  id: z.string(),
+  title: z.string().nullable(),
+  sourceCategory: SourceCategorySchema,
+  sourceUrl: z.string().nullable(),
+  createdAt: z.string(),
+  actionCount: z.number(),
+});
+export type SourceSummary = z.infer<typeof SourceSummarySchema>;
 
-export type SourceListResponse = Readonly<{
-  sources: readonly SourceSummary[];
-  currentPage: number;
-  pageSize: number;
-  totalElements: number;
-  totalPages: number;
-  hasNext: boolean;
-}>;
+export const SourceListResponseSchema = PaginationSchema.extend({
+  sources: z.array(SourceSummarySchema),
+});
+export type SourceListResponse = z.infer<typeof SourceListResponseSchema>;
 
-export type SourceDetail = Readonly<{
-  id: string;
-  title: string | null;
-  sourceCategory: SourceCategory;
-  sourceUrl: string | null;
-  createdAt: string;
-  actions: readonly SavedActionSummary[];
-}>;
+export const SourceDetailSchema = z.object({
+  id: z.string(),
+  title: z.string().nullable(),
+  sourceCategory: SourceCategorySchema,
+  sourceUrl: z.string().nullable(),
+  createdAt: z.string(),
+  actions: z.array(SavedActionSummarySchema),
+});
+export type SourceDetail = z.infer<typeof SourceDetailSchema>;
 
-function isSourceSummary(value: unknown): value is SourceSummary {
-  if (typeof value !== 'object' || value === null) {
-    return false;
+// --- Parse helpers ---
+
+function safeParse<T>(schema: z.ZodType<T>, value: unknown, label: string): T {
+  const result = schema.safeParse(value);
+  if (result.success) {
+    return result.data;
   }
-
-  const record = value as Record<string, unknown>;
-  return (
-    typeof record.id === 'string' &&
-    typeof record.sourceCategory === 'string' &&
-    typeof record.createdAt === 'string' &&
-    typeof record.actionCount === 'number'
-  );
+  console.warn(`[zod] ${label} parse failed:`, result.error.issues);
+  throw new Error(`${label} response shape is invalid`);
 }
 
-export function isSourceListResponse(value: unknown): value is SourceListResponse {
-  if (typeof value !== 'object' || value === null) {
-    console.warn('[type-guard] isSourceListResponse: not an object', value);
-    return false;
-  }
-
-  const record = value as Record<string, unknown>;
-  const valid = (
-    Array.isArray(record.sources) &&
-    record.sources.every(isSourceSummary) &&
-    typeof record.currentPage === 'number' &&
-    typeof record.pageSize === 'number' &&
-    typeof record.totalElements === 'number' &&
-    typeof record.totalPages === 'number' &&
-    typeof record.hasNext === 'boolean'
-  );
-  if (!valid) {
-    console.warn('[type-guard] isSourceListResponse: field mismatch', {
-      sources: Array.isArray(record.sources) ? `Array(${record.sources.length})` : typeof record.sources,
-      currentPage: typeof record.currentPage,
-      pageSize: typeof record.pageSize,
-      totalElements: typeof record.totalElements,
-      totalPages: typeof record.totalPages,
-      hasNext: typeof record.hasNext,
-    });
-  }
-  return valid;
+export function parseActionExtractionResponse(value: unknown): ActionExtractionResponse {
+  return safeParse(ActionExtractionResponseSchema, value, 'ActionExtractionResponse');
 }
 
-export function isSourceDetail(value: unknown): value is SourceDetail {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const record = value as Record<string, unknown>;
-  return (
-    typeof record.id === 'string' &&
-    typeof record.sourceCategory === 'string' &&
-    typeof record.createdAt === 'string' &&
-    Array.isArray(record.actions) &&
-    record.actions.every(isSavedActionSummary)
-  );
+export function parseActionListResponse(value: unknown): ActionListResponse {
+  return safeParse(ActionListResponseSchema, value, 'ActionListResponse');
 }
 
-export function isSavedActionDetail(value: unknown): value is SavedActionDetail {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
+export function parseSavedActionDetail(value: unknown): SavedActionDetail {
+  return safeParse(SavedActionDetailSchema, value, 'SavedActionDetail');
+}
 
-  const record = value as Record<string, unknown>;
-  return (
-    typeof record.id === 'string' &&
-    typeof record.title === 'string' &&
-    typeof record.actionSummary === 'string' &&
-    typeof record.createdAt === 'string' &&
-    Array.isArray(record.evidence) &&
-    record.evidence.every(isEvidenceSnippet)
-  );
+export function parseSourceListResponse(value: unknown): SourceListResponse {
+  return safeParse(SourceListResponseSchema, value, 'SourceListResponse');
+}
+
+export function parseSourceDetail(value: unknown): SourceDetail {
+  return safeParse(SourceDetailSchema, value, 'SourceDetail');
 }

@@ -1,24 +1,39 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
-import { deleteAction, fetchActionDetail, fetchActionList, type SearchParams } from '../lib/api';
+import { deleteAction, fetchActionDetail, fetchActionList, fetchAllMatchingActions, type SearchParams } from '../lib/api';
 import { generateActionsCsv, downloadCsv } from '../lib/csv';
 import { computeDateRange, getPresetLabel, type DateRangePreset } from '../lib/dateRange';
 import { loadProfile, saveProfile, isProfileConfigured } from '../lib/profile';
 import type { UserProfile } from '../lib/profile';
 import { computeRelevance } from '../lib/relevance';
+import { replaceFilters, type InboxFilters } from '../lib/router';
 import type { SavedActionDetail, SavedActionSummary, SourceCategory } from '../lib/types';
 import { ActionDetailPanel } from './ActionDetailPanel';
 import { ActionSummaryCard } from './ActionSummaryCard';
 import { ProfileSettings } from './ProfileSettings';
 import { SkeletonCard } from './SkeletonCard';
 
+const VALID_CATEGORIES = new Set(['NOTICE', 'SYLLABUS', 'EMAIL', 'PDF', 'SCREENSHOT']);
+const VALID_PRESETS = new Set(['all', 'this-week', 'this-month', 'overdue', 'custom']);
+
+function toCategory(val: string | undefined): SourceCategory | '' {
+  return val !== undefined && VALID_CATEGORIES.has(val) ? (val as SourceCategory) : '';
+}
+
+function toPreset(val: string | undefined): DateRangePreset {
+  return val !== undefined && VALID_PRESETS.has(val) ? (val as DateRangePreset) : 'all';
+}
+
 type InboxViewProps = Readonly<{
   initialActionId: string | null;
+  initialFilters: InboxFilters;
   onActionSelect: (id: string | null) => void;
 }>;
 
-export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): ReactElement {
+export function InboxView({ initialActionId, initialFilters, onActionSelect }: InboxViewProps): ReactElement {
   const [actions, setActions] = useState<readonly SavedActionSummary[]>([]);
-  const [sort, setSort] = useState<'recent' | 'due'>('due');
+  const [sort, setSort] = useState<'recent' | 'due'>(
+    initialFilters.sort === 'recent' ? 'recent' : 'due',
+  );
   const [selectedId, setSelectedId] = useState<string | null>(initialActionId);
   const [detail, setDetail] = useState<SavedActionDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -29,13 +44,14 @@ export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): 
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [hasNext, setHasNext] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [searchInput, setSearchInput] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<SourceCategory | ''>('');
-  const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>('all');
-  const [customFrom, setCustomFrom] = useState<string>('');
-  const [customTo, setCustomTo] = useState<string>('');
+  const [searchInput, setSearchInput] = useState<string>(initialFilters.q ?? '');
+  const [searchQuery, setSearchQuery] = useState<string>(initialFilters.q ?? '');
+  const [categoryFilter, setCategoryFilter] = useState<SourceCategory | ''>(toCategory(initialFilters.category));
+  const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>(toPreset(initialFilters.dateRange));
+  const [customFrom, setCustomFrom] = useState<string>(initialFilters.customFrom ?? '');
+  const [customTo, setCustomTo] = useState<string>(initialFilters.customTo ?? '');
   const [retryKey, setRetryKey] = useState<number>(0);
+  const [csvExporting, setCsvExporting] = useState<boolean>(false);
 
   useEffect(() => {
     if (initialActionId === null) {
@@ -63,6 +79,38 @@ export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): 
     [dateRangePreset, customFrom, customTo],
   );
 
+  const currentSearch: SearchParams = useMemo(() => ({
+    ...(searchQuery.length > 0 ? { q: searchQuery } : {}),
+    ...(categoryFilter !== '' ? { category: categoryFilter } : {}),
+    ...(dateRange.from !== undefined ? { dueDateFrom: dateRange.from } : {}),
+    ...(dateRange.to !== undefined ? { dueDateTo: dateRange.to } : {}),
+  }), [searchQuery, categoryFilter, dateRange]);
+
+  const calendarUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (searchQuery.length > 0) params.set('q', searchQuery);
+    if (categoryFilter !== '') params.set('category', categoryFilter);
+    if (dateRange.from !== undefined) params.set('dueDateFrom', dateRange.from);
+    if (dateRange.to !== undefined) params.set('dueDateTo', dateRange.to);
+    params.set('sort', sort);
+    const qs = params.toString();
+    return qs.length > 0 ? `/api/v1/actions/calendar.ics?${qs}` : '/api/v1/actions/calendar.ics';
+  }, [searchQuery, categoryFilter, dateRange, sort]);
+
+  useEffect(() => {
+    replaceFilters(
+      {
+        sort,
+        q: searchQuery.length > 0 ? searchQuery : undefined,
+        category: categoryFilter !== '' ? categoryFilter : undefined,
+        dateRange: dateRangePreset !== 'all' ? dateRangePreset : undefined,
+        customFrom: dateRangePreset === 'custom' && customFrom.length > 0 ? customFrom : undefined,
+        customTo: dateRangePreset === 'custom' && customTo.length > 0 ? customTo : undefined,
+      },
+      selectedId,
+    );
+  }, [sort, searchQuery, categoryFilter, dateRangePreset, customFrom, customTo, selectedId]);
+
   useEffect(() => {
     setActions([]);
     setCurrentPage(0);
@@ -77,13 +125,7 @@ export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): 
     } else {
       setLoadingMore(true);
     }
-    const search: SearchParams = {
-      ...(searchQuery.length > 0 ? { q: searchQuery } : {}),
-      ...(categoryFilter !== '' ? { category: categoryFilter } : {}),
-      ...(dateRange.from !== undefined ? { dueDateFrom: dateRange.from } : {}),
-      ...(dateRange.to !== undefined ? { dueDateTo: dateRange.to } : {}),
-    };
-    fetchActionList(sort, currentPage, search)
+    fetchActionList(sort, currentPage, currentSearch)
       .then((result) => {
         if (cancelled) return;
         setActions((prev) => isFirstPage ? result.actions : [...prev, ...result.actions]);
@@ -99,7 +141,21 @@ export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): 
         setLoadingMore(false);
       });
     return () => { cancelled = true; };
-  }, [sort, currentPage, searchQuery, categoryFilter, dateRange, retryKey]);
+  }, [sort, currentPage, currentSearch, retryKey]);
+
+  async function handleCsvExport(): Promise<void> {
+    setCsvExporting(true);
+    try {
+      const allActions = await fetchAllMatchingActions(sort, currentSearch);
+      const csv = generateActionsCsv(allActions);
+      downloadCsv(csv, 'notice2action-actions.csv');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'CSV 내보내기에 실패했습니다';
+      setError(message);
+    } finally {
+      setCsvExporting(false);
+    }
+  }
 
   function handleProfileChange(newProfile: UserProfile): void {
     saveProfile(newProfile);
@@ -203,20 +259,17 @@ export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): 
           <div className="export-row">
             <a
               className="calendar-btn"
-              href="/api/v1/actions/calendar.ics"
+              href={calendarUrl}
               download="notice2action.ics"
             >
               캘린더 내보내기
             </a>
             <button
               className="calendar-btn"
-              onClick={() => {
-                const csv = generateActionsCsv(actions);
-                downloadCsv(csv, 'notice2action-actions.csv');
-              }}
-              disabled={actions.length === 0}
+              onClick={() => { void handleCsvExport(); }}
+              disabled={actions.length === 0 || csvExporting}
             >
-              CSV 내보내기
+              {csvExporting ? '내보내는 중...' : 'CSV 내보내기'}
             </button>
           </div>
 

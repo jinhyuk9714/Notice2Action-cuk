@@ -1,9 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { isActionExtractionResponse, isActionListResponse, isSavedActionDetail, isSourceListResponse, isSourceDetail } from './types';
+import {
+  parseActionExtractionResponse,
+  parseActionListResponse,
+  parseSavedActionDetail,
+  parseSourceListResponse,
+  parseSourceDetail,
+  SourceCategorySchema,
+} from './types';
 
 const VALID_EVIDENCE = { fieldName: '마감일', snippet: '2026-03-15까지', confidence: 0.9 };
 
 const VALID_EXTRACTED_ACTION = {
+  id: null,
+  sourceId: null,
   title: '장학금 신청',
   actionSummary: '교내 장학금 신청',
   dueAtIso: '2026-03-15',
@@ -14,12 +23,20 @@ const VALID_EXTRACTED_ACTION = {
   sourceCategory: 'NOTICE',
   evidence: [VALID_EVIDENCE],
   inferred: false,
+  confidenceScore: 0.9,
+  createdAt: null,
 };
 
 const VALID_SUMMARY = {
   id: '123',
   title: '장학금 신청',
   actionSummary: '교내 장학금 신청',
+  dueAtIso: null,
+  dueAtLabel: null,
+  eligibility: null,
+  sourceCategory: null,
+  sourceTitle: null,
+  confidenceScore: 0.9,
   createdAt: '2026-03-01T00:00:00Z',
 };
 
@@ -27,139 +44,199 @@ const VALID_DETAIL = {
   id: '123',
   title: '장학금 신청',
   actionSummary: '교내 장학금 신청',
+  dueAtIso: null,
+  dueAtLabel: null,
+  eligibility: null,
+  requiredItems: [],
+  systemHint: null,
+  inferred: false,
+  confidenceScore: 0.9,
   createdAt: '2026-03-01T00:00:00Z',
+  source: null,
   evidence: [VALID_EVIDENCE],
+  overrides: [],
 };
 
-describe('isActionExtractionResponse', () => {
-  it('returns false for null', () => {
-    expect(isActionExtractionResponse(null)).toBe(false);
+describe('SourceCategorySchema', () => {
+  it('accepts valid categories', () => {
+    expect(SourceCategorySchema.parse('NOTICE')).toBe('NOTICE');
+    expect(SourceCategorySchema.parse('PDF')).toBe('PDF');
   });
 
-  it('returns false for non-object', () => {
-    expect(isActionExtractionResponse('string')).toBe(false);
-    expect(isActionExtractionResponse(42)).toBe(false);
+  it('rejects invalid category', () => {
+    expect(() => SourceCategorySchema.parse('INVALID')).toThrow();
+  });
+});
+
+describe('parseActionExtractionResponse', () => {
+  it('throws for null', () => {
+    expect(() => parseActionExtractionResponse(null)).toThrow();
   });
 
-  it('returns false for object without actions', () => {
-    expect(isActionExtractionResponse({})).toBe(false);
+  it('throws for non-object', () => {
+    expect(() => parseActionExtractionResponse('string')).toThrow();
+    expect(() => parseActionExtractionResponse(42)).toThrow();
   });
 
-  it('returns false for missing duplicate field', () => {
-    expect(isActionExtractionResponse({ actions: [] })).toBe(false);
+  it('throws for object without actions', () => {
+    expect(() => parseActionExtractionResponse({})).toThrow();
   });
 
-  it('returns true for empty actions array with duplicate', () => {
-    expect(isActionExtractionResponse({ actions: [], duplicate: false })).toBe(true);
+  it('throws for missing duplicate field', () => {
+    expect(() => parseActionExtractionResponse({ actions: [] })).toThrow();
   });
 
-  it('returns true for valid action', () => {
-    expect(isActionExtractionResponse({ actions: [VALID_EXTRACTED_ACTION], duplicate: false })).toBe(true);
+  it('parses empty actions array with duplicate', () => {
+    const result = parseActionExtractionResponse({ actions: [], duplicate: false });
+    expect(result.actions).toHaveLength(0);
+    expect(result.duplicate).toBe(false);
   });
 
-  it('returns false when action missing title', () => {
+  it('parses valid action', () => {
+    const result = parseActionExtractionResponse({ actions: [VALID_EXTRACTED_ACTION], duplicate: false });
+    expect(result.actions).toHaveLength(1);
+    expect(result.actions[0].title).toBe('장학금 신청');
+  });
+
+  it('throws when action missing title', () => {
     const { title: _, ...noTitle } = VALID_EXTRACTED_ACTION;
-    expect(isActionExtractionResponse({ actions: [noTitle] })).toBe(false);
+    expect(() => parseActionExtractionResponse({ actions: [noTitle], duplicate: false })).toThrow();
   });
 
-  it('returns false when action missing actionSummary', () => {
+  it('throws when action missing actionSummary', () => {
     const { actionSummary: _, ...noSummary } = VALID_EXTRACTED_ACTION;
-    expect(isActionExtractionResponse({ actions: [noSummary] })).toBe(false);
+    expect(() => parseActionExtractionResponse({ actions: [noSummary], duplicate: false })).toThrow();
   });
 
-  it('returns false when action has invalid evidence', () => {
+  it('throws when action has invalid evidence', () => {
     const action = { ...VALID_EXTRACTED_ACTION, evidence: [{ fieldName: 'f' }] };
-    expect(isActionExtractionResponse({ actions: [action] })).toBe(false);
+    expect(() => parseActionExtractionResponse({ actions: [action], duplicate: false })).toThrow();
   });
 
-  it('returns false when action has non-boolean inferred', () => {
+  it('throws when action has non-boolean inferred', () => {
     const action = { ...VALID_EXTRACTED_ACTION, inferred: 'yes' };
-    expect(isActionExtractionResponse({ actions: [action] })).toBe(false);
+    expect(() => parseActionExtractionResponse({ actions: [action], duplicate: false })).toThrow();
   });
 
-  it('returns false when evidence snippet missing confidence', () => {
+  it('throws when evidence snippet missing confidence', () => {
     const action = { ...VALID_EXTRACTED_ACTION, evidence: [{ fieldName: 'f', snippet: 's' }] };
-    expect(isActionExtractionResponse({ actions: [action] })).toBe(false);
+    expect(() => parseActionExtractionResponse({ actions: [action], duplicate: false })).toThrow();
   });
 
-  it('returns false when requiredItems contains non-string', () => {
+  it('throws when requiredItems contains non-string', () => {
     const action = { ...VALID_EXTRACTED_ACTION, requiredItems: [123] };
-    expect(isActionExtractionResponse({ actions: [action] })).toBe(false);
+    expect(() => parseActionExtractionResponse({ actions: [action], duplicate: false })).toThrow();
   });
 });
 
-describe('isActionListResponse', () => {
-  it('returns false for null', () => {
-    expect(isActionListResponse(null)).toBe(false);
+describe('parseActionListResponse', () => {
+  it('throws for null', () => {
+    expect(() => parseActionListResponse(null)).toThrow();
   });
 
-  it('returns true for empty actions array', () => {
-    expect(isActionListResponse({ actions: [], currentPage: 0, pageSize: 20, totalElements: 0, totalPages: 0, hasNext: false })).toBe(true);
+  it('parses empty actions array', () => {
+    const result = parseActionListResponse({
+      actions: [], currentPage: 0, pageSize: 20, totalElements: 0, totalPages: 0, hasNext: false,
+    });
+    expect(result.actions).toHaveLength(0);
+    expect(result.hasNext).toBe(false);
   });
 
-  it('returns true for valid summary', () => {
-    expect(isActionListResponse({ actions: [VALID_SUMMARY], currentPage: 0, pageSize: 20, totalElements: 1, totalPages: 1, hasNext: false })).toBe(true);
+  it('parses valid summary', () => {
+    const result = parseActionListResponse({
+      actions: [VALID_SUMMARY], currentPage: 0, pageSize: 20, totalElements: 1, totalPages: 1, hasNext: false,
+    });
+    expect(result.actions).toHaveLength(1);
   });
 
-  it('returns false when summary missing id', () => {
+  it('throws when summary missing id', () => {
     const { id: _, ...noId } = VALID_SUMMARY;
-    expect(isActionListResponse({ actions: [noId], currentPage: 0, totalPages: 1, hasNext: false })).toBe(false);
+    expect(() => parseActionListResponse({
+      actions: [noId], currentPage: 0, pageSize: 20, totalElements: 1, totalPages: 1, hasNext: false,
+    })).toThrow();
   });
 
-  it('returns false when summary missing title', () => {
+  it('throws when summary missing title', () => {
     const { title: _, ...noTitle } = VALID_SUMMARY;
-    expect(isActionListResponse({ actions: [noTitle], currentPage: 0, totalPages: 1, hasNext: false })).toBe(false);
+    expect(() => parseActionListResponse({
+      actions: [noTitle], currentPage: 0, pageSize: 20, totalElements: 1, totalPages: 1, hasNext: false,
+    })).toThrow();
   });
 
-  it('returns false when summary missing createdAt', () => {
+  it('throws when summary missing createdAt', () => {
     const { createdAt: _, ...noCreatedAt } = VALID_SUMMARY;
-    expect(isActionListResponse({ actions: [noCreatedAt], currentPage: 0, totalPages: 1, hasNext: false })).toBe(false);
+    expect(() => parseActionListResponse({
+      actions: [noCreatedAt], currentPage: 0, pageSize: 20, totalElements: 1, totalPages: 1, hasNext: false,
+    })).toThrow();
   });
 
-  it('returns false when missing pagination fields', () => {
-    expect(isActionListResponse({ actions: [VALID_SUMMARY] })).toBe(false);
+  it('throws when missing pagination fields', () => {
+    expect(() => parseActionListResponse({ actions: [VALID_SUMMARY] })).toThrow();
   });
 
-  it('returns false when pageSize is missing', () => {
-    expect(isActionListResponse({
+  it('throws when pageSize is missing', () => {
+    expect(() => parseActionListResponse({
       actions: [VALID_SUMMARY], currentPage: 0, totalElements: 1, totalPages: 1, hasNext: false,
-    })).toBe(false);
+    })).toThrow();
   });
 
-  it('returns false when totalElements is missing', () => {
-    expect(isActionListResponse({
+  it('throws when totalElements is missing', () => {
+    expect(() => parseActionListResponse({
       actions: [VALID_SUMMARY], currentPage: 0, pageSize: 20, totalPages: 1, hasNext: false,
-    })).toBe(false);
+    })).toThrow();
   });
 });
 
-describe('isSavedActionDetail', () => {
-  it('returns false for null', () => {
-    expect(isSavedActionDetail(null)).toBe(false);
+describe('parseSavedActionDetail', () => {
+  it('throws for null', () => {
+    expect(() => parseSavedActionDetail(null)).toThrow();
   });
 
-  it('returns true for valid detail', () => {
-    expect(isSavedActionDetail(VALID_DETAIL)).toBe(true);
+  it('parses valid detail', () => {
+    const result = parseSavedActionDetail(VALID_DETAIL);
+    expect(result.id).toBe('123');
+    expect(result.evidence).toHaveLength(1);
   });
 
-  it('returns false when missing evidence array', () => {
+  it('throws when missing evidence array', () => {
     const { evidence: _, ...noEvidence } = VALID_DETAIL;
-    expect(isSavedActionDetail(noEvidence)).toBe(false);
+    expect(() => parseSavedActionDetail(noEvidence)).toThrow();
   });
 
-  it('returns false when evidence has invalid snippet', () => {
+  it('throws when evidence has invalid snippet', () => {
     const detail = { ...VALID_DETAIL, evidence: [{ fieldName: 'f' }] };
-    expect(isSavedActionDetail(detail)).toBe(false);
+    expect(() => parseSavedActionDetail(detail)).toThrow();
   });
 
-  it('returns false when missing id', () => {
+  it('throws when missing id', () => {
     const { id: _, ...noId } = VALID_DETAIL;
-    expect(isSavedActionDetail(noId)).toBe(false);
+    expect(() => parseSavedActionDetail(noId)).toThrow();
   });
 
-  it('returns false when missing actionSummary', () => {
+  it('throws when missing actionSummary', () => {
     const { actionSummary: _, ...noSummary } = VALID_DETAIL;
-    expect(isSavedActionDetail(noSummary)).toBe(false);
+    expect(() => parseSavedActionDetail(noSummary)).toThrow();
+  });
+
+  it('parses detail with empty overrides', () => {
+    const result = parseSavedActionDetail({ ...VALID_DETAIL, overrides: [] });
+    expect(result.overrides).toHaveLength(0);
+  });
+
+  it('parses detail with overrides', () => {
+    const result = parseSavedActionDetail({
+      ...VALID_DETAIL,
+      overrides: [{ fieldName: 'title', machineValue: '원래 제목' }],
+    });
+    expect(result.overrides).toHaveLength(1);
+    expect(result.overrides[0].fieldName).toBe('title');
+    expect(result.overrides[0].machineValue).toBe('원래 제목');
+  });
+
+  it('defaults overrides to empty array when missing', () => {
+    const { overrides: _, ...noOverrides } = VALID_DETAIL;
+    const result = parseSavedActionDetail(noOverrides);
+    expect(result.overrides).toHaveLength(0);
   });
 });
 
@@ -172,82 +249,87 @@ const VALID_SOURCE_SUMMARY = {
   actionCount: 2,
 };
 
-describe('isSourceListResponse', () => {
-  it('returns false for null', () => {
-    expect(isSourceListResponse(null)).toBe(false);
+describe('parseSourceListResponse', () => {
+  it('throws for null', () => {
+    expect(() => parseSourceListResponse(null)).toThrow();
   });
 
-  it('returns true for valid response', () => {
-    expect(isSourceListResponse({
+  it('parses valid response', () => {
+    const result = parseSourceListResponse({
       sources: [VALID_SOURCE_SUMMARY],
       currentPage: 0, pageSize: 20, totalElements: 1, totalPages: 1, hasNext: false,
-    })).toBe(true);
+    });
+    expect(result.sources).toHaveLength(1);
   });
 
-  it('returns true for empty sources', () => {
-    expect(isSourceListResponse({
+  it('parses empty sources', () => {
+    const result = parseSourceListResponse({
       sources: [],
       currentPage: 0, pageSize: 20, totalElements: 0, totalPages: 0, hasNext: false,
-    })).toBe(true);
+    });
+    expect(result.sources).toHaveLength(0);
   });
 
-  it('returns false when missing pagination fields', () => {
-    expect(isSourceListResponse({ sources: [VALID_SOURCE_SUMMARY] })).toBe(false);
+  it('throws when missing pagination fields', () => {
+    expect(() => parseSourceListResponse({ sources: [VALID_SOURCE_SUMMARY] })).toThrow();
   });
 
-  it('returns false when source pageSize is missing', () => {
-    expect(isSourceListResponse({
+  it('throws when source pageSize is missing', () => {
+    expect(() => parseSourceListResponse({
       sources: [VALID_SOURCE_SUMMARY], currentPage: 0, totalElements: 1, totalPages: 1, hasNext: false,
-    })).toBe(false);
+    })).toThrow();
   });
 
-  it('returns false when source totalElements is missing', () => {
-    expect(isSourceListResponse({
+  it('throws when source totalElements is missing', () => {
+    expect(() => parseSourceListResponse({
       sources: [VALID_SOURCE_SUMMARY], currentPage: 0, pageSize: 20, totalPages: 1, hasNext: false,
-    })).toBe(false);
+    })).toThrow();
   });
 
-  it('returns false when source missing id', () => {
+  it('throws when source missing id', () => {
     const { id: _, ...noId } = VALID_SOURCE_SUMMARY;
-    expect(isSourceListResponse({
-      sources: [noId], currentPage: 0, totalPages: 1, hasNext: false,
-    })).toBe(false);
+    expect(() => parseSourceListResponse({
+      sources: [noId], currentPage: 0, pageSize: 20, totalElements: 1, totalPages: 1, hasNext: false,
+    })).toThrow();
   });
 });
 
-describe('isSourceDetail', () => {
-  it('returns false for null', () => {
-    expect(isSourceDetail(null)).toBe(false);
+describe('parseSourceDetail', () => {
+  it('throws for null', () => {
+    expect(() => parseSourceDetail(null)).toThrow();
   });
 
-  it('returns true for valid detail', () => {
-    expect(isSourceDetail({
+  it('parses valid detail', () => {
+    const result = parseSourceDetail({
       id: 'src-1',
       title: '공결 신청 안내',
       sourceCategory: 'NOTICE',
       sourceUrl: null,
       createdAt: '2026-03-01T00:00:00Z',
       actions: [VALID_SUMMARY],
-    })).toBe(true);
+    });
+    expect(result.id).toBe('src-1');
+    expect(result.actions).toHaveLength(1);
   });
 
-  it('returns true for detail with empty actions', () => {
-    expect(isSourceDetail({
+  it('parses detail with empty actions', () => {
+    const result = parseSourceDetail({
       id: 'src-1',
       title: null,
       sourceCategory: 'PDF',
       sourceUrl: null,
       createdAt: '2026-03-01T00:00:00Z',
       actions: [],
-    })).toBe(true);
+    });
+    expect(result.actions).toHaveLength(0);
   });
 
-  it('returns false when missing sourceCategory', () => {
-    expect(isSourceDetail({
+  it('throws when missing sourceCategory', () => {
+    expect(() => parseSourceDetail({
       id: 'src-1',
       title: '테스트',
       createdAt: '2026-03-01T00:00:00Z',
       actions: [],
-    })).toBe(false);
+    })).toThrow();
   });
 });
