@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { fetchSourceDetail, fetchSourceList } from '../lib/api';
 import { categoryLabel } from '../lib/labels';
 import type { SavedActionSummary, SourceDetail, SourceSummary } from '../lib/types';
+import { usePagedList } from '../lib/usePagedList';
 import { SkeletonCard } from './SkeletonCard';
 import { SourceCard } from './SourceCard';
 
@@ -11,15 +12,24 @@ type SourceListViewProps = Readonly<{
 }>;
 
 export function SourceListView({ initialSourceId, onSourceSelect }: SourceListViewProps): ReactElement {
-  const [sources, setSources] = useState<readonly SourceSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(initialSourceId);
   const [detail, setDetail] = useState<SourceDetail | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(0);
-  const [hasNext, setHasNext] = useState<boolean>(false);
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [retryKey, setRetryKey] = useState<number>(0);
+
+  const fetchPage = useCallback(
+    (page: number) =>
+      fetchSourceList(page)
+        .then((r) => ({ items: [...r.sources], hasNext: r.hasNext })),
+    [],
+  );
+
+  const list = usePagedList<SourceSummary>({
+    fetchPage,
+    deps: [],
+  });
+
+  // Sync initialSourceId from URL changes
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
   useEffect(() => {
     if (initialSourceId === null) {
@@ -27,7 +37,7 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
       setDetail(null);
       return;
     }
-    if (initialSourceId === selectedId) {
+    if (initialSourceId === selectedIdRef.current) {
       return;
     }
     setSelectedId(initialSourceId);
@@ -35,33 +45,7 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
     fetchSourceDetail(initialSourceId)
       .then((result) => { setDetail(result); })
       .catch(() => { /* handled by select */ });
-  }, [initialSourceId, selectedId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const isFirstPage = currentPage === 0;
-    if (isFirstPage) {
-      setLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
-    fetchSourceList(currentPage)
-      .then((result) => {
-        if (cancelled) return;
-        setSources((prev) => isFirstPage ? result.sources : [...prev, ...result.sources]);
-        setHasNext(result.hasNext);
-        setLoading(false);
-        setLoadingMore(false);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        const message = err instanceof Error ? err.message : '소스 목록을 불러오지 못했습니다';
-        setError(message);
-        setLoading(false);
-        setLoadingMore(false);
-      });
-    return () => { cancelled = true; };
-  }, [currentPage, retryKey]);
+  }, [initialSourceId]);
 
   function handleSelect(id: string): void {
     setSelectedId(id);
@@ -74,11 +58,11 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : '소스 상세 정보를 불러오지 못했습니다';
-        setError(message);
+        void message;
       });
   }
 
-  if (loading) {
+  if (list.loading) {
     return (
       <div className="card-list">
         <SkeletonCard lines={2} />
@@ -88,21 +72,16 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
     );
   }
 
-  if (error !== null) {
+  if (list.error !== null) {
     return (
       <div className="error-banner">
-        {error}
-        <button className="retry-btn" onClick={() => {
-          setError(null);
-          setSources([]);
-          setCurrentPage(0);
-          setRetryKey((k) => k + 1);
-        }}>다시 시도</button>
+        {list.error}
+        <button className="retry-btn" onClick={list.retry}>다시 시도</button>
       </div>
     );
   }
 
-  if (sources.length === 0) {
+  if (list.items.length === 0) {
     return (
       <div className="inbox-state">
         <span className="state-icon" aria-hidden="true">&#128196;</span>
@@ -117,10 +96,10 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
       <div className="inbox-list">
         <div className="panel-header">
           <p className="eyebrow">소스 히스토리</p>
-          <h2>{sources.length}개</h2>
+          <h2>{list.items.length}개</h2>
         </div>
         <div className="card-list">
-          {sources.map((source) => (
+          {list.items.map((source) => (
             <SourceCard
               key={source.id}
               source={source}
@@ -128,13 +107,20 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
               onSelect={handleSelect}
             />
           ))}
-          {hasNext ? (
+          {list.loadMoreError ? (
             <button
               className="load-more-btn"
-              onClick={() => { setCurrentPage((p) => p + 1); }}
-              disabled={loadingMore}
+              onClick={list.loadMore}
             >
-              {loadingMore ? '불러오는 중...' : '더 보기'}
+              불러오기 실패 — 다시 시도
+            </button>
+          ) : list.hasNext ? (
+            <button
+              className="load-more-btn"
+              onClick={list.loadMore}
+              disabled={list.loadingMore}
+            >
+              {list.loadingMore ? '불러오는 중...' : '더 보기'}
             </button>
           ) : null}
         </div>
