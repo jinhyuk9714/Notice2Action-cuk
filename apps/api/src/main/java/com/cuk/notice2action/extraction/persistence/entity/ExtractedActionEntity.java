@@ -55,6 +55,9 @@ public class ExtractedActionEntity {
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
+  @Column(name = "machine_values_json", nullable = false, columnDefinition = "TEXT")
+  private String machineValuesJson = "{}";
+
   @OneToMany(mappedBy = "action", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<EvidenceSnippetEntity> evidenceSnippets = new ArrayList<>();
 
@@ -161,5 +164,13 @@ public class ExtractedActionEntity {
 
   public void setSystemHint(String systemHint) {
     this.systemHint = systemHint;
+  }
+
+  public String getMachineValuesJson() {
+    return machineValuesJson;
+  }
+
+  public void setMachineValuesJson(String machineValuesJson) {
+    this.machineValuesJson = machineValuesJson;
   }
 }

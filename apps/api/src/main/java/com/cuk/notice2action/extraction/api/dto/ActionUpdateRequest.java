@@ -9,5 +9,6 @@ public record ActionUpdateRequest(
     String dueAtLabel,
     String eligibility,
     List<String> requiredItems,
-    String systemHint
+    String systemHint,
+    List<String> revertFields
 ) {}

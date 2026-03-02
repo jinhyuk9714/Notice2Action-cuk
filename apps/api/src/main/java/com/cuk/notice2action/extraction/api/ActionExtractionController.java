@@ -225,9 +225,17 @@ public class ActionExtractionController {
   }
 
   @GetMapping(value = "/actions/calendar.ics", produces = "text/calendar")
-  public ResponseEntity<String> exportCalendar() {
-    List<ExtractedActionEntity> actions =
-        actionRepository.findAllByDueAtIsoIsNotNullOrderByDueAtIsoAsc();
+  public ResponseEntity<String> exportCalendar(
+      @RequestParam(name = "sort", required = false, defaultValue = "due") String sort,
+      @RequestParam(name = "q", required = false) String q,
+      @RequestParam(name = "category", required = false) SourceCategory category,
+      @RequestParam(name = "dueDateFrom", required = false) String dueDateFrom,
+      @RequestParam(name = "dueDateTo", required = false) String dueDateTo
+  ) {
+    OffsetDateTime from = parseQueryDate(dueDateFrom, "dueDateFrom", false);
+    OffsetDateTime to = parseQueryDate(dueDateTo, "dueDateTo", true);
+    ActionSearchCriteria criteria = new ActionSearchCriteria(q, category, from, to, sort);
+    List<ExtractedActionEntity> actions = actionPersistenceService.findActionsForCalendar(criteria);
     String ics = iCalendarService.generateCalendar(actions);
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"notice2action.ics\"")

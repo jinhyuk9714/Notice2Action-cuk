@@ -7,6 +7,7 @@ import com.cuk.notice2action.extraction.api.dto.ActionSearchCriteria;
 import com.cuk.notice2action.extraction.api.dto.ActionUpdateRequest;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
+import com.cuk.notice2action.extraction.api.dto.FieldOverrideInfoDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionSummaryDto;
 import com.cuk.notice2action.extraction.api.dto.SourceInfoDto;
@@ -21,9 +22,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -86,7 +91,19 @@ public class ActionPersistenceService {
         now
     );
     source.setContentHash(contentHash);
-    sourceRepository.save(source);
+    try {
+      sourceRepository.saveAndFlush(source);
+    } catch (DataIntegrityViolationException e) {
+      // Concurrent duplicate: another request saved the same content_hash first.
+      // Re-check and return duplicate response.
+      if (contentHash != null) {
+        var concurrent = sourceRepository.findByContentHash(contentHash);
+        if (concurrent.isPresent()) {
+          return buildDuplicateResponse(concurrent.get());
+        }
+      }
+      throw e;
+    }
 
     List<ExtractedActionDto> savedActions = new ArrayList<>();
 
@@ -124,38 +141,113 @@ public class ActionPersistenceService {
     return new ActionExtractionResponse(savedActions);
   }
 
+  private static final Set<String> OVERRIDABLE_FIELDS = Set.of(
+      "title", "actionSummary", "dueAtIso", "dueAtLabel",
+      "eligibility", "requiredItems", "systemHint");
+
   @Transactional
   public SavedActionDetailDto updateAction(UUID actionId, ActionUpdateRequest request) {
     ExtractedActionEntity entity = actionRepository.findById(actionId)
         .orElseThrow(() -> new NoSuchElementException("Action not found: " + actionId));
 
+    Map<String, String> machineValues = parseMachineValues(entity.getMachineValuesJson());
+
+    // Phase 1: Handle revert requests
+    if (request.revertFields() != null) {
+      for (String fieldName : request.revertFields()) {
+        if (!OVERRIDABLE_FIELDS.contains(fieldName)) {
+          throw new IllegalArgumentException("되돌릴 수 없는 필드입니다: " + fieldName);
+        }
+        String machineValue = machineValues.get(fieldName);
+        if (machineValue != null) {
+          setFieldValue(entity, fieldName, machineValue);
+          machineValues.remove(fieldName);
+        }
+      }
+    }
+
+    // Phase 2: Handle updates with override tracking
     if (request.title() != null) {
       if (request.title().isBlank()) {
         throw new IllegalArgumentException("제목은 비워둘 수 없습니다.");
       }
+      if (!machineValues.containsKey("title")) {
+        machineValues.put("title", entity.getTitle());
+      }
       entity.setTitle(request.title());
     }
     if (request.actionSummary() != null) {
+      if (!machineValues.containsKey("actionSummary")) {
+        machineValues.put("actionSummary", entity.getActionSummary());
+      }
       entity.setActionSummary(request.actionSummary());
     }
     if (request.dueAtIso() != null) {
+      if (!machineValues.containsKey("dueAtIso")) {
+        machineValues.put("dueAtIso",
+            entity.getDueAtIso() != null ? entity.getDueAtIso().toString() : null);
+      }
       entity.setDueAtIso(parseDueAtIso(request.dueAtIso(), "dueAtIso"));
     }
     if (request.dueAtLabel() != null) {
+      if (!machineValues.containsKey("dueAtLabel")) {
+        machineValues.put("dueAtLabel", entity.getDueAtLabel());
+      }
       entity.setDueAtLabel(request.dueAtLabel());
     }
     if (request.eligibility() != null) {
+      if (!machineValues.containsKey("eligibility")) {
+        machineValues.put("eligibility", entity.getEligibility());
+      }
       entity.setEligibility(request.eligibility());
     }
     if (request.requiredItems() != null) {
+      if (!machineValues.containsKey("requiredItems")) {
+        machineValues.put("requiredItems", entity.getRequiredItemsJson());
+      }
       entity.setRequiredItemsJson(toJson(request.requiredItems()));
     }
     if (request.systemHint() != null) {
+      if (!machineValues.containsKey("systemHint")) {
+        machineValues.put("systemHint", entity.getSystemHint());
+      }
       entity.setSystemHint(request.systemHint());
     }
 
+    entity.setMachineValuesJson(serializeMachineValues(machineValues));
     actionRepository.save(entity);
     return toDetailDto(entity);
+  }
+
+  private void setFieldValue(ExtractedActionEntity entity, String fieldName, String value) {
+    switch (fieldName) {
+      case "title" -> entity.setTitle(value);
+      case "actionSummary" -> entity.setActionSummary(value);
+      case "dueAtIso" -> entity.setDueAtIso(value != null ? OffsetDateTime.parse(value) : null);
+      case "dueAtLabel" -> entity.setDueAtLabel(value);
+      case "eligibility" -> entity.setEligibility(value);
+      case "requiredItems" -> entity.setRequiredItemsJson(value != null ? value : "[]");
+      case "systemHint" -> entity.setSystemHint(value);
+      default -> { /* unreachable due to OVERRIDABLE_FIELDS check */ }
+    }
+  }
+
+  private Map<String, String> parseMachineValues(String json) {
+    try {
+      Map<String, String> map = objectMapper.readValue(json,
+          new TypeReference<Map<String, String>>() {});
+      return new HashMap<>(map);
+    } catch (Exception e) {
+      return new HashMap<>();
+    }
+  }
+
+  private String serializeMachineValues(Map<String, String> map) {
+    try {
+      return objectMapper.writeValueAsString(map);
+    } catch (JsonProcessingException e) {
+      return "{}";
+    }
   }
 
   private ActionExtractionResponse buildDuplicateResponse(NoticeSourceEntity existingSource) {
@@ -240,6 +332,31 @@ public class ActionPersistenceService {
   }
 
   @Transactional(readOnly = true)
+  public List<ExtractedActionEntity> findActionsForCalendar(ActionSearchCriteria criteria) {
+    Specification<ExtractedActionEntity> spec =
+        (root, query, cb) -> cb.isNotNull(root.get("dueAtIso"));
+
+    if (criteria.q() != null && !criteria.q().isBlank()) {
+      spec = spec.and(ActionSpecifications.titleOrSummaryContains(criteria.q()));
+    }
+    if (criteria.category() != null) {
+      spec = spec.and(ActionSpecifications.sourceCategoryEquals(criteria.category()));
+    }
+    if (criteria.dueDateFrom() != null) {
+      spec = spec.and(ActionSpecifications.dueAtFrom(criteria.dueDateFrom()));
+    }
+    if (criteria.dueDateTo() != null) {
+      spec = spec.and(ActionSpecifications.dueAtTo(criteria.dueDateTo()));
+    }
+
+    Sort sort = "due".equals(criteria.sort())
+        ? Sort.by(Sort.Order.asc("dueAtIso"))
+        : Sort.by(Sort.Order.desc("createdAt"));
+
+    return actionRepository.findAll(spec, sort);
+  }
+
+  @Transactional(readOnly = true)
   public SavedActionDetailDto getActionDetail(UUID actionId) {
     ExtractedActionEntity entity = actionRepository.findById(actionId)
         .orElseThrow(() -> new NoSuchElementException("Action not found: " + actionId));
@@ -305,6 +422,11 @@ public class ActionPersistenceService {
         .map(e -> new EvidenceSnippetDto(e.getFieldName(), e.getSnippet(), e.getConfidence()))
         .toList();
 
+    Map<String, String> machineValues = parseMachineValues(entity.getMachineValuesJson());
+    List<FieldOverrideInfoDto> overrides = machineValues.entrySet().stream()
+        .map(e -> new FieldOverrideInfoDto(e.getKey(), e.getValue()))
+        .toList();
+
     return new SavedActionDetailDto(
         entity.getId(),
         entity.getTitle(),
@@ -318,7 +440,8 @@ public class ActionPersistenceService {
         entity.getConfidenceScore(),
         entity.getCreatedAt(),
         sourceInfo,
-        evidence
+        evidence,
+        overrides
     );
   }
 

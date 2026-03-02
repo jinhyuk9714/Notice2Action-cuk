@@ -17,10 +17,12 @@ public record SavedActionDetailDto(
     double confidenceScore,
     OffsetDateTime createdAt,
     SourceInfoDto source,
-    List<EvidenceSnippetDto> evidence
+    List<EvidenceSnippetDto> evidence,
+    List<FieldOverrideInfoDto> overrides
 ) {
   public SavedActionDetailDto {
     requiredItems = requiredItems == null ? List.of() : List.copyOf(requiredItems);
     evidence = evidence == null ? List.of() : List.copyOf(evidence);
+    overrides = overrides == null ? List.of() : List.copyOf(overrides);
   }
 }
