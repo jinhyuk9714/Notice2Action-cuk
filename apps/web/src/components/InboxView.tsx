@@ -9,6 +9,7 @@ import { replaceFilters, type InboxFilters } from '../lib/router';
 import type { SavedActionDetail, SavedActionSummary, SourceCategory } from '../lib/types';
 import { ActionDetailPanel } from './ActionDetailPanel';
 import { ActionSummaryCard } from './ActionSummaryCard';
+import { ConfirmDialog } from './ConfirmDialog';
 import { ProfileSettings } from './ProfileSettings';
 import { SkeletonCard } from './SkeletonCard';
 
@@ -52,6 +53,9 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
   const [customTo, setCustomTo] = useState<string>(initialFilters.customTo ?? '');
   const [retryKey, setRetryKey] = useState<number>(0);
   const [csvExporting, setCsvExporting] = useState<boolean>(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleteToast, setDeleteToast] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<boolean>(false);
 
   useEffect(() => {
     if (initialActionId === null) {
@@ -115,6 +119,7 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
     setActions([]);
     setCurrentPage(0);
     setHasNext(false);
+    setLoadMoreError(false);
   }, [sort, searchQuery, categoryFilter, dateRange]);
 
   useEffect(() => {
@@ -135,10 +140,15 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        const message = err instanceof Error ? err.message : '액션 목록을 불러오지 못했습니다';
-        setError(message);
-        setLoading(false);
-        setLoadingMore(false);
+        if (isFirstPage) {
+          const message = err instanceof Error ? err.message : '액션 목록을 불러오지 못했습니다';
+          setError(message);
+          setLoading(false);
+        } else {
+          setLoadMoreError(true);
+          setLoadingMore(false);
+          setCurrentPage((p) => Math.max(0, p - 1));
+        }
       });
     return () => { cancelled = true; };
   }, [sort, currentPage, currentSearch, retryKey]);
@@ -157,13 +167,26 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
     }
   }
 
+  useEffect(() => {
+    if (deleteToast === null) return;
+    const timer = setTimeout(() => { setDeleteToast(null); }, 2500);
+    return () => { clearTimeout(timer); };
+  }, [deleteToast]);
+
   function handleProfileChange(newProfile: UserProfile): void {
     saveProfile(newProfile);
     setProfile(newProfile);
   }
 
-  async function handleDelete(id: string): Promise<void> {
-    if (!window.confirm('이 액션을 삭제하시겠습니까?')) return;
+  function requestDelete(id: string): void {
+    setPendingDeleteId(id);
+  }
+
+  async function confirmDelete(): Promise<void> {
+    if (pendingDeleteId === null) return;
+    const id = pendingDeleteId;
+    const deletedAction = actions.find((a) => a.id === id);
+    setPendingDeleteId(null);
     setDeletingId(id);
     try {
       await deleteAction(id);
@@ -173,12 +196,19 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
         setDetail(null);
         onActionSelect(null);
       }
+      setDeleteToast(deletedAction !== undefined
+        ? `"${deletedAction.title}" 삭제 완료`
+        : '삭제 완료');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다';
       setError(message);
     } finally {
       setDeletingId(null);
     }
+  }
+
+  function cancelDelete(): void {
+    setPendingDeleteId(null);
   }
 
   function handleSelect(id: string): void {
@@ -361,12 +391,22 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
               action={action}
               selected={action.id === selectedId}
               onSelect={handleSelect}
-              onDelete={handleDelete}
+              onDelete={requestDelete}
               isDeleting={deletingId === action.id}
               relevance={relevance}
             />
           ))}
-          {hasNext ? (
+          {loadMoreError ? (
+            <button
+              className="load-more-btn"
+              onClick={() => {
+                setLoadMoreError(false);
+                setCurrentPage((p) => p + 1);
+              }}
+            >
+              불러오기 실패 — 다시 시도
+            </button>
+          ) : hasNext ? (
             <button
               className="load-more-btn"
               onClick={() => { setCurrentPage((p) => p + 1); }}
@@ -408,6 +448,21 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="액션 삭제"
+        message={`"${actions.find((a) => a.id === pendingDeleteId)?.title ?? ''}" 액션을 삭제하시겠습니까?`}
+        confirmLabel="삭제"
+        cancelLabel="취소"
+        danger={true}
+        onConfirm={() => { void confirmDelete(); }}
+        onCancel={cancelDelete}
+      />
+      {deleteToast !== null ? (
+        <div className="toast" role="status" aria-live="polite">
+          {deleteToast}
+        </div>
+      ) : null}
     </section>
   );
 }
