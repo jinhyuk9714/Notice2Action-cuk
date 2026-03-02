@@ -39,6 +39,10 @@
   .toast {
     animation: none;
   }
+  .skeleton-card,
+  .skeleton-line {
+    animation: none;
+  }
   body::before {
     display: none;
   }

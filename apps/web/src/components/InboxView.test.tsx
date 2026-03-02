@@ -498,6 +498,33 @@ describe('InboxView - CSV export', () => {
     });
   });
 
+  it('shows error banner when CSV export fails', async () => {
+    mockFetchActionList.mockResolvedValue(makeActionListResponse([makeActionSummary()]));
+    mockFetchAllMatchingActions.mockRejectedValue(new Error('CSV 생성 실패'));
+    renderInbox();
+    await waitFor(() => { screen.getByText('1개'); });
+
+    fireEvent.click(screen.getByText('CSV 내보내기'));
+    await waitFor(() => {
+      expect(screen.getByText('CSV 생성 실패')).toBeInTheDocument();
+    });
+  });
+
+  it('auto-dismisses CSV error after 4 seconds', async () => {
+    mockFetchActionList.mockResolvedValue(makeActionListResponse([makeActionSummary()]));
+    mockFetchAllMatchingActions.mockRejectedValue(new Error('실패'));
+    renderInbox();
+    await waitFor(() => { screen.getByText('1개'); });
+
+    fireEvent.click(screen.getByText('CSV 내보내기'));
+    await waitFor(() => { screen.getByText('실패'); });
+
+    await act(async () => { vi.advanceTimersByTime(4000); });
+    await waitFor(() => {
+      expect(screen.queryByText('실패')).not.toBeInTheDocument();
+    });
+  });
+
   it('shows "내보내는 중..." during export', async () => {
     mockFetchActionList.mockResolvedValue(makeActionListResponse([makeActionSummary()]));
     mockFetchAllMatchingActions.mockReturnValue(new Promise(() => {}));

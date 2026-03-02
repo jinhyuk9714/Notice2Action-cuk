@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { fetchActionList, fetchAllMatchingActions } from '../lib/api';
 import { generateActionsCsv, downloadCsv } from '../lib/csv';
 import { getPresetLabel } from '../lib/dateRange';
@@ -27,6 +27,13 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
   const [profile, setProfile] = useState<UserProfile>(() => loadProfile());
   const [showRelevantOnly, setShowRelevantOnly] = useState<boolean>(false);
   const [csvExporting, setCsvExporting] = useState<boolean>(false);
+  const [csvError, setCsvError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (csvError === null) return;
+    const timer = setTimeout(() => { setCsvError(null); }, 4000);
+    return () => { clearTimeout(timer); };
+  }, [csvError]);
 
   const detail = useActionDetail({ initialActionId, onActionSelect });
   const filters = useActionFilters({ initialFilters, selectedId: detail.selectedId });
@@ -63,9 +70,7 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
       downloadCsv(csv, 'notice2action-actions.csv');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'CSV 내보내기에 실패했습니다';
-      list.clearError();
-      // Use a brief toast-like approach: set error state temporarily
-      void message; // CSV errors are silently handled for now
+      setCsvError(message);
     } finally {
       setCsvExporting(false);
     }
@@ -150,6 +155,13 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
               {csvExporting ? '내보내는 중...' : 'CSV 내보내기'}
             </button>
           </div>
+
+          {csvError !== null ? (
+            <div className="error-banner" role="alert">
+              {csvError}
+              <button className="retry-btn" onClick={() => { setCsvError(null); }}>닫기</button>
+            </div>
+          ) : null}
 
           <div className="filter-row">
             <input

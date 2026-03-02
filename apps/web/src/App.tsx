@@ -20,6 +20,15 @@ export default function App(): ReactElement {
 
   const activeView = route.view;
 
+  // Lazy mount: only mount a view once its tab has been visited
+  const [mountedViews, setMountedViews] = useState<Set<string>>(() => new Set([activeView]));
+  useEffect(() => {
+    setMountedViews((prev) => {
+      if (prev.has(activeView)) return prev;
+      return new Set([...prev, activeView]);
+    });
+  }, [activeView]);
+
   const handleRetry = useCallback(() => {
     setError(null);
     if (lastSubmitRef.current !== null) {
@@ -123,56 +132,66 @@ export default function App(): ReactElement {
         </nav>
       </section>
 
-      <div className="view-transition" key={activeView}>
-        {activeView === 'extract' ? (
-          <section className="layout">
-            <SourceIngestionForm onSubmit={handleSubmit} onFileSubmit={handleFileSubmit} onEmailSubmit={handleEmailSubmit} isSubmitting={isSubmitting} />
+      <div className="view-transition">
+        {mountedViews.has('extract') ? (
+          <div style={activeView === 'extract' ? undefined : { display: 'none' }}>
+            <section className="layout">
+              <SourceIngestionForm onSubmit={handleSubmit} onFileSubmit={handleFileSubmit} onEmailSubmit={handleEmailSubmit} isSubmitting={isSubmitting} />
 
-            <div className="panel">
-              <div className="panel-header">
-                <div>
-                  <p className="eyebrow">추출 결과</p>
-                  <h2>{actionCountLabel}</h2>
-                </div>
-              </div>
-
-              {error !== null ? (
-                <div className="error-banner">
-                  {error}
-                  <button className="retry-btn" onClick={handleRetry}>다시 시도</button>
-                </div>
-              ) : null}
-
-              <div className="card-list">
-                {actions.length > 0 ? (
-                  actions.map((action, idx) => (
-                    <ActionCard key={action.id ?? `${action.title}-${idx}`} action={action} />
-                  ))
-                ) : (
-                  <div className="inbox-state">
-                    <span className="state-icon" aria-hidden="true">&#9998;</span>
-                    <p className="state-title">추출 결과가 없습니다</p>
-                    <p className="state-desc">텍스트를 입력하고 추출하면 결과가 여기에 표시됩니다.</p>
+              <div className="panel">
+                <div className="panel-header">
+                  <div>
+                    <p className="eyebrow">추출 결과</p>
+                    <h2>{actionCountLabel}</h2>
                   </div>
-                )}
+                </div>
+
+                {error !== null ? (
+                  <div className="error-banner">
+                    {error}
+                    <button className="retry-btn" onClick={handleRetry}>다시 시도</button>
+                  </div>
+                ) : null}
+
+                <div className="card-list">
+                  {actions.length > 0 ? (
+                    actions.map((action, idx) => (
+                      <ActionCard key={action.id ?? `${action.title}-${idx}`} action={action} />
+                    ))
+                  ) : (
+                    <div className="inbox-state">
+                      <span className="state-icon" aria-hidden="true">&#9998;</span>
+                      <p className="state-title">추출 결과가 없습니다</p>
+                      <p className="state-desc">텍스트를 입력하고 추출하면 결과가 여기에 표시됩니다.</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </section>
-        ) : activeView === 'inbox' ? (
-          <InboxView
-            initialActionId={route.view === 'inbox' ? route.actionId : null}
-            initialFilters={route.view === 'inbox' ? route.filters : {}}
-            onActionSelect={(id) => {
-              const filters = route.view === 'inbox' ? route.filters : {};
-              navigate({ view: 'inbox', actionId: id, filters });
-            }}
-          />
-        ) : (
-          <SourceListView
-            initialSourceId={route.view === 'sources' ? route.sourceId : null}
-            onSourceSelect={(id) => { navigate({ view: 'sources', sourceId: id }); }}
-          />
-        )}
+            </section>
+          </div>
+        ) : null}
+
+        {mountedViews.has('inbox') ? (
+          <div style={activeView === 'inbox' ? undefined : { display: 'none' }}>
+            <InboxView
+              initialActionId={route.view === 'inbox' ? route.actionId : null}
+              initialFilters={route.view === 'inbox' ? route.filters : {}}
+              onActionSelect={(id) => {
+                const filters = route.view === 'inbox' ? route.filters : {};
+                navigate({ view: 'inbox', actionId: id, filters });
+              }}
+            />
+          </div>
+        ) : null}
+
+        {mountedViews.has('sources') ? (
+          <div style={activeView === 'sources' ? undefined : { display: 'none' }}>
+            <SourceListView
+              initialSourceId={route.view === 'sources' ? route.sourceId : null}
+              onSourceSelect={(id) => { navigate({ view: 'sources', sourceId: id }); }}
+            />
+          </div>
+        ) : null}
       </div>
 
       {toastMessage !== null ? (

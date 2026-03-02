@@ -32,6 +32,9 @@
   margin: 0 0 var(--space-1);
   font-size: 0.95rem;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .source-card-meta {
@@ -67,6 +70,10 @@
 .source-action-title {
   font-size: 0.85rem;
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .source-action-due {

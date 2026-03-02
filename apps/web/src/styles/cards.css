@@ -41,6 +41,10 @@
   font-weight: 700;
   letter-spacing: var(--tracking-normal);
   line-height: var(--leading-snug);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .panel-header {
@@ -58,4 +62,8 @@
   margin: var(--space-4) 0;
   color: var(--color-text-secondary);
   line-height: var(--leading-relaxed);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
