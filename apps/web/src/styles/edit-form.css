@@ -1,0 +1,101 @@
+/* ===== Edit Form ===== */
+
+.edit-toggle-btn {
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  padding: 6px var(--space-3);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: var(--space-3);
+  transition: background var(--ease-default);
+}
+
+.edit-toggle-btn:hover {
+  background: var(--color-bg-surface-hover);
+  border-color: var(--color-brand-border);
+}
+
+.edit-form {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.edit-row label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.edit-field {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  background: var(--color-bg-surface);
+}
+
+.edit-field:focus {
+  border-color: var(--color-brand);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-shadow-brand-ring);
+}
+
+.edit-textarea {
+  resize: vertical;
+  margin: var(--space-2) 0;
+}
+
+.edit-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-error);
+}
+
+.edit-btn-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.edit-save-btn {
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand);
+  color: var(--color-toast-text);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--ease-default);
+}
+
+.edit-save-btn:hover:not(:disabled) {
+  background: var(--color-brand-hover);
+}
+
+.edit-save-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.edit-cancel-btn {
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--ease-default);
+}
+
+.edit-cancel-btn:hover {
+  background: var(--color-bg-surface-hover);
+}

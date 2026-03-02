@@ -1,0 +1,230 @@
+/* ===== Design Tokens ===== */
+
+:root {
+  color-scheme: light dark;
+
+  /* ── Spacing scale (4px base) ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+
+  /* ── Typography scale ── */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1rem;
+  --text-xl: 1.1rem;
+  --text-2xl: 1.25rem;
+  --text-hero: clamp(2.25rem, 4.5vw, 3.5rem);
+
+  /* ── Line-height scale ── */
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.6;
+
+  /* ── Letter-spacing scale ── */
+  --tracking-tight: -0.025em;
+  --tracking-snug: -0.015em;
+  --tracking-normal: -0.005em;
+  --tracking-wide: 0.01em;
+  --tracking-wider: 0.02em;
+  --tracking-widest: 0.08em;
+
+  /* ── Border-radius scale ── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 999px;
+
+  /* ── Z-index layers ── */
+  --z-dropdown: 10;
+  --z-sticky: 100;
+  --z-toast: 1000;
+  --z-modal: 2000;
+  --z-grain: 9999;
+
+  /* ── Transition ── */
+  --ease-default: 0.2s ease;
+  --ease-out: 0.3s ease-out;
+
+  /* ── Background ── */
+  --color-bg-page: #faf9f7;
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-hover: #f7f5f2;
+  --color-bg-input: #ffffff;
+  --color-bg-input-file: #faf9f7;
+
+  /* ── Text ──
+     Contrast on #ffffff:
+     --color-text-primary   #1c1917 → 16.5:1 (AAA)
+     --color-text-secondary #44403c → 8.2:1  (AAA)
+     --color-text-muted     #78716c → 4.6:1  (AA)
+     --color-text-faint     #a8a29e → 2.7:1  (decorative only)
+  */
+  --color-text-primary: #1c1917;
+  --color-text-secondary: #44403c;
+  --color-text-muted: #78716c;
+  --color-text-faint: #a8a29e;
+  --color-text-strong: #0c0a09;
+
+  /* ── Brand (Indigo) ── */
+  --color-brand: #4f46e5;
+  --color-brand-hover: #4338ca;
+  --color-brand-light: #eef2ff;
+  --color-brand-lighter: #e0e7ff;
+  --color-brand-border: #a5b4fc;
+
+  /* ── Accent (Amber) ── */
+  --color-accent: #d97706;
+  --color-accent-light: #fef3c7;
+  --color-accent-text: #92400e;
+
+  /* ── Border ── */
+  --color-border: #e7e5e4;
+  --color-border-input: #d6d3d1;
+  --color-border-light: #f5f5f4;
+  --color-border-separator: #fafaf9;
+
+  /* ── Chip ── */
+  --color-chip-bg: #e0e7ff;
+  --color-chip-text: #3730a3;
+
+  /* ── Shadow ── */
+  --color-shadow: rgba(28, 25, 23, 0.06);
+  --color-shadow-heavy: rgba(28, 25, 23, 0.20);
+  --color-shadow-light: rgba(28, 25, 23, 0.03);
+  --color-shadow-brand: rgba(79, 70, 229, 0.08);
+  --color-shadow-brand-ring: rgba(99, 102, 241, 0.18);
+
+  /* ── Badge ── */
+  --color-badge-success-bg: #ecfdf5;
+  --color-badge-success-text: #047857;
+  --color-badge-warn-bg: #fff7ed;
+  --color-badge-warn-text: #c2410c;
+
+  /* ── Confidence ── */
+  --color-confidence-high-bg: #ecfdf5;
+  --color-confidence-high-text: #047857;
+  --color-confidence-medium-bg: #fef3c7;
+  --color-confidence-medium-text: #92400e;
+  --color-confidence-low-bg: #fef2f2;
+  --color-confidence-low-text: #b91c1c;
+
+  /* ── D-day ── */
+  --color-dday-imminent-bg: #fef2f2;
+  --color-dday-imminent-text: #dc2626;
+  --color-dday-upcoming-bg: #fef3c7;
+  --color-dday-upcoming-text: #b45309;
+  --color-dday-normal-bg: #ecfdf5;
+  --color-dday-normal-text: #16a34a;
+  --color-dday-overdue-bg: #f5f5f4;
+  --color-dday-overdue-text: #a8a29e;
+
+  /* ── Error ── */
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+  --color-error-border: #fecaca;
+  --color-error-text: #991b1b;
+  --color-error-btn-border: #fca5a5;
+
+  /* ── Toast ── */
+  --color-toast-bg: #1c1917;
+  --color-toast-text: #fafaf9;
+
+  /* ── Editorial extras ── */
+  --grain-opacity: 0.03;
+  --card-inset-highlight: rgba(255, 255, 255, 0.6);
+
+  /* ── Fonts ── */
+  font-family:
+    'Pretendard',
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    'Segoe UI',
+    sans-serif;
+  line-height: var(--leading-relaxed);
+  font-weight: 400;
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
+}
+
+[data-theme="dark"] {
+  --color-bg-page: #1a1a2e;
+  --color-bg-surface: #25253e;
+  --color-bg-surface-hover: #32324e;
+  --color-bg-input: #25253e;
+  --color-bg-input-file: #25253e;
+
+  --color-text-primary: #f0ede8;
+  --color-text-secondary: #c8c3bc;
+  --color-text-muted: #9a948d;
+  --color-text-faint: #7a746e;
+  --color-text-strong: #faf8f5;
+
+  --color-brand: #818cf8;
+  --color-brand-hover: #a5b4fc;
+  --color-brand-light: #2a2a4a;
+  --color-brand-lighter: #2a2a4a;
+  --color-brand-border: #6366f1;
+
+  --color-accent: #fbbf24;
+  --color-accent-light: #422006;
+  --color-accent-text: #fcd34d;
+
+  --color-border: #3a3a52;
+  --color-border-input: #4a4a62;
+  --color-border-light: #2a2a42;
+  --color-border-separator: #25253e;
+
+  --color-chip-bg: #312e81;
+  --color-chip-text: #a5b4fc;
+
+  --color-shadow: rgba(0, 0, 0, 0.35);
+  --color-shadow-heavy: rgba(0, 0, 0, 0.55);
+  --color-shadow-light: rgba(0, 0, 0, 0.25);
+  --color-shadow-brand: rgba(129, 140, 248, 0.15);
+  --color-shadow-brand-ring: rgba(129, 140, 248, 0.35);
+
+  --color-badge-success-bg: #064e3b;
+  --color-badge-success-text: #6ee7b7;
+  --color-badge-warn-bg: #7c2d12;
+  --color-badge-warn-text: #fdba74;
+
+  --color-confidence-high-bg: #064e3b;
+  --color-confidence-high-text: #6ee7b7;
+  --color-confidence-medium-bg: #422006;
+  --color-confidence-medium-text: #fcd34d;
+  --color-confidence-low-bg: #7f1d1d;
+  --color-confidence-low-text: #fca5a5;
+
+  --color-dday-imminent-bg: #7f1d1d;
+  --color-dday-imminent-text: #fca5a5;
+  --color-dday-upcoming-bg: #422006;
+  --color-dday-upcoming-text: #fcd34d;
+  --color-dday-normal-bg: #064e3b;
+  --color-dday-normal-text: #6ee7b7;
+  --color-dday-overdue-bg: #2a2a42;
+  --color-dday-overdue-text: #6b6560;
+
+  --color-error: #f87171;
+  --color-error-bg: #7f1d1d;
+  --color-error-border: #991b1b;
+  --color-error-text: #fca5a5;
+  --color-error-btn-border: #b91c1c;
+
+  --color-toast-bg: #f0ede8;
+  --color-toast-text: #1a1a2e;
+
+  --grain-opacity: 0.04;
+  --card-inset-highlight: rgba(255, 255, 255, 0.05);
+}

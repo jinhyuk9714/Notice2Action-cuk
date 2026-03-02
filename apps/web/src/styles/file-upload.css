@@ -1,0 +1,57 @@
+/* ===== File Upload ===== */
+
+input[type="file"] {
+  border: 2px dashed var(--color-border-input);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-3);
+  background: var(--color-bg-input-file);
+  cursor: pointer;
+  transition: border-color var(--ease-default), background var(--ease-default);
+}
+
+input[type="file"]:hover {
+  border-color: var(--color-brand-border);
+  background: var(--color-brand-light);
+}
+
+.file-error {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  color: var(--color-error);
+}
+
+.file-info {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* File drop zone */
+
+.file-drop-zone {
+  position: relative;
+}
+
+.file-drop-zone-active {
+  border-color: var(--color-brand);
+}
+
+.file-drop-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-brand-light);
+  border: 2px dashed var(--color-brand);
+  border-radius: var(--radius-lg);
+  z-index: var(--z-dropdown);
+  pointer-events: none;
+}
+
+.file-drop-overlay p {
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 0;
+}

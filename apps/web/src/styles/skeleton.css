@@ -1,0 +1,36 @@
+/* ===== Skeleton Loading ===== */
+
+.skeleton-card {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--color-border) 25%, var(--color-bg-page) 50%, var(--color-border) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  margin-bottom: var(--space-3);
+}
+
+.skeleton-line:last-child {
+  margin-bottom: 0;
+}
+
+.skeleton-line-short {
+  width: 40%;
+  height: 18px;
+  margin-bottom: var(--space-4);
+}
+
+.skeleton-line-medium {
+  width: 60%;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

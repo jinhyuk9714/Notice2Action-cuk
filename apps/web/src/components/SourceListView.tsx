@@ -105,8 +105,9 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
   if (sources.length === 0) {
     return (
       <div className="inbox-state">
-        <p>저장된 소스가 없습니다.</p>
-        <p>"액션 추출" 탭에서 텍스트를 입력하면 소스가 저장됩니다.</p>
+        <span className="state-icon" aria-hidden="true">&#128196;</span>
+        <p className="state-title">저장된 소스가 없습니다</p>
+        <p className="state-desc">&quot;액션 추출&quot; 탭에서 텍스트를 입력하면 소스가 저장됩니다.</p>
       </div>
     );
   }
@@ -152,7 +153,8 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
           </>
         ) : (
           <div className="inbox-state">
-            <p>목록에서 소스를 선택하세요.</p>
+            <span className="state-icon" aria-hidden="true">&#128196;</span>
+            <p className="state-title">목록에서 소스를 선택하세요</p>
           </div>
         )}
       </div>

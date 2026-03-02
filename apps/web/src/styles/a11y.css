@@ -1,0 +1,57 @@
+/* ===== Accessibility ===== */
+
+/* Focus-visible */
+
+.summary-card:focus-visible,
+.source-card:focus-visible,
+.tab:focus-visible,
+.sort-btn:focus-visible,
+.toggle:focus-visible,
+.edit-toggle-btn:focus-visible,
+.retry-btn:focus-visible,
+.year-btn:focus-visible,
+.reminder-option:focus-visible,
+.load-more-btn:focus-visible,
+.delete-btn:focus-visible,
+.calendar-btn:focus-visible,
+.theme-toggle:focus-visible,
+.primary-button:focus-visible,
+.mobile-back-btn:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .view-transition,
+  .card-list > * {
+    animation: none;
+  }
+  .summary-card,
+  .source-card {
+    transition: none;
+  }
+  .confirm-backdrop,
+  .confirm-dialog {
+    animation: none;
+  }
+  .toast {
+    animation: none;
+  }
+  body::before {
+    display: none;
+  }
+}
+
+/* Forced colors (high contrast mode) */
+
+@media (forced-colors: active) {
+  .badge,
+  .dday-badge,
+  .confidence-badge,
+  .relevance-badge,
+  .chip {
+    border: 1px solid currentColor;
+  }
+}

@@ -1,0 +1,86 @@
+/* ===== States: Empty, Error ===== */
+
+.inbox-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.state-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+  line-height: 1;
+}
+
+.state-title {
+  font-weight: 600;
+  font-size: var(--text-lg);
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-secondary);
+}
+
+.state-desc {
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.empty-hint {
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--space-7) 0;
+}
+
+/* Error banner */
+
+.error-banner {
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--color-error-border);
+  border-left: 3px solid var(--color-error);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Error boundary */
+
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 40px var(--space-5);
+  color: var(--color-text-primary);
+}
+
+.error-boundary::before {
+  content: '\26A0';
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+  opacity: 0.6;
+}
+
+.error-boundary h2 {
+  margin-bottom: var(--space-2);
+}
+
+.error-boundary p {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-5);
+}
+
+.error-boundary .primary-button {
+  width: auto;
+}

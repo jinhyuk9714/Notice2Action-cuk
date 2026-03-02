@@ -1,0 +1,74 @@
+/* ===== Profile Settings ===== */
+
+.profile-settings {
+  border-top: 1px solid var(--color-border-light);
+  padding-top: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.profile-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 0;
+}
+
+.profile-settings-body {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.profile-field label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.profile-field input,
+.profile-field select {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.85rem;
+  border-radius: var(--radius-md);
+}
+
+.year-group {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.year-btn {
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  padding: 6px var(--space-3);
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--ease-default), color var(--ease-default), border-color var(--ease-default);
+}
+
+.year-btn:hover {
+  border-color: var(--color-brand-border);
+  background: var(--color-brand-light);
+}
+
+.year-btn:active {
+  transform: scale(0.97);
+}
+
+.year-btn-active {
+  background: var(--color-brand);
+  color: var(--color-toast-text);
+  border-color: var(--color-brand);
+}

@@ -1,0 +1,71 @@
+/* ===== Forms ===== */
+
+.form-row {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.form-row label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: var(--tracking-normal);
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-3);
+  background: var(--color-bg-input);
+  transition: border-color var(--ease-default), box-shadow var(--ease-default);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-brand);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-shadow-brand-ring);
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* Toggle group */
+
+.toggle-group {
+  display: flex;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.toggle {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--ease-default), color var(--ease-default);
+}
+
+.toggle:hover:not(.toggle-active) {
+  background: var(--color-bg-surface-hover);
+}
+
+.toggle-active {
+  background: var(--color-brand);
+  color: var(--color-toast-text);
+}
+
+.url-hint {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-faint);
+}

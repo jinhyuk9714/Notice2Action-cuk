@@ -269,8 +269,9 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
   if (actions.length === 0 && !hasActiveSearch) {
     return (
       <div className="inbox-state">
-        <p>저장된 액션이 없습니다.</p>
-        <p>"액션 추출" 탭에서 텍스트를 입력하면 여기에 저장됩니다.</p>
+        <span className="state-icon" aria-hidden="true">&#128203;</span>
+        <p className="state-title">저장된 액션이 없습니다</p>
+        <p className="state-desc">&quot;액션 추출&quot; 탭에서 텍스트를 입력하면 여기에 저장됩니다.</p>
       </div>
     );
   }
@@ -383,7 +384,10 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
         </div>
         <div className="card-list">
           {actions.length === 0 && hasActiveSearch ? (
-            <p className="empty-hint">검색 결과가 없습니다.</p>
+            <div className="inbox-state">
+              <span className="state-icon" aria-hidden="true">&#128269;</span>
+              <p className="state-title">검색 결과가 없습니다</p>
+            </div>
           ) : null}
           {filteredActions.map(({ action, relevance }) => (
             <ActionSummaryCard
@@ -444,7 +448,8 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
           </>
         ) : (
           <div className="inbox-state">
-            <p>목록에서 액션을 선택하세요.</p>
+            <span className="state-icon" aria-hidden="true">&#128203;</span>
+            <p className="state-title">목록에서 액션을 선택하세요</p>
           </div>
         )}
       </div>

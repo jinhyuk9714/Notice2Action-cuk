@@ -87,7 +87,9 @@ export default function App(): ReactElement {
   }
 
   return (
-    <main className="page-shell">
+    <>
+    <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
+    <main className="page-shell" id="main-content">
       <section className="hero">
         <div className="hero-top">
           <p className="eyebrow">Notice2Action CUK</p>
@@ -147,7 +149,11 @@ export default function App(): ReactElement {
                     <ActionCard key={action.id ?? `${action.title}-${idx}`} action={action} />
                   ))
                 ) : (
-                  <p className="empty-hint">텍스트를 입력하고 추출하면 결과가 여기에 표시됩니다.</p>
+                  <div className="inbox-state">
+                    <span className="state-icon" aria-hidden="true">&#9998;</span>
+                    <p className="state-title">추출 결과가 없습니다</p>
+                    <p className="state-desc">텍스트를 입력하고 추출하면 결과가 여기에 표시됩니다.</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -175,5 +181,6 @@ export default function App(): ReactElement {
         </div>
       ) : null}
     </main>
+    </>
   );
 }

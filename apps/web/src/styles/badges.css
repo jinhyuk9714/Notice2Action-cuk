@@ -1,0 +1,112 @@
+/* ===== Badges ===== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-badge-success-bg);
+  color: var(--color-badge-success-text);
+  font-weight: 700;
+  font-size: 0.825rem;
+}
+
+.badge-warn {
+  background: var(--color-badge-warn-bg);
+  color: var(--color-badge-warn-text);
+}
+
+.badge-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Confidence badge */
+
+.confidence-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: var(--tracking-wide);
+}
+
+.confidence-high {
+  background: var(--color-confidence-high-bg);
+  color: var(--color-confidence-high-text);
+}
+
+.confidence-medium {
+  background: var(--color-confidence-medium-bg);
+  color: var(--color-confidence-medium-text);
+}
+
+.confidence-low {
+  background: var(--color-confidence-low-bg);
+  color: var(--color-confidence-low-text);
+}
+
+/* D-day badges */
+
+.dday-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-wider);
+  white-space: nowrap;
+}
+
+.dday-imminent {
+  background: var(--color-dday-imminent-bg);
+  color: var(--color-dday-imminent-text);
+}
+
+.dday-upcoming {
+  background: var(--color-dday-upcoming-bg);
+  color: var(--color-dday-upcoming-text);
+}
+
+.dday-normal {
+  background: var(--color-dday-normal-bg);
+  color: var(--color-dday-normal-text);
+}
+
+.dday-overdue {
+  background: var(--color-dday-overdue-bg);
+  color: var(--color-dday-overdue-text);
+  text-decoration: line-through;
+}
+
+.dday-inline {
+  margin-left: var(--space-2);
+}
+
+/* Relevance badge */
+
+.relevance-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-wider);
+  white-space: nowrap;
+}
+
+.relevance-relevant {
+  background: var(--color-badge-success-bg);
+  color: var(--color-badge-success-text);
+}
+
+.relevance-not-relevant {
+  background: var(--color-dday-overdue-bg);
+  color: var(--color-text-faint);
+}

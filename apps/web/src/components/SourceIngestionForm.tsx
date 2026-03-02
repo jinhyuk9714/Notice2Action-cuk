@@ -245,7 +245,7 @@ export function SourceIngestionForm({
         </>
       )}
 
-      <button className="primary-button" type="submit" disabled={isSubmitting || isInputEmpty}>
+      <button className={`primary-button${isSubmitting ? ' primary-button-loading' : ''}`} type="submit" disabled={isSubmitting || isInputEmpty}>
         {isSubmitting ? '추출 중...' : '액션 추출'}
       </button>
     </form>

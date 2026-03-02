@@ -1,0 +1,145 @@
+/* ===== Base: Shell, Hero, Eyebrow, Chip ===== */
+
+.page-shell {
+  width: min(1200px, calc(100% - var(--space-7)));
+  margin: 0 auto;
+  padding: var(--space-8) 0 80px;
+}
+
+.hero {
+  margin-bottom: var(--space-7);
+}
+
+.hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.theme-toggle {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);
+  font-size: 1.15rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background var(--ease-default), border-color var(--ease-default), box-shadow var(--ease-default);
+  box-shadow:
+    0 1px 2px var(--color-shadow-light),
+    0 2px 6px var(--color-shadow-light);
+}
+
+.theme-toggle:hover {
+  background: var(--color-bg-surface-hover);
+  border-color: var(--color-brand-border);
+  box-shadow: 0 2px 8px var(--color-shadow-brand);
+}
+
+.hero h1 {
+  margin: 6px 0 var(--space-3);
+  font-size: var(--text-hero);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: var(--tracking-tight);
+}
+
+.hero-copy {
+  max-width: 780px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+  line-height: var(--leading-relaxed);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-brand);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.chip-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+
+.chip {
+  border-radius: var(--radius-full);
+  background: var(--color-chip-bg);
+  color: var(--color-chip-text);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.825rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+}
+
+/* Tab navigation */
+
+.tab-nav {
+  display: flex;
+  gap: 0;
+  margin-top: var(--space-6);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.tab {
+  border: 0;
+  border-radius: 0;
+  padding: var(--space-3) 28px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  position: relative;
+  transition: color var(--ease-default);
+}
+
+.tab::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  transition: background var(--ease-default);
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+}
+
+.tab-active {
+  background: transparent;
+  color: var(--color-brand);
+  box-shadow: none;
+}
+
+.tab-active::after {
+  background: var(--color-brand);
+}
+
+/* Skip link (accessibility) */
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--space-4);
+  background: var(--color-brand);
+  color: white;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  z-index: var(--z-grain);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: var(--space-4);
+}
