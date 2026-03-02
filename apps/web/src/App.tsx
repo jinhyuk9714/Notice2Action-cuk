@@ -5,7 +5,7 @@ import { SourceIngestionForm } from './components/SourceIngestionForm';
 import { SourceListView } from './components/SourceListView';
 import { ThemeToggle } from './components/ThemeToggle';
 import { requestActionExtraction, requestEmailExtraction, requestPdfExtraction, requestScreenshotExtraction } from './lib/api';
-import type { ActionExtractionRequest, ExtractedAction } from './lib/types';
+import type { ActionExtractionRequest, ActionExtractionResponse, ExtractedAction } from './lib/types';
 import { useHashRoute } from './lib/useHashRoute';
 import { useReminderCheck } from './lib/useReminderCheck';
 
@@ -35,64 +35,55 @@ export default function App(): ReactElement {
 
   const actionCountLabel = useMemo(() => `${actions.length}개 액션`, [actions.length]);
 
-  async function handleSubmit(payload: ActionExtractionRequest): Promise<void> {
-    lastSubmitRef.current = () => handleSubmit(payload);
+  function applyExtractionResult(result: ActionExtractionResponse): void {
+    setActions(result.actions);
+    setToastMessage(result.duplicate
+      ? '이미 추출된 소스입니다. 기존 결과를 표시합니다.'
+      : `${result.actions.length}개 액션이 인박스에 저장되었습니다`);
+  }
+
+  async function runSubmission(
+    submit: () => Promise<ActionExtractionResponse>,
+    retry: () => Promise<void>,
+  ): Promise<void> {
+    lastSubmitRef.current = retry;
     setIsSubmitting(true);
     setError(null);
-
     try {
-      const result = await requestActionExtraction(payload);
-      setActions(result.actions);
-      setToastMessage(result.duplicate
-        ? '이미 추출된 소스입니다. 기존 결과를 표시합니다.'
-        : `${result.actions.length}개 액션이 인박스에 저장되었습니다`);
+      const result = await submit();
+      applyExtractionResult(result);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
       setError(message);
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleSubmit(payload: ActionExtractionRequest): Promise<void> {
+    await runSubmission(
+      () => requestActionExtraction(payload),
+      () => handleSubmit(payload),
+    );
   }
 
   async function handleEmailSubmit(emailBody: string, subject: string | null): Promise<void> {
-    lastSubmitRef.current = () => handleEmailSubmit(emailBody, subject);
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const result = await requestEmailExtraction(emailBody, subject);
-      setActions(result.actions);
-      setToastMessage(result.duplicate
-        ? '이미 추출된 소스입니다. 기존 결과를 표시합니다.'
-        : `${result.actions.length}개 액션이 인박스에 저장되었습니다`);
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
-      setError(message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    await runSubmission(
+      () => requestEmailExtraction(emailBody, subject),
+      () => handleEmailSubmit(emailBody, subject),
+    );
   }
 
   async function handleFileSubmit(file: File, sourceTitle: string | null): Promise<void> {
-    lastSubmitRef.current = () => handleFileSubmit(file, sourceTitle);
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const isImage = /\.(png|jpe?g|webp)$/i.test(file.name);
-      const result = isImage
-        ? await requestScreenshotExtraction(file, sourceTitle)
-        : await requestPdfExtraction(file, sourceTitle);
-      setActions(result.actions);
-      setToastMessage(result.duplicate
-        ? '이미 추출된 소스입니다. 기존 결과를 표시합니다.'
-        : `${result.actions.length}개 액션이 인박스에 저장되었습니다`);
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : '알 수 없는 에러가 발생했습니다.';
-      setError(message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    await runSubmission(
+      () => {
+        const isImage = /\.(png|jpe?g|webp)$/i.test(file.name);
+        return isImage
+          ? requestScreenshotExtraction(file, sourceTitle)
+          : requestPdfExtraction(file, sourceTitle);
+      },
+      () => handleFileSubmit(file, sourceTitle),
+    );
   }
 
   return (
@@ -152,8 +143,8 @@ export default function App(): ReactElement {
 
               <div className="card-list">
                 {actions.length > 0 ? (
-                  actions.map((action) => (
-                    <ActionCard key={`${action.title}-${action.dueAtIso ?? 'none'}`} action={action} />
+                  actions.map((action, idx) => (
+                    <ActionCard key={action.id ?? `${action.title}-${idx}`} action={action} />
                   ))
                 ) : (
                   <p className="empty-hint">텍스트를 입력하고 추출하면 결과가 여기에 표시됩니다.</p>

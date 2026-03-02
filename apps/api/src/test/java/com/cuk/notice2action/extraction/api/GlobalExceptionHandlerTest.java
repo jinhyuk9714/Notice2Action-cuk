@@ -35,4 +35,13 @@ class GlobalExceptionHandlerTest {
             .param("category", "INVALID_CATEGORY"))
         .andExpect(status().isBadRequest());
   }
+
+  @Test
+  void malformed_due_date_returns_400_with_param_name() throws Exception {
+    mockMvc.perform(get("/api/v1/actions")
+            .param("dueDateTo", "not-a-date"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("bad_request"))
+        .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("dueDateTo")));
+  }
 }

@@ -14,6 +14,29 @@ import {
   isSourceListResponse
 } from './types';
 
+function parseApiError(body: string, fallback: string): string {
+  try {
+    const json: unknown = JSON.parse(body);
+    if (typeof json === 'object' && json !== null) {
+      const record = json as Record<string, unknown>;
+      if (typeof record.message === 'string') {
+        const details = Array.isArray(record.details)
+          ? record.details.filter((item): item is string => typeof item === 'string' && item.length > 0)
+          : [];
+        if (details.length === 0) {
+          return record.message;
+        }
+        return `${record.message} (${details.join('; ')})`;
+      }
+      if (typeof record.error === 'string') {
+        const status = typeof record.status === 'number' ? ` (${record.status})` : '';
+        return `서버 오류: ${record.error}${status}`;
+      }
+    }
+  } catch { /* not JSON, use raw body */ }
+  return body.length > 0 ? body : fallback;
+}
+
 export type SearchParams = Readonly<{
   q?: string;
   category?: SourceCategory;
@@ -34,7 +57,7 @@ export async function requestActionExtraction(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || 'API request failed');
+    throw new Error(parseApiError(body, '액션 추출 요청에 실패했습니다'));
   }
 
   const json: unknown = await response.json();
@@ -62,7 +85,7 @@ export async function requestPdfExtraction(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || 'PDF extraction request failed');
+    throw new Error(parseApiError(body, 'PDF 추출 요청에 실패했습니다'));
   }
 
   const json: unknown = await response.json();
@@ -90,7 +113,7 @@ export async function requestScreenshotExtraction(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || 'Screenshot extraction request failed');
+    throw new Error(parseApiError(body, '스크린샷 추출 요청에 실패했습니다'));
   }
 
   const json: unknown = await response.json();
@@ -119,7 +142,7 @@ export async function requestEmailExtraction(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || 'Email extraction request failed');
+    throw new Error(parseApiError(body, '이메일 추출 요청에 실패했습니다'));
   }
 
   const json: unknown = await response.json();
@@ -148,7 +171,7 @@ export async function fetchActionList(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || 'Failed to fetch actions');
+    throw new Error(parseApiError(body, '액션 목록을 불러오지 못했습니다'));
   }
 
   const json: unknown = await response.json();
@@ -166,7 +189,7 @@ export async function deleteAction(id: string): Promise<void> {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || '액션 삭제에 실패했습니다');
+    throw new Error(parseApiError(body, '액션 삭제에 실패했습니다'));
   }
 }
 
@@ -175,7 +198,7 @@ export async function fetchActionDetail(id: string): Promise<SavedActionDetail> 
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || 'Failed to fetch action detail');
+    throw new Error(parseApiError(body, '액션 상세 정보를 불러오지 못했습니다'));
   }
 
   const json: unknown = await response.json();
@@ -200,7 +223,7 @@ export async function updateAction(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || '액션 수정에 실패했습니다');
+    throw new Error(parseApiError(body, '액션 수정에 실패했습니다'));
   }
 
   const json: unknown = await response.json();
@@ -216,7 +239,7 @@ export async function fetchSourceList(page: number = 0): Promise<SourceListRespo
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || '소스 목록을 불러오지 못했습니다');
+    throw new Error(parseApiError(body, '소스 목록을 불러오지 못했습니다'));
   }
 
   const json: unknown = await response.json();
@@ -232,7 +255,7 @@ export async function fetchSourceDetail(id: string): Promise<SourceDetail> {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || '소스 상세 정보를 불러오지 못했습니다');
+    throw new Error(parseApiError(body, '소스 상세 정보를 불러오지 못했습니다'));
   }
 
   const json: unknown = await response.json();

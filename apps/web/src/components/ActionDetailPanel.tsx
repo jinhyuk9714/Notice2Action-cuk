@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { updateAction } from '../lib/api';
 import { computeDday } from '../lib/dday';
 import { categoryLabel, evidenceFieldLabel, inferredLabel } from '../lib/labels';
@@ -51,6 +51,18 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
   const [editSystemHint, setEditSystemHint] = useState(detail.systemHint ?? '');
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveKeys(getActiveOffsetKeys(detail.id));
+    setEditing(false);
+    setEditTitle(detail.title);
+    setEditSummary(detail.actionSummary);
+    setEditDueLabel(detail.dueAtLabel ?? '');
+    setEditEligibility(detail.eligibility ?? '');
+    setEditSystemHint(detail.systemHint ?? '');
+    setEditError(null);
+    setSaving(false);
+  }, [detail]);
 
   function startEditing(): void {
     setEditTitle(detail.title);

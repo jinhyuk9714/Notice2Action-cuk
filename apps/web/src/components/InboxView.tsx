@@ -35,16 +35,23 @@ export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): 
   const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>('all');
   const [customFrom, setCustomFrom] = useState<string>('');
   const [customTo, setCustomTo] = useState<string>('');
+  const [retryKey, setRetryKey] = useState<number>(0);
 
   useEffect(() => {
-    if (initialActionId !== null && initialActionId !== selectedId) {
-      setSelectedId(initialActionId);
+    if (initialActionId === null) {
+      setSelectedId(null);
       setDetail(null);
-      fetchActionDetail(initialActionId)
-        .then((result) => { setDetail(result); })
-        .catch(() => { /* handled by select */ });
+      return;
     }
-  }, [initialActionId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (initialActionId === selectedId) {
+      return;
+    }
+    setSelectedId(initialActionId);
+    setDetail(null);
+    fetchActionDetail(initialActionId)
+      .then((result) => { setDetail(result); })
+      .catch(() => { /* handled by select */ });
+  }, [initialActionId, selectedId]);
 
   useEffect(() => {
     const timer = setTimeout(() => { setSearchQuery(searchInput); }, 300);
@@ -63,6 +70,7 @@ export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): 
   }, [sort, searchQuery, categoryFilter, dateRange]);
 
   useEffect(() => {
+    let cancelled = false;
     const isFirstPage = currentPage === 0;
     if (isFirstPage) {
       setLoading(true);
@@ -77,18 +85,21 @@ export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): 
     };
     fetchActionList(sort, currentPage, search)
       .then((result) => {
+        if (cancelled) return;
         setActions((prev) => isFirstPage ? result.actions : [...prev, ...result.actions]);
         setHasNext(result.hasNext);
         setLoading(false);
         setLoadingMore(false);
       })
       .catch((err: unknown) => {
+        if (cancelled) return;
         const message = err instanceof Error ? err.message : '액션 목록을 불러오지 못했습니다';
         setError(message);
         setLoading(false);
         setLoadingMore(false);
       });
-  }, [sort, currentPage, searchQuery, categoryFilter, dateRange]);
+    return () => { cancelled = true; };
+  }, [sort, currentPage, searchQuery, categoryFilter, dateRange, retryKey]);
 
   function handleProfileChange(newProfile: UserProfile): void {
     saveProfile(newProfile);
@@ -161,6 +172,7 @@ export function InboxView({ initialActionId, onActionSelect }: InboxViewProps): 
           setError(null);
           setActions([]);
           setCurrentPage(0);
+          setRetryKey((k) => k + 1);
         }}>다시 시도</button>
       </div>
     );

@@ -8,4 +8,8 @@ public record ApiErrorResponse(
     String message,
     List<String> details,
     OffsetDateTime timestamp
-) {}
+) {
+  public ApiErrorResponse {
+    details = details == null ? List.of() : List.copyOf(details);
+  }
+}

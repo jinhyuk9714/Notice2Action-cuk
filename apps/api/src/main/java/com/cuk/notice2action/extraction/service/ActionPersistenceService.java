@@ -57,7 +57,10 @@ public class ActionPersistenceService {
     if (contentHash != null) {
       var existing = sourceRepository.findByContentHash(contentHash);
       if (existing.isPresent()) {
-        return buildDuplicateResponse(existing.get());
+        if (sourceRepository.countActionsBySourceId(existing.get().getId()) > 0) {
+          return buildDuplicateResponse(existing.get());
+        }
+        sourceRepository.delete(existing.get());
       }
     }
 
@@ -65,7 +68,10 @@ public class ActionPersistenceService {
     if (request.sourceUrl() != null && !request.sourceUrl().isBlank()) {
       var existing = sourceRepository.findBySourceUrl(request.sourceUrl());
       if (existing.isPresent()) {
-        return buildDuplicateResponse(existing.get());
+        if (sourceRepository.countActionsBySourceId(existing.get().getId()) > 0) {
+          return buildDuplicateResponse(existing.get());
+        }
+        sourceRepository.delete(existing.get());
       }
     }
 
@@ -87,7 +93,7 @@ public class ActionPersistenceService {
     for (ExtractedActionDto dto : extractionResult.actions()) {
       UUID actionId = UUID.randomUUID();
       String requiredItemsJson = toJson(dto.requiredItems());
-      OffsetDateTime dueAtIso = parseDueAtIso(dto.dueAtIso());
+      OffsetDateTime dueAtIso = parseDueAtIso(dto.dueAtIso(), "dueAtIso");
 
       ExtractedActionEntity actionEntity = new ExtractedActionEntity(
           actionId, source, dto.title(), dto.actionSummary(),
@@ -133,7 +139,7 @@ public class ActionPersistenceService {
       entity.setActionSummary(request.actionSummary());
     }
     if (request.dueAtIso() != null) {
-      entity.setDueAtIso(parseDueAtIso(request.dueAtIso()));
+      entity.setDueAtIso(parseDueAtIso(request.dueAtIso(), "dueAtIso"));
     }
     if (request.dueAtLabel() != null) {
       entity.setDueAtLabel(request.dueAtLabel());
@@ -174,15 +180,15 @@ public class ActionPersistenceService {
 
   @Transactional
   public void deleteAction(UUID actionId) {
-    if (!actionRepository.existsById(actionId)) {
-      throw new NoSuchElementException("Action not found: " + actionId);
-    }
+    ExtractedActionEntity action = actionRepository.findById(actionId)
+        .orElseThrow(() -> new NoSuchElementException("Action not found: " + actionId));
+    UUID sourceId = action.getSource().getId();
     actionRepository.deleteById(actionId);
-  }
+    actionRepository.flush();
 
-  @Transactional(readOnly = true)
-  public ActionListResponse listActions(String sort, int page, int size) {
-    return listActions(new ActionSearchCriteria(null, null, null, null, sort), page, size);
+    if (sourceRepository.countActionsBySourceId(sourceId) == 0) {
+      sourceRepository.deleteById(sourceId);
+    }
   }
 
   @Transactional(readOnly = true)
@@ -210,48 +216,27 @@ public class ActionPersistenceService {
       spec = spec.and(ActionSpecifications.dueAtTo(criteria.dueDateTo()));
     }
 
-    Sort sorting = "due".equals(criteria.sort())
-        ? Sort.by(Sort.Order.asc("dueAtIso"))
-        : Sort.by(Sort.Order.desc("createdAt"));
-    Pageable pageable = PageRequest.of(page, size, sorting);
-
+    Pageable pageable;
+    if ("due".equals(criteria.sort())) {
+      spec = spec.and(dueNullsLastOrder());
+      pageable = PageRequest.of(page, size);
+    } else {
+      pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")));
+    }
     Page<ExtractedActionEntity> pageResult = actionRepository.findAll(spec, pageable);
-
-    List<SavedActionSummaryDto> summaries = pageResult.getContent().stream()
-        .map(this::toSummaryDto)
-        .toList();
-
-    return new ActionListResponse(
-        summaries,
-        pageResult.getNumber(),
-        pageResult.getSize(),
-        pageResult.getTotalElements(),
-        pageResult.getTotalPages(),
-        pageResult.hasNext()
-    );
+    return toActionListResponse(pageResult);
   }
 
-  private ActionListResponse listActionsSimple(String sort, int page, int size) {
-    Pageable pageable = PageRequest.of(page, size);
-    Page<ExtractedActionEntity> pageResult;
-    if ("due".equals(sort)) {
-      pageResult = actionRepository.findAllOrderByDueAtIsoAscNullsLast(pageable);
-    } else {
-      pageResult = actionRepository.findAllByOrderByCreatedAtDesc(pageable);
+  private ActionListResponse listActionsSimple(String sortParam, int page, int size) {
+    if ("due".equals(sortParam)) {
+      Pageable pageable = PageRequest.of(page, size);
+      Page<ExtractedActionEntity> pageResult = actionRepository.findAllOrderByDueAtIsoAscNullsLast(pageable);
+      return toActionListResponse(pageResult);
     }
 
-    List<SavedActionSummaryDto> summaries = pageResult.getContent().stream()
-        .map(this::toSummaryDto)
-        .toList();
-
-    return new ActionListResponse(
-        summaries,
-        pageResult.getNumber(),
-        pageResult.getSize(),
-        pageResult.getTotalElements(),
-        pageResult.getTotalPages(),
-        pageResult.hasNext()
-    );
+    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")));
+    Page<ExtractedActionEntity> pageResult = actionRepository.findAll(pageable);
+    return toActionListResponse(pageResult);
   }
 
   @Transactional(readOnly = true)
@@ -275,6 +260,36 @@ public class ActionPersistenceService {
         source != null ? source.getTitle() : null,
         entity.getConfidenceScore(),
         entity.getCreatedAt()
+    );
+  }
+
+  private static Specification<ExtractedActionEntity> dueNullsLastOrder() {
+    return (root, query, cb) -> {
+      if (query != null) {
+        query.orderBy(
+            cb.asc(cb.selectCase()
+                .when(cb.isNull(root.get("dueAtIso")), 1)
+                .otherwise(0)),
+            cb.asc(root.get("dueAtIso")),
+            cb.desc(root.get("createdAt"))
+        );
+      }
+      return cb.conjunction();
+    };
+  }
+
+  private ActionListResponse toActionListResponse(Page<ExtractedActionEntity> pageResult) {
+    List<SavedActionSummaryDto> summaries = pageResult.getContent().stream()
+        .map(this::toSummaryDto)
+        .toList();
+
+    return new ActionListResponse(
+        summaries,
+        pageResult.getNumber(),
+        pageResult.getSize(),
+        pageResult.getTotalElements(),
+        pageResult.getTotalPages(),
+        pageResult.hasNext()
     );
   }
 
@@ -323,14 +338,16 @@ public class ActionPersistenceService {
     }
   }
 
-  private OffsetDateTime parseDueAtIso(String isoString) {
+  private OffsetDateTime parseDueAtIso(String isoString, String fieldName) {
     if (isoString == null || isoString.isBlank()) {
       return null;
     }
     try {
       return OffsetDateTime.parse(isoString);
     } catch (Exception e) {
-      return null;
+      throw new IllegalArgumentException(
+          "잘못된 날짜 형식입니다: " + fieldName + " = " + isoString
+      );
     }
   }
 }

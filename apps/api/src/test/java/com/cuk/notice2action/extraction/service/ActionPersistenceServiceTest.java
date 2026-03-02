@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
+import com.cuk.notice2action.extraction.api.dto.ActionSearchCriteria;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
 import java.util.List;
@@ -55,7 +56,7 @@ class ActionPersistenceServiceTest {
     ActionExtractionResponse extracted = extractionService.extract(request);
     persistenceService.persistExtraction(request, extracted);
 
-    ActionListResponse list = persistenceService.listActions("recent", 0, 100);
+    ActionListResponse list = persistenceService.listActions(new ActionSearchCriteria(null, null, null, null, "recent"), 0, 100);
 
     assertThat(list.actions()).isNotEmpty();
     assertThat(list.actions().getFirst().title()).isEqualTo("공결 신청 안내");
@@ -90,7 +91,7 @@ class ActionPersistenceServiceTest {
     ActionExtractionResponse noDueExtracted = extractionService.extract(noDueReq);
     persistenceService.persistExtraction(noDueReq, noDueExtracted);
 
-    ActionListResponse list = persistenceService.listActions("due", 0, 100);
+    ActionListResponse list = persistenceService.listActions(new ActionSearchCriteria(null, null, null, null, "due"), 0, 100);
 
     assertThat(list.actions()).hasSizeGreaterThanOrEqualTo(3);
     // Earlier due date comes first

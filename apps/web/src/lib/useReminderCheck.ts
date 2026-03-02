@@ -6,8 +6,9 @@ export function useReminderCheck(intervalMs: number = 60_000): void {
     function checkAndFire(): void {
       const pending = getPendingReminders();
       for (const reminder of pending) {
-        fireNotification(reminder);
-        dismissReminder(reminder.actionId, reminder.offsetKey);
+        if (fireNotification(reminder)) {
+          dismissReminder(reminder.actionId, reminder.offsetKey);
+        }
       }
     }
 

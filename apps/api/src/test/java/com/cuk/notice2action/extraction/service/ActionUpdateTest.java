@@ -89,4 +89,16 @@ class ActionUpdateTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("제목");
   }
+
+  @Test
+  void updateAction_rejects_invalid_dueAtIso() {
+    UUID id = persistAndGetId();
+    ActionUpdateRequest update = new ActionUpdateRequest(
+        null, null, "invalid-datetime", null, null, null, null
+    );
+
+    assertThatThrownBy(() -> persistenceService.updateAction(id, update))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("dueAtIso");
+  }
 }

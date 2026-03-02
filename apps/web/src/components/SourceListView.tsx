@@ -19,18 +19,26 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [hasNext, setHasNext] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [retryKey, setRetryKey] = useState<number>(0);
 
   useEffect(() => {
-    if (initialSourceId !== null && initialSourceId !== selectedId) {
-      setSelectedId(initialSourceId);
+    if (initialSourceId === null) {
+      setSelectedId(null);
       setDetail(null);
-      fetchSourceDetail(initialSourceId)
-        .then((result) => { setDetail(result); })
-        .catch(() => { /* handled by select */ });
+      return;
     }
-  }, [initialSourceId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (initialSourceId === selectedId) {
+      return;
+    }
+    setSelectedId(initialSourceId);
+    setDetail(null);
+    fetchSourceDetail(initialSourceId)
+      .then((result) => { setDetail(result); })
+      .catch(() => { /* handled by select */ });
+  }, [initialSourceId, selectedId]);
 
   useEffect(() => {
+    let cancelled = false;
     const isFirstPage = currentPage === 0;
     if (isFirstPage) {
       setLoading(true);
@@ -39,18 +47,21 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
     }
     fetchSourceList(currentPage)
       .then((result) => {
+        if (cancelled) return;
         setSources((prev) => isFirstPage ? result.sources : [...prev, ...result.sources]);
         setHasNext(result.hasNext);
         setLoading(false);
         setLoadingMore(false);
       })
       .catch((err: unknown) => {
+        if (cancelled) return;
         const message = err instanceof Error ? err.message : '소스 목록을 불러오지 못했습니다';
         setError(message);
         setLoading(false);
         setLoadingMore(false);
       });
-  }, [currentPage]);
+    return () => { cancelled = true; };
+  }, [currentPage, retryKey]);
 
   function handleSelect(id: string): void {
     setSelectedId(id);
@@ -85,6 +96,7 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
           setError(null);
           setSources([]);
           setCurrentPage(0);
+          setRetryKey((k) => k + 1);
         }}>다시 시도</button>
       </div>
     );

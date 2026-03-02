@@ -128,4 +128,28 @@ class ActionSearchTest {
 
     assertThat(result.actions()).hasSizeGreaterThanOrEqualTo(3);
   }
+
+  @Test
+  void due_sort_with_filter_keeps_null_due_last() {
+    persistSample(
+        "정렬서비스테스트 2026년 3월 10일까지 제출하세요.",
+        "정렬서비스테스트-마감",
+        SourceCategory.NOTICE
+    );
+    persistSample(
+        "정렬서비스테스트 안내문입니다.",
+        "정렬서비스테스트-무마감",
+        SourceCategory.NOTICE
+    );
+
+    ActionSearchCriteria criteria = new ActionSearchCriteria(
+        "정렬서비스테스트", null, null, null, "due"
+    );
+    ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
+
+    assertThat(result.actions()).hasSizeGreaterThanOrEqualTo(2);
+    assertThat(result.actions().get(0).title()).isEqualTo("정렬서비스테스트-마감");
+    assertThat(result.actions().get(1).title()).isEqualTo("정렬서비스테스트-무마감");
+    assertThat(result.actions().get(1).dueAtIso()).isNull();
+  }
 }

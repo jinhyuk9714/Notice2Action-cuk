@@ -21,7 +21,11 @@ import com.cuk.notice2action.extraction.persistence.repository.ExtractedActionRe
 import com.cuk.notice2action.extraction.domain.SourceCategory;
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -42,6 +46,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1")
 public class ActionExtractionController {
+
+  private static final ZoneOffset APP_OFFSET = ZoneOffset.ofHours(9);
 
   private final ActionExtractionService actionExtractionService;
   private final ActionPersistenceService actionPersistenceService;
@@ -79,9 +85,7 @@ public class ActionExtractionController {
   public ActionExtractionResponse extractActions(
       @RequestBody ActionExtractionRequest request
   ) {
-    ActionExtractionRequest resolved = resolveRequest(request);
-    ActionExtractionResponse extractionResult = actionExtractionService.extract(resolved);
-    return actionPersistenceService.persistExtraction(resolved, extractionResult);
+    return extractAndPersist(resolveRequest(request));
   }
 
   @PostMapping("/extractions/pdf")
@@ -107,8 +111,7 @@ public class ActionExtractionController {
         List.of()
     );
 
-    ActionExtractionResponse extractionResult = actionExtractionService.extract(request);
-    return actionPersistenceService.persistExtraction(request, extractionResult);
+    return extractAndPersist(request);
   }
 
   @PostMapping("/extractions/email")
@@ -127,8 +130,7 @@ public class ActionExtractionController {
         List.of()
     );
 
-    ActionExtractionResponse extractionResult = actionExtractionService.extract(extractionRequest);
-    return actionPersistenceService.persistExtraction(extractionRequest, extractionResult);
+    return extractAndPersist(extractionRequest);
   }
 
   @PostMapping("/extractions/screenshot")
@@ -154,8 +156,7 @@ public class ActionExtractionController {
         List.of()
     );
 
-    ActionExtractionResponse extractionResult = actionExtractionService.extract(request);
-    return actionPersistenceService.persistExtraction(request, extractionResult);
+    return extractAndPersist(request);
   }
 
   @GetMapping("/actions")
@@ -168,20 +169,39 @@ public class ActionExtractionController {
       @RequestParam(name = "dueDateFrom", required = false) String dueDateFrom,
       @RequestParam(name = "dueDateTo", required = false) String dueDateTo
   ) {
-    OffsetDateTime from = parseIsoDate(dueDateFrom);
-    OffsetDateTime to = parseIsoDate(dueDateTo);
+    OffsetDateTime from = parseQueryDate(dueDateFrom, "dueDateFrom", false);
+    OffsetDateTime to = parseQueryDate(dueDateTo, "dueDateTo", true);
     ActionSearchCriteria criteria = new ActionSearchCriteria(q, category, from, to, sort);
     return actionPersistenceService.listActions(criteria, page, size);
   }
 
-  private static OffsetDateTime parseIsoDate(String isoString) {
-    if (isoString == null || isoString.isBlank()) {
+  private static OffsetDateTime parseQueryDate(String raw, String parameterName, boolean endOfDay) {
+    if (raw == null || raw.isBlank()) {
       return null;
     }
+
+    String input = raw.trim();
+
     try {
-      return OffsetDateTime.parse(isoString);
-    } catch (Exception e) {
-      return null;
+      return OffsetDateTime.parse(input);
+    } catch (Exception ignored) {
+      // fallback below
+    }
+
+    try {
+      LocalDate localDate = LocalDate.parse(input);
+      LocalTime localTime = endOfDay ? LocalTime.MAX : LocalTime.MIN;
+      return localDate.atTime(localTime).atOffset(APP_OFFSET);
+    } catch (Exception ignored) {
+      // fallback below
+    }
+
+    try {
+      return LocalDateTime.parse(input).atOffset(APP_OFFSET);
+    } catch (Exception ignored) {
+      throw new IllegalArgumentException(
+          "잘못된 날짜 형식입니다: " + parameterName + " = " + raw
+      );
     }
   }
 
@@ -282,5 +302,10 @@ public class ActionExtractionController {
         request.sourceCategory(),
         request.focusProfile()
     );
+  }
+
+  private ActionExtractionResponse extractAndPersist(ActionExtractionRequest request) {
+    ActionExtractionResponse extractionResult = actionExtractionService.extract(request);
+    return actionPersistenceService.persistExtraction(request, extractionResult);
   }
 }

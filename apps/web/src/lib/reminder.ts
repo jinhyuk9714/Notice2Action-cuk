@@ -82,10 +82,17 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return result === 'granted';
 }
 
-export function fireNotification(reminder: ReminderSetting): void {
-  if (Notification.permission !== 'granted') return;
-  new Notification(`Notice2Action: ${reminder.title}`, {
-    body: `마감 ${reminder.offsetKey}: ${reminder.dueLabel}`,
-    tag: `n2a-${reminder.actionId}-${reminder.offsetKey}`,
-  });
+export function fireNotification(reminder: ReminderSetting): boolean {
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
+    return false;
+  }
+  try {
+    new Notification(`Notice2Action: ${reminder.title}`, {
+      body: `마감 ${reminder.offsetKey}: ${reminder.dueLabel}`,
+      tag: `n2a-${reminder.actionId}-${reminder.offsetKey}`,
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }

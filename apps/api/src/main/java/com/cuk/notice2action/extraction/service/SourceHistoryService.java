@@ -8,7 +8,9 @@ import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity
 import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
 import com.cuk.notice2action.extraction.persistence.repository.ExtractedActionRepository;
 import com.cuk.notice2action.extraction.persistence.repository.NoticeSourceRepository;
+import com.cuk.notice2action.extraction.persistence.repository.SourceActionCountView;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -33,8 +35,19 @@ public class SourceHistoryService {
     Page<NoticeSourceEntity> pageResult =
         sourceRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
 
+    List<UUID> sourceIds = pageResult.getContent().stream()
+        .map(NoticeSourceEntity::getId)
+        .toList();
+    Map<UUID, Integer> actionCounts = sourceIds.isEmpty()
+        ? Map.of()
+        : sourceRepository.countActionsBySourceIds(sourceIds).stream()
+            .collect(java.util.stream.Collectors.toMap(
+                SourceActionCountView::getSourceId,
+                row -> Math.toIntExact(row.getActionCount())
+            ));
+
     List<SourceSummaryDto> summaries = pageResult.getContent().stream()
-        .map(this::toSummaryDto)
+        .map(source -> toSummaryDto(source, actionCounts))
         .toList();
 
     return new SourceListResponse(
@@ -69,8 +82,8 @@ public class SourceHistoryService {
     );
   }
 
-  private SourceSummaryDto toSummaryDto(NoticeSourceEntity entity) {
-    int actionCount = sourceRepository.countActionsBySourceId(entity.getId());
+  private SourceSummaryDto toSummaryDto(NoticeSourceEntity entity, Map<UUID, Integer> actionCounts) {
+    int actionCount = actionCounts.getOrDefault(entity.getId(), 0);
     return new SourceSummaryDto(
         entity.getId(),
         entity.getTitle(),

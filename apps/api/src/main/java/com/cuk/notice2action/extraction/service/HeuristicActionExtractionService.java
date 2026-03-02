@@ -365,11 +365,12 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       int day = Integer.parseInt(m.group(3));
       if (!isValidDate(year, month, day)) continue;
       String ampm = m.group(4);
+      boolean hasTime = m.group(5) != null;
       int hour = m.group(5) == null ? 0 : resolveHour(Integer.parseInt(m.group(5)), ampm);
       int minute = m.group(6) == null ? 0 : Integer.parseInt(m.group(6));
-      if (hour > 0 && !isValidTime(hour, minute)) continue;
+      if (hasTime && !isValidTime(hour, minute)) continue;
       String label = m.group(0).trim();
-      double score = computeDateConfidence(true, hour > 0, text, label);
+      double score = computeDateConfidence(true, hasTime, text, label);
       if (isStartDateContext(text, label)) score -= 0.15;
       candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(year, month, day, hour, minute)), Math.min(score, 0.95)));
     }
@@ -382,11 +383,12 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       int month = Integer.parseInt(m.group(2));
       int day = Integer.parseInt(m.group(3));
       if (!isValidDate(year, month, day)) continue;
+      boolean hasTime = m.group(4) != null;
       int hour = m.group(4) == null ? 0 : Integer.parseInt(m.group(4));
       int minute = m.group(5) == null ? 0 : Integer.parseInt(m.group(5));
-      if (hour > 0 && !isValidTime(hour, minute)) continue;
+      if (hasTime && !isValidTime(hour, minute)) continue;
       String label = m.group(0).trim();
-      double score = computeDateConfidence(true, hour > 0, text, label);
+      double score = computeDateConfidence(true, hasTime, text, label);
       if (isStartDateContext(text, label)) score -= 0.15;
       candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(year, month, day, hour, minute)), Math.min(score, 0.95)));
     }
@@ -417,11 +419,12 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       int day = Integer.parseInt(m.group(2));
       if (!isValidDate(currentYear(), month, day)) continue;
       String ampm = m.group(3);
+      boolean hasTime = m.group(4) != null;
       int hour = m.group(4) == null ? 0 : resolveHour(Integer.parseInt(m.group(4)), ampm);
       int minute = m.group(5) == null ? 0 : Integer.parseInt(m.group(5));
-      if (hour > 0 && !isValidTime(hour, minute)) continue;
+      if (hasTime && !isValidTime(hour, minute)) continue;
       String label = m.group(0).trim();
-      double score = computeDateConfidence(false, hour > 0, text, label);
+      double score = computeDateConfidence(false, hasTime, text, label);
       if (isStartDateContext(text, label)) score -= 0.15;
       candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, hour, minute)), Math.min(score, 0.95)));
     }
@@ -433,9 +436,10 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       int month = Integer.parseInt(m.group(1));
       int day = Integer.parseInt(m.group(2));
       if (!isValidDate(currentYear(), month, day)) continue;
+      boolean hasTime = m.group(3) != null;
       int hour = m.group(3) == null ? 0 : Integer.parseInt(m.group(3));
       int minute = m.group(4) == null ? 0 : Integer.parseInt(m.group(4));
-      if (hour > 0 && !isValidTime(hour, minute)) continue;
+      if (hasTime && !isValidTime(hour, minute)) continue;
       String label = m.group(0).trim();
       boolean nearDeadline = isNearDeadlineKeyword(text, label);
       double score = nearDeadline ? 0.70 : 0.60;
@@ -672,6 +676,11 @@ public class HeuristicActionExtractionService implements ActionExtractionService
     for (String verb : ACTION_VERBS) {
       int index = text.indexOf(verb);
       if (index >= 0) {
+        int contextEnd = Math.min(text.length(), index + verb.length() + 5);
+        String afterVerb = text.substring(index, contextEnd);
+        if (NON_ACTION_CONTEXT.matcher(afterVerb).find()) {
+          continue;
+        }
         String contextSnippet = extractContext(text, index, verb.length(), 30);
         evidence.add(new EvidenceSnippetDto("actionVerb", contextSnippet, 0.76));
         return verb;

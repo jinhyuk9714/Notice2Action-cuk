@@ -433,6 +433,13 @@ class HeuristicActionExtractionServiceTest {
     }
 
     @Test
+    void rejects_invalid_time_minute_99_even_with_zero_hour() {
+      ActionExtractionResponse response =
+          service.extract(request("2026.3.12 00:99 마감"));
+      assertThat(response.actions().getFirst().dueAtIso()).isNull();
+    }
+
+    @Test
     void rejects_short_slash_feb_30() {
       ActionExtractionResponse response =
           service.extract(request("2/30까지 제출"));

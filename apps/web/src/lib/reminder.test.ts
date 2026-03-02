@@ -7,6 +7,7 @@ import {
   getRemindersForAction,
   hasActiveReminders,
   getPendingReminders,
+  fireNotification,
 } from './reminder';
 import type { ReminderSetting } from './reminder';
 
@@ -183,5 +184,52 @@ describe('getPendingReminders', () => {
     saveReminder(makeReminder({ offsetKey: 'D-3', remindAtIso: past }));
     saveReminder(makeReminder({ offsetKey: 'D-7', remindAtIso: future }));
     expect(getPendingReminders(now)).toHaveLength(2);
+  });
+});
+
+describe('fireNotification', () => {
+  beforeEach(() => { localStorage.clear(); });
+
+  it('returns false when Notification API is unavailable', () => {
+    const original = (globalThis as { Notification?: unknown }).Notification;
+    delete (globalThis as { Notification?: unknown }).Notification;
+    expect(fireNotification(makeReminder())).toBe(false);
+    (globalThis as { Notification?: unknown }).Notification = original;
+  });
+
+  it('returns false when permission is denied', () => {
+    const OriginalNotification = globalThis.Notification;
+    const MockNotification = class {
+      static permission: NotificationPermission = 'denied';
+      constructor() {}
+    };
+    Object.defineProperty(globalThis, 'Notification', {
+      configurable: true,
+      value: MockNotification,
+    });
+    expect(fireNotification(makeReminder())).toBe(false);
+    Object.defineProperty(globalThis, 'Notification', {
+      configurable: true,
+      value: OriginalNotification,
+    });
+  });
+
+  it('returns true when notification is shown', () => {
+    const OriginalNotification = globalThis.Notification;
+    let called = false;
+    const MockNotification = class {
+      static permission: NotificationPermission = 'granted';
+      constructor() { called = true; }
+    };
+    Object.defineProperty(globalThis, 'Notification', {
+      configurable: true,
+      value: MockNotification,
+    });
+    expect(fireNotification(makeReminder())).toBe(true);
+    expect(called).toBe(true);
+    Object.defineProperty(globalThis, 'Notification', {
+      configurable: true,
+      value: OriginalNotification,
+    });
   });
 });

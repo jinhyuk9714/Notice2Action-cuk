@@ -45,12 +45,16 @@ describe('isActionExtractionResponse', () => {
     expect(isActionExtractionResponse({})).toBe(false);
   });
 
-  it('returns true for empty actions array', () => {
-    expect(isActionExtractionResponse({ actions: [] })).toBe(true);
+  it('returns false for missing duplicate field', () => {
+    expect(isActionExtractionResponse({ actions: [] })).toBe(false);
+  });
+
+  it('returns true for empty actions array with duplicate', () => {
+    expect(isActionExtractionResponse({ actions: [], duplicate: false })).toBe(true);
   });
 
   it('returns true for valid action', () => {
-    expect(isActionExtractionResponse({ actions: [VALID_EXTRACTED_ACTION] })).toBe(true);
+    expect(isActionExtractionResponse({ actions: [VALID_EXTRACTED_ACTION], duplicate: false })).toBe(true);
   });
 
   it('returns false when action missing title', () => {
@@ -115,6 +119,18 @@ describe('isActionListResponse', () => {
   it('returns false when missing pagination fields', () => {
     expect(isActionListResponse({ actions: [VALID_SUMMARY] })).toBe(false);
   });
+
+  it('returns false when pageSize is missing', () => {
+    expect(isActionListResponse({
+      actions: [VALID_SUMMARY], currentPage: 0, totalElements: 1, totalPages: 1, hasNext: false,
+    })).toBe(false);
+  });
+
+  it('returns false when totalElements is missing', () => {
+    expect(isActionListResponse({
+      actions: [VALID_SUMMARY], currentPage: 0, pageSize: 20, totalPages: 1, hasNext: false,
+    })).toBe(false);
+  });
 });
 
 describe('isSavedActionDetail', () => {
@@ -177,6 +193,18 @@ describe('isSourceListResponse', () => {
 
   it('returns false when missing pagination fields', () => {
     expect(isSourceListResponse({ sources: [VALID_SOURCE_SUMMARY] })).toBe(false);
+  });
+
+  it('returns false when source pageSize is missing', () => {
+    expect(isSourceListResponse({
+      sources: [VALID_SOURCE_SUMMARY], currentPage: 0, totalElements: 1, totalPages: 1, hasNext: false,
+    })).toBe(false);
+  });
+
+  it('returns false when source totalElements is missing', () => {
+    expect(isSourceListResponse({
+      sources: [VALID_SOURCE_SUMMARY], currentPage: 0, pageSize: 20, totalPages: 1, hasNext: false,
+    })).toBe(false);
   });
 
   it('returns false when source missing id', () => {

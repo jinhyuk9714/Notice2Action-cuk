@@ -87,7 +87,9 @@ export function isActionExtractionResponse(value: unknown): value is ActionExtra
   }
 
   const record = value as Record<string, unknown>;
-  return Array.isArray(record.actions) && record.actions.every(isExtractedAction);
+  return typeof record.duplicate === 'boolean'
+    && Array.isArray(record.actions)
+    && record.actions.every(isExtractedAction);
 }
 
 // --- Inbox types ---
@@ -139,31 +141,55 @@ export type SavedActionDetail = Readonly<{
 
 function isSavedActionSummary(value: unknown): value is SavedActionSummary {
   if (typeof value !== 'object' || value === null) {
+    console.warn('[type-guard] isSavedActionSummary: not an object', value);
     return false;
   }
 
   const record = value as Record<string, unknown>;
-  return (
+  const valid = (
     typeof record.id === 'string' &&
     typeof record.title === 'string' &&
     typeof record.actionSummary === 'string' &&
     typeof record.createdAt === 'string'
   );
+  if (!valid) {
+    console.warn('[type-guard] isSavedActionSummary: field mismatch', {
+      id: typeof record.id,
+      title: typeof record.title,
+      actionSummary: typeof record.actionSummary,
+      createdAt: typeof record.createdAt,
+    });
+  }
+  return valid;
 }
 
 export function isActionListResponse(value: unknown): value is ActionListResponse {
   if (typeof value !== 'object' || value === null) {
+    console.warn('[type-guard] isActionListResponse: not an object', value);
     return false;
   }
 
   const record = value as Record<string, unknown>;
-  return (
+  const valid = (
     Array.isArray(record.actions) &&
     record.actions.every(isSavedActionSummary) &&
     typeof record.currentPage === 'number' &&
+    typeof record.pageSize === 'number' &&
+    typeof record.totalElements === 'number' &&
     typeof record.totalPages === 'number' &&
     typeof record.hasNext === 'boolean'
   );
+  if (!valid) {
+    console.warn('[type-guard] isActionListResponse: field mismatch', {
+      actions: Array.isArray(record.actions) ? `Array(${record.actions.length})` : typeof record.actions,
+      currentPage: typeof record.currentPage,
+      pageSize: typeof record.pageSize,
+      totalElements: typeof record.totalElements,
+      totalPages: typeof record.totalPages,
+      hasNext: typeof record.hasNext,
+    });
+  }
+  return valid;
 }
 
 // --- Source history types ---
@@ -211,17 +237,31 @@ function isSourceSummary(value: unknown): value is SourceSummary {
 
 export function isSourceListResponse(value: unknown): value is SourceListResponse {
   if (typeof value !== 'object' || value === null) {
+    console.warn('[type-guard] isSourceListResponse: not an object', value);
     return false;
   }
 
   const record = value as Record<string, unknown>;
-  return (
+  const valid = (
     Array.isArray(record.sources) &&
     record.sources.every(isSourceSummary) &&
     typeof record.currentPage === 'number' &&
+    typeof record.pageSize === 'number' &&
+    typeof record.totalElements === 'number' &&
     typeof record.totalPages === 'number' &&
     typeof record.hasNext === 'boolean'
   );
+  if (!valid) {
+    console.warn('[type-guard] isSourceListResponse: field mismatch', {
+      sources: Array.isArray(record.sources) ? `Array(${record.sources.length})` : typeof record.sources,
+      currentPage: typeof record.currentPage,
+      pageSize: typeof record.pageSize,
+      totalElements: typeof record.totalElements,
+      totalPages: typeof record.totalPages,
+      hasNext: typeof record.hasNext,
+    });
+  }
+  return valid;
 }
 
 export function isSourceDetail(value: unknown): value is SourceDetail {
