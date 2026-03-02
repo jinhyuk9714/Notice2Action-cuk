@@ -57,86 +57,26 @@ public class ActionPersistenceService {
       ActionExtractionRequest request,
       ActionExtractionResponse extractionResult) {
 
-    // Duplicate detection by content hash
     String contentHash = ContentHashUtil.sha256(request.sourceText());
-    if (contentHash != null) {
-      var existing = sourceRepository.findByContentHash(contentHash);
-      if (existing.isPresent()) {
-        if (sourceRepository.countActionsBySourceId(existing.get().getId()) > 0) {
-          return buildDuplicateResponse(existing.get());
-        }
-        sourceRepository.delete(existing.get());
-      }
+    ActionExtractionResponse duplicateByHash = resolveDuplicateByContentHash(contentHash);
+    if (duplicateByHash != null) {
+      return duplicateByHash;
     }
 
-    // Duplicate detection by URL
-    if (request.sourceUrl() != null && !request.sourceUrl().isBlank()) {
-      var existing = sourceRepository.findBySourceUrl(request.sourceUrl());
-      if (existing.isPresent()) {
-        if (sourceRepository.countActionsBySourceId(existing.get().getId()) > 0) {
-          return buildDuplicateResponse(existing.get());
-        }
-        sourceRepository.delete(existing.get());
-      }
+    ActionExtractionResponse duplicateByUrl = resolveDuplicateBySourceUrl(request.sourceUrl());
+    if (duplicateByUrl != null) {
+      return duplicateByUrl;
     }
 
     OffsetDateTime now = OffsetDateTime.now();
-
-    NoticeSourceEntity source = new NoticeSourceEntity(
-        UUID.randomUUID(),
-        request.sourceTitle(),
-        request.sourceCategory(),
-        request.sourceText(),
-        request.sourceUrl(),
-        now
-    );
-    source.setContentHash(contentHash);
-    try {
-      sourceRepository.saveAndFlush(source);
-    } catch (DataIntegrityViolationException e) {
-      // Concurrent duplicate: another request saved the same content_hash first.
-      // Re-check and return duplicate response.
-      if (contentHash != null) {
-        var concurrent = sourceRepository.findByContentHash(contentHash);
-        if (concurrent.isPresent()) {
-          return buildDuplicateResponse(concurrent.get());
-        }
-      }
-      throw e;
+    NoticeSourceEntity source = createSourceEntity(request, contentHash, now);
+    ActionExtractionResponse concurrentDuplicate = saveSourceOrResolveConcurrentDuplicate(source,
+        contentHash);
+    if (concurrentDuplicate != null) {
+      return concurrentDuplicate;
     }
 
-    List<ExtractedActionDto> savedActions = new ArrayList<>();
-
-    for (ExtractedActionDto dto : extractionResult.actions()) {
-      UUID actionId = UUID.randomUUID();
-      String requiredItemsJson = toJson(dto.requiredItems());
-      OffsetDateTime dueAtIso = parseDueAtIso(dto.dueAtIso(), "dueAtIso");
-
-      ExtractedActionEntity actionEntity = new ExtractedActionEntity(
-          actionId, source, dto.title(), dto.actionSummary(),
-          dueAtIso, dto.dueAtLabel(), dto.eligibility(),
-          requiredItemsJson, dto.systemHint(), dto.inferred(),
-          dto.confidenceScore(), now
-      );
-
-      for (EvidenceSnippetDto ev : dto.evidence()) {
-        EvidenceSnippetEntity evidenceEntity = new EvidenceSnippetEntity(
-            UUID.randomUUID(), actionEntity,
-            ev.fieldName(), ev.snippet(), ev.confidence(), now
-        );
-        actionEntity.addEvidence(evidenceEntity);
-      }
-
-      actionRepository.save(actionEntity);
-
-      savedActions.add(new ExtractedActionDto(
-          actionId, source.getId(),
-          dto.title(), dto.actionSummary(), dto.dueAtIso(),
-          dto.dueAtLabel(), dto.eligibility(), dto.requiredItems(),
-          dto.systemHint(), dto.sourceCategory(), dto.evidence(),
-          dto.inferred(), dto.confidenceScore(), now
-      ));
-    }
+    List<ExtractedActionDto> savedActions = persistActions(extractionResult.actions(), source, now);
 
     return new ActionExtractionResponse(savedActions);
   }
@@ -152,67 +92,8 @@ public class ActionPersistenceService {
 
     Map<String, String> machineValues = parseMachineValues(entity.getMachineValuesJson());
 
-    // Phase 1: Handle revert requests
-    if (request.revertFields() != null) {
-      for (String fieldName : request.revertFields()) {
-        if (!OVERRIDABLE_FIELDS.contains(fieldName)) {
-          throw new IllegalArgumentException("되돌릴 수 없는 필드입니다: " + fieldName);
-        }
-        String machineValue = machineValues.get(fieldName);
-        if (machineValue != null) {
-          setFieldValue(entity, fieldName, machineValue);
-          machineValues.remove(fieldName);
-        }
-      }
-    }
-
-    // Phase 2: Handle updates with override tracking
-    if (request.title() != null) {
-      if (request.title().isBlank()) {
-        throw new IllegalArgumentException("제목은 비워둘 수 없습니다.");
-      }
-      if (!machineValues.containsKey("title")) {
-        machineValues.put("title", entity.getTitle());
-      }
-      entity.setTitle(request.title());
-    }
-    if (request.actionSummary() != null) {
-      if (!machineValues.containsKey("actionSummary")) {
-        machineValues.put("actionSummary", entity.getActionSummary());
-      }
-      entity.setActionSummary(request.actionSummary());
-    }
-    if (request.dueAtIso() != null) {
-      if (!machineValues.containsKey("dueAtIso")) {
-        machineValues.put("dueAtIso",
-            entity.getDueAtIso() != null ? entity.getDueAtIso().toString() : null);
-      }
-      entity.setDueAtIso(parseDueAtIso(request.dueAtIso(), "dueAtIso"));
-    }
-    if (request.dueAtLabel() != null) {
-      if (!machineValues.containsKey("dueAtLabel")) {
-        machineValues.put("dueAtLabel", entity.getDueAtLabel());
-      }
-      entity.setDueAtLabel(request.dueAtLabel());
-    }
-    if (request.eligibility() != null) {
-      if (!machineValues.containsKey("eligibility")) {
-        machineValues.put("eligibility", entity.getEligibility());
-      }
-      entity.setEligibility(request.eligibility());
-    }
-    if (request.requiredItems() != null) {
-      if (!machineValues.containsKey("requiredItems")) {
-        machineValues.put("requiredItems", entity.getRequiredItemsJson());
-      }
-      entity.setRequiredItemsJson(toJson(request.requiredItems()));
-    }
-    if (request.systemHint() != null) {
-      if (!machineValues.containsKey("systemHint")) {
-        machineValues.put("systemHint", entity.getSystemHint());
-      }
-      entity.setSystemHint(request.systemHint());
-    }
+    applyReverts(entity, request.revertFields(), machineValues);
+    applyUpdates(entity, request, machineValues);
 
     entity.setMachineValuesJson(serializeMachineValues(machineValues));
     actionRepository.save(entity);
@@ -253,19 +134,7 @@ public class ActionPersistenceService {
   private ActionExtractionResponse buildDuplicateResponse(NoticeSourceEntity existingSource) {
     List<ExtractedActionDto> actions = actionRepository
         .findAllBySourceIdOrderByCreatedAtDesc(existingSource.getId()).stream()
-        .map(entity -> new ExtractedActionDto(
-            entity.getId(), existingSource.getId(),
-            entity.getTitle(), entity.getActionSummary(),
-            entity.getDueAtIso() != null ? entity.getDueAtIso().toString() : null,
-            entity.getDueAtLabel(), entity.getEligibility(),
-            fromJson(entity.getRequiredItemsJson()),
-            entity.getSystemHint(),
-            existingSource.getSourceCategory(),
-            entity.getEvidenceSnippets().stream()
-                .map(e -> new EvidenceSnippetDto(e.getFieldName(), e.getSnippet(), e.getConfidence()))
-                .toList(),
-            entity.isInferred(), entity.getConfidenceScore(), entity.getCreatedAt()
-        ))
+        .map(this::toExtractedActionDto)
         .toList();
     return new ActionExtractionResponse(actions, true);
   }
@@ -285,36 +154,16 @@ public class ActionPersistenceService {
 
   @Transactional(readOnly = true)
   public ActionListResponse listActions(ActionSearchCriteria criteria, int page, int size) {
-    boolean hasFilters = (criteria.q() != null && !criteria.q().isBlank())
-        || criteria.category() != null
-        || criteria.dueDateFrom() != null
-        || criteria.dueDateTo() != null;
-
-    if (!hasFilters) {
+    if (!hasFilters(criteria)) {
       return listActionsSimple(criteria.sort(), page, size);
     }
 
-    Specification<ExtractedActionEntity> spec = (root, query, cb) -> cb.conjunction();
-    if (criteria.q() != null && !criteria.q().isBlank()) {
-      spec = spec.and(ActionSpecifications.titleOrSummaryContains(criteria.q()));
-    }
-    if (criteria.category() != null) {
-      spec = spec.and(ActionSpecifications.sourceCategoryEquals(criteria.category()));
-    }
-    if (criteria.dueDateFrom() != null) {
-      spec = spec.and(ActionSpecifications.dueAtFrom(criteria.dueDateFrom()));
-    }
-    if (criteria.dueDateTo() != null) {
-      spec = spec.and(ActionSpecifications.dueAtTo(criteria.dueDateTo()));
+    Specification<ExtractedActionEntity> spec = buildSearchSpec(criteria);
+    if (isDueSort(criteria.sort())) {
+      spec = spec.and(dueNullsLastOrder());
     }
 
-    Pageable pageable;
-    if ("due".equals(criteria.sort())) {
-      spec = spec.and(dueNullsLastOrder());
-      pageable = PageRequest.of(page, size);
-    } else {
-      pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")));
-    }
+    Pageable pageable = resolvePageable(criteria.sort(), page, size);
     Page<ExtractedActionEntity> pageResult = actionRepository.findAll(spec, pageable);
     return toActionListResponse(pageResult);
   }
@@ -333,23 +182,10 @@ public class ActionPersistenceService {
 
   @Transactional(readOnly = true)
   public List<ExtractedActionEntity> findActionsForCalendar(ActionSearchCriteria criteria) {
-    Specification<ExtractedActionEntity> spec =
-        (root, query, cb) -> cb.isNotNull(root.get("dueAtIso"));
+    Specification<ExtractedActionEntity> spec = buildSearchSpec(criteria)
+        .and((root, query, cb) -> cb.isNotNull(root.get("dueAtIso")));
 
-    if (criteria.q() != null && !criteria.q().isBlank()) {
-      spec = spec.and(ActionSpecifications.titleOrSummaryContains(criteria.q()));
-    }
-    if (criteria.category() != null) {
-      spec = spec.and(ActionSpecifications.sourceCategoryEquals(criteria.category()));
-    }
-    if (criteria.dueDateFrom() != null) {
-      spec = spec.and(ActionSpecifications.dueAtFrom(criteria.dueDateFrom()));
-    }
-    if (criteria.dueDateTo() != null) {
-      spec = spec.and(ActionSpecifications.dueAtTo(criteria.dueDateTo()));
-    }
-
-    Sort sort = "due".equals(criteria.sort())
+    Sort sort = isDueSort(criteria.sort())
         ? Sort.by(Sort.Order.asc("dueAtIso"))
         : Sort.by(Sort.Order.desc("createdAt"));
 
@@ -370,7 +206,7 @@ public class ActionPersistenceService {
         entity.getId(),
         entity.getTitle(),
         entity.getActionSummary(),
-        entity.getDueAtIso() != null ? entity.getDueAtIso().toString() : null,
+        toIsoString(entity.getDueAtIso()),
         entity.getDueAtLabel(),
         entity.getEligibility(),
         source != null ? source.getSourceCategory() : null,
@@ -431,7 +267,7 @@ public class ActionPersistenceService {
         entity.getId(),
         entity.getTitle(),
         entity.getActionSummary(),
-        entity.getDueAtIso() != null ? entity.getDueAtIso().toString() : null,
+        toIsoString(entity.getDueAtIso()),
         entity.getDueAtLabel(),
         entity.getEligibility(),
         fromJson(entity.getRequiredItemsJson()),
@@ -472,5 +308,269 @@ public class ActionPersistenceService {
           "잘못된 날짜 형식입니다: " + fieldName + " = " + isoString
       );
     }
+  }
+
+  private ActionExtractionResponse resolveDuplicateByContentHash(String contentHash) {
+    if (contentHash == null) {
+      return null;
+    }
+    return resolveDuplicateSource(sourceRepository.findByContentHash(contentHash));
+  }
+
+  private ActionExtractionResponse resolveDuplicateBySourceUrl(String sourceUrl) {
+    if (sourceUrl == null || sourceUrl.isBlank()) {
+      return null;
+    }
+    return resolveDuplicateSource(sourceRepository.findBySourceUrl(sourceUrl));
+  }
+
+  private ActionExtractionResponse resolveDuplicateSource(
+      java.util.Optional<NoticeSourceEntity> existingSource) {
+    if (existingSource.isEmpty()) {
+      return null;
+    }
+    NoticeSourceEntity source = existingSource.get();
+    if (sourceRepository.countActionsBySourceId(source.getId()) > 0) {
+      return buildDuplicateResponse(source);
+    }
+    sourceRepository.delete(source);
+    return null;
+  }
+
+  private NoticeSourceEntity createSourceEntity(ActionExtractionRequest request, String contentHash,
+      OffsetDateTime now) {
+    NoticeSourceEntity source = new NoticeSourceEntity(
+        UUID.randomUUID(),
+        request.sourceTitle(),
+        request.sourceCategory(),
+        request.sourceText(),
+        request.sourceUrl(),
+        now
+    );
+    source.setContentHash(contentHash);
+    return source;
+  }
+
+  private ActionExtractionResponse saveSourceOrResolveConcurrentDuplicate(NoticeSourceEntity source,
+      String contentHash) {
+    try {
+      sourceRepository.saveAndFlush(source);
+      return null;
+    } catch (DataIntegrityViolationException e) {
+      if (contentHash != null) {
+        var concurrent = sourceRepository.findByContentHash(contentHash);
+        if (concurrent.isPresent()) {
+          return buildDuplicateResponse(concurrent.get());
+        }
+      }
+      throw e;
+    }
+  }
+
+  private List<ExtractedActionDto> persistActions(List<ExtractedActionDto> extractedActions,
+      NoticeSourceEntity source, OffsetDateTime now) {
+    List<ExtractedActionDto> savedActions = new ArrayList<>();
+    for (ExtractedActionDto extractedAction : extractedActions) {
+      ExtractedActionEntity entity = toExtractedActionEntity(extractedAction, source, now);
+      addEvidence(entity, extractedAction.evidence(), now);
+      actionRepository.save(entity);
+      savedActions.add(toExtractedActionDto(entity));
+    }
+    return savedActions;
+  }
+
+  private ExtractedActionEntity toExtractedActionEntity(ExtractedActionDto extractedAction,
+      NoticeSourceEntity source, OffsetDateTime now) {
+    return new ExtractedActionEntity(
+        UUID.randomUUID(),
+        source,
+        extractedAction.title(),
+        extractedAction.actionSummary(),
+        parseDueAtIso(extractedAction.dueAtIso(), "dueAtIso"),
+        extractedAction.dueAtLabel(),
+        extractedAction.eligibility(),
+        toJson(extractedAction.requiredItems()),
+        extractedAction.systemHint(),
+        extractedAction.inferred(),
+        extractedAction.confidenceScore(),
+        now
+    );
+  }
+
+  private void addEvidence(ExtractedActionEntity actionEntity, List<EvidenceSnippetDto> evidences,
+      OffsetDateTime now) {
+    for (EvidenceSnippetDto evidence : evidences) {
+      EvidenceSnippetEntity evidenceEntity = new EvidenceSnippetEntity(
+          UUID.randomUUID(),
+          actionEntity,
+          evidence.fieldName(),
+          evidence.snippet(),
+          evidence.confidence(),
+          now
+      );
+      actionEntity.addEvidence(evidenceEntity);
+    }
+  }
+
+  private ExtractedActionDto toExtractedActionDto(ExtractedActionEntity entity) {
+    NoticeSourceEntity source = entity.getSource();
+    return new ExtractedActionDto(
+        entity.getId(),
+        source != null ? source.getId() : null,
+        entity.getTitle(),
+        entity.getActionSummary(),
+        toIsoString(entity.getDueAtIso()),
+        entity.getDueAtLabel(),
+        entity.getEligibility(),
+        fromJson(entity.getRequiredItemsJson()),
+        entity.getSystemHint(),
+        source != null ? source.getSourceCategory() : null,
+        entity.getEvidenceSnippets().stream()
+            .map(e -> new EvidenceSnippetDto(e.getFieldName(), e.getSnippet(), e.getConfidence()))
+            .toList(),
+        entity.isInferred(),
+        entity.getConfidenceScore(),
+        entity.getCreatedAt()
+    );
+  }
+
+  private void applyReverts(ExtractedActionEntity entity, List<String> revertFields,
+      Map<String, String> machineValues) {
+    if (revertFields == null) {
+      return;
+    }
+    for (String fieldName : revertFields) {
+      if (!OVERRIDABLE_FIELDS.contains(fieldName)) {
+        throw new IllegalArgumentException("되돌릴 수 없는 필드입니다: " + fieldName);
+      }
+      String machineValue = machineValues.get(fieldName);
+      if (machineValue != null) {
+        setFieldValue(entity, fieldName, machineValue);
+        machineValues.remove(fieldName);
+      }
+    }
+  }
+
+  private void applyUpdates(ExtractedActionEntity entity, ActionUpdateRequest request,
+      Map<String, String> machineValues) {
+    applyTitleUpdate(entity, request.title(), machineValues);
+    applyActionSummaryUpdate(entity, request.actionSummary(), machineValues);
+    applyDueAtIsoUpdate(entity, request.dueAtIso(), machineValues);
+    applyDueAtLabelUpdate(entity, request.dueAtLabel(), machineValues);
+    applyEligibilityUpdate(entity, request.eligibility(), machineValues);
+    applyRequiredItemsUpdate(entity, request.requiredItems(), machineValues);
+    applySystemHintUpdate(entity, request.systemHint(), machineValues);
+  }
+
+  private void applyTitleUpdate(ExtractedActionEntity entity, String title,
+      Map<String, String> machineValues) {
+    if (title == null) {
+      return;
+    }
+    if (title.isBlank()) {
+      throw new IllegalArgumentException("제목은 비워둘 수 없습니다.");
+    }
+    rememberMachineValueIfAbsent(machineValues, "title", entity.getTitle());
+    entity.setTitle(title);
+  }
+
+  private void applyActionSummaryUpdate(ExtractedActionEntity entity, String actionSummary,
+      Map<String, String> machineValues) {
+    if (actionSummary == null) {
+      return;
+    }
+    rememberMachineValueIfAbsent(machineValues, "actionSummary", entity.getActionSummary());
+    entity.setActionSummary(actionSummary);
+  }
+
+  private void applyDueAtIsoUpdate(ExtractedActionEntity entity, String dueAtIso,
+      Map<String, String> machineValues) {
+    if (dueAtIso == null) {
+      return;
+    }
+    rememberMachineValueIfAbsent(machineValues, "dueAtIso", toIsoString(entity.getDueAtIso()));
+    entity.setDueAtIso(parseDueAtIso(dueAtIso, "dueAtIso"));
+  }
+
+  private void applyDueAtLabelUpdate(ExtractedActionEntity entity, String dueAtLabel,
+      Map<String, String> machineValues) {
+    if (dueAtLabel == null) {
+      return;
+    }
+    rememberMachineValueIfAbsent(machineValues, "dueAtLabel", entity.getDueAtLabel());
+    entity.setDueAtLabel(dueAtLabel);
+  }
+
+  private void applyEligibilityUpdate(ExtractedActionEntity entity, String eligibility,
+      Map<String, String> machineValues) {
+    if (eligibility == null) {
+      return;
+    }
+    rememberMachineValueIfAbsent(machineValues, "eligibility", entity.getEligibility());
+    entity.setEligibility(eligibility);
+  }
+
+  private void applyRequiredItemsUpdate(ExtractedActionEntity entity, List<String> requiredItems,
+      Map<String, String> machineValues) {
+    if (requiredItems == null) {
+      return;
+    }
+    rememberMachineValueIfAbsent(machineValues, "requiredItems", entity.getRequiredItemsJson());
+    entity.setRequiredItemsJson(toJson(requiredItems));
+  }
+
+  private void applySystemHintUpdate(ExtractedActionEntity entity, String systemHint,
+      Map<String, String> machineValues) {
+    if (systemHint == null) {
+      return;
+    }
+    rememberMachineValueIfAbsent(machineValues, "systemHint", entity.getSystemHint());
+    entity.setSystemHint(systemHint);
+  }
+
+  private void rememberMachineValueIfAbsent(Map<String, String> machineValues, String fieldName,
+      String machineValue) {
+    if (!machineValues.containsKey(fieldName)) {
+      machineValues.put(fieldName, machineValue);
+    }
+  }
+
+  private boolean hasFilters(ActionSearchCriteria criteria) {
+    return (criteria.q() != null && !criteria.q().isBlank())
+        || criteria.category() != null
+        || criteria.dueDateFrom() != null
+        || criteria.dueDateTo() != null;
+  }
+
+  private Specification<ExtractedActionEntity> buildSearchSpec(ActionSearchCriteria criteria) {
+    Specification<ExtractedActionEntity> spec = (root, query, cb) -> cb.conjunction();
+    if (criteria.q() != null && !criteria.q().isBlank()) {
+      spec = spec.and(ActionSpecifications.titleOrSummaryContains(criteria.q()));
+    }
+    if (criteria.category() != null) {
+      spec = spec.and(ActionSpecifications.sourceCategoryEquals(criteria.category()));
+    }
+    if (criteria.dueDateFrom() != null) {
+      spec = spec.and(ActionSpecifications.dueAtFrom(criteria.dueDateFrom()));
+    }
+    if (criteria.dueDateTo() != null) {
+      spec = spec.and(ActionSpecifications.dueAtTo(criteria.dueDateTo()));
+    }
+    return spec;
+  }
+
+  private Pageable resolvePageable(String sort, int page, int size) {
+    if (isDueSort(sort)) {
+      return PageRequest.of(page, size);
+    }
+    return PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")));
+  }
+
+  private boolean isDueSort(String sort) {
+    return "due".equals(sort);
+  }
+
+  private String toIsoString(OffsetDateTime dateTime) {
+    return dateTime != null ? dateTime.toString() : null;
   }
 }
