@@ -150,4 +150,32 @@ describe('useActionDetail', () => {
     act(() => { result.current.setDetail(updated); });
     expect(result.current.detail?.title).toBe('수정됨');
   });
+
+  it('ignores stale response when handleSelect is called rapidly', async () => {
+    const detailA = makeActionDetail({ id: 'a1', title: 'Slow' });
+    const detailB = makeActionDetail({ id: 'a2', title: 'Fast' });
+
+    let resolveA: (v: typeof detailA) => void;
+    const promiseA = new Promise<typeof detailA>((r) => { resolveA = r; });
+    mockFetchDetail
+      .mockReturnValueOnce(promiseA)
+      .mockResolvedValueOnce(detailB);
+
+    const onActionSelect = vi.fn();
+    const { result } = renderHook(() =>
+      useActionDetail({ initialActionId: null, onActionSelect }),
+    );
+
+    act(() => { result.current.handleSelect('a1'); });
+    act(() => { result.current.handleSelect('a2'); });
+
+    await waitFor(() => { expect(result.current.detail).toEqual(detailB); });
+
+    // Resolve the stale first request
+    await act(async () => { resolveA!(detailA); });
+
+    // Detail should still be B, not overwritten by stale A
+    expect(result.current.detail).toEqual(detailB);
+    expect(result.current.selectedId).toBe('a2');
+  });
 });

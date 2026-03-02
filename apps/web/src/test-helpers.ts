@@ -1,4 +1,4 @@
-import type { SavedActionSummary, SavedActionDetail, ActionListResponse, SourceSummary, SourceDetail, SourceListResponse } from './lib/types';
+import type { SavedActionSummary, SavedActionDetail, ActionExtractionResponse, ActionListResponse, ExtractedAction, SourceSummary, SourceDetail, SourceListResponse } from './lib/types';
 import type { UserProfile } from './lib/profile';
 
 // --- Profiles ---
@@ -103,4 +103,33 @@ export function makeSourceListResponse(
     totalPages: 1,
     hasNext,
   };
+}
+
+// --- Extraction Response ---
+
+export function makeExtractedAction(overrides: Partial<ExtractedAction> = {}): ExtractedAction {
+  return {
+    id: 'ea-1',
+    sourceId: 'src-1',
+    title: '장학금 신청',
+    actionSummary: 'TRINITY에서 장학금을 신청하세요.',
+    dueAtIso: '2026-03-15T00:00:00',
+    dueAtLabel: '3월 15일까지',
+    eligibility: '재학생',
+    requiredItems: ['신청서'],
+    systemHint: 'TRINITY',
+    sourceCategory: 'NOTICE',
+    evidence: [{ fieldName: 'dueAtIso', snippet: '3월 15일까지', confidence: 0.9 }],
+    inferred: false,
+    confidenceScore: 0.85,
+    createdAt: '2026-03-01T10:00:00',
+    ...overrides,
+  };
+}
+
+export function makeActionExtractionResponse(
+  actions: ExtractedAction[] = [makeExtractedAction()],
+  duplicate = false,
+): ActionExtractionResponse {
+  return { actions, duplicate };
 }

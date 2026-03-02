@@ -25,9 +25,12 @@ export function useActionDetail({ initialActionId, onActionSelect }: UseActionDe
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
+  const requestIdRef = useRef<number>(0);
+
   // Sync with external initialActionId changes only
   useEffect(() => {
     if (initialActionId === null) {
+      requestIdRef.current++;
       setSelectedId(null);
       setDetail(null);
       setDetailError(null);
@@ -36,18 +39,24 @@ export function useActionDetail({ initialActionId, onActionSelect }: UseActionDe
     if (initialActionId === selectedIdRef.current) {
       return;
     }
+    const requestId = ++requestIdRef.current;
     setSelectedId(initialActionId);
     setDetail(null);
     setDetailError(null);
     fetchActionDetail(initialActionId)
-      .then((result) => { setDetail(result); })
+      .then((result) => {
+        if (requestIdRef.current !== requestId) return;
+        setDetail(result);
+      })
       .catch((err: unknown) => {
+        if (requestIdRef.current !== requestId) return;
         const message = err instanceof Error ? err.message : '상세 정보를 불러오지 못했습니다';
         setDetailError(message);
       });
   }, [initialActionId]);
 
   function handleSelect(id: string): void {
+    const requestId = ++requestIdRef.current;
     setSelectedId(id);
     setDetail(null);
     setDetailError(null);
@@ -55,15 +64,18 @@ export function useActionDetail({ initialActionId, onActionSelect }: UseActionDe
 
     fetchActionDetail(id)
       .then((result) => {
+        if (requestIdRef.current !== requestId) return;
         setDetail(result);
       })
       .catch((err: unknown) => {
+        if (requestIdRef.current !== requestId) return;
         const message = err instanceof Error ? err.message : '상세 정보를 불러오지 못했습니다';
         setDetailError(message);
       });
   }
 
   function clearSelection(): void {
+    requestIdRef.current++;
     setSelectedId(null);
     setDetail(null);
     setDetailError(null);

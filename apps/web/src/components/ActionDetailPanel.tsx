@@ -11,14 +11,8 @@ import {
   removeReminder,
   requestNotificationPermission,
 } from '../lib/reminder';
-import type { FieldOverrideInfo, SavedActionDetail } from '../lib/types';
-
-function getOverride(
-  overrides: readonly FieldOverrideInfo[],
-  fieldName: string,
-): FieldOverrideInfo | undefined {
-  return overrides.find((o) => o.fieldName === fieldName);
-}
+import type { SavedActionDetail } from '../lib/types';
+import { OverrideBadge } from './OverrideBadge';
 
 type ActionDetailPanelProps = Readonly<{
   detail: SavedActionDetail;
@@ -182,19 +176,13 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
           ) : (
             <h3>
               {detail.title}
-              {getOverride(detail.overrides, 'title') !== undefined ? (
-                <span className="override-badge">
-                  <span className="override-label">수정됨</span>
-                  <button
-                    className="override-revert-btn"
-                    onClick={() => { void handleRevert('title'); }}
-                    disabled={reverting === 'title'}
-                    title={`원래 값: ${getOverride(detail.overrides, 'title')?.machineValue ?? ''}`}
-                  >
-                    되돌리기
-                  </button>
-                </span>
-              ) : null}
+              <OverrideBadge
+                overrides={detail.overrides}
+                fieldName="title"
+                reverting={reverting}
+                onRevert={(f) => { void handleRevert(f); }}
+                showOriginalTitle={true}
+              />
             </h3>
           )}
         </div>
@@ -219,18 +207,12 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
       ) : (
         <p className="summary">
           {detail.actionSummary}
-          {getOverride(detail.overrides, 'actionSummary') !== undefined ? (
-            <span className="override-badge">
-              <span className="override-label">수정됨</span>
-              <button
-                className="override-revert-btn"
-                onClick={() => { void handleRevert('actionSummary'); }}
-                disabled={reverting === 'actionSummary'}
-              >
-                되돌리기
-              </button>
-            </span>
-          ) : null}
+          <OverrideBadge
+            overrides={detail.overrides}
+            fieldName="actionSummary"
+            reverting={reverting}
+            onRevert={(f) => { void handleRevert(f); }}
+          />
         </p>
       )}
 
@@ -287,36 +269,24 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                     {dday.label}
                   </span>
                 ) : null}
-                {getOverride(detail.overrides, 'dueAtLabel') !== undefined ? (
-                  <span className="override-badge">
-                    <span className="override-label">수정됨</span>
-                    <button
-                      className="override-revert-btn"
-                      onClick={() => { void handleRevert('dueAtLabel'); }}
-                      disabled={reverting === 'dueAtLabel'}
-                    >
-                      되돌리기
-                    </button>
-                  </span>
-                ) : null}
+                <OverrideBadge
+                  overrides={detail.overrides}
+                  fieldName="dueAtLabel"
+                  reverting={reverting}
+                  onRevert={(f) => { void handleRevert(f); }}
+                />
               </dd>
             </div>
             <div>
               <dt>시스템</dt>
               <dd>
                 {detail.systemHint ?? '미확인'}
-                {getOverride(detail.overrides, 'systemHint') !== undefined ? (
-                  <span className="override-badge">
-                    <span className="override-label">수정됨</span>
-                    <button
-                      className="override-revert-btn"
-                      onClick={() => { void handleRevert('systemHint'); }}
-                      disabled={reverting === 'systemHint'}
-                    >
-                      되돌리기
-                    </button>
-                  </span>
-                ) : null}
+                <OverrideBadge
+                  overrides={detail.overrides}
+                  fieldName="systemHint"
+                  reverting={reverting}
+                  onRevert={(f) => { void handleRevert(f); }}
+                />
               </dd>
             </div>
             <div>
@@ -328,36 +298,24 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                 ) : relevance.level === 'not_relevant' ? (
                   <span className="relevance-badge relevance-not-relevant dday-inline" title={relevance.reason ?? undefined}>해당없음</span>
                 ) : null}
-                {getOverride(detail.overrides, 'eligibility') !== undefined ? (
-                  <span className="override-badge">
-                    <span className="override-label">수정됨</span>
-                    <button
-                      className="override-revert-btn"
-                      onClick={() => { void handleRevert('eligibility'); }}
-                      disabled={reverting === 'eligibility'}
-                    >
-                      되돌리기
-                    </button>
-                  </span>
-                ) : null}
+                <OverrideBadge
+                  overrides={detail.overrides}
+                  fieldName="eligibility"
+                  reverting={reverting}
+                  onRevert={(f) => { void handleRevert(f); }}
+                />
               </dd>
             </div>
             <div>
               <dt>준비물</dt>
               <dd>
                 {detail.requiredItems.length > 0 ? detail.requiredItems.join(', ') : '없음'}
-                {getOverride(detail.overrides, 'requiredItems') !== undefined ? (
-                  <span className="override-badge">
-                    <span className="override-label">수정됨</span>
-                    <button
-                      className="override-revert-btn"
-                      onClick={() => { void handleRevert('requiredItems'); }}
-                      disabled={reverting === 'requiredItems'}
-                    >
-                      되돌리기
-                    </button>
-                  </span>
-                ) : null}
+                <OverrideBadge
+                  overrides={detail.overrides}
+                  fieldName="requiredItems"
+                  reverting={reverting}
+                  onRevert={(f) => { void handleRevert(f); }}
+                />
               </dd>
             </div>
           </dl>

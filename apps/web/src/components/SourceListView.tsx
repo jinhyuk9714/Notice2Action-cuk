@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { fetchSourceDetail, fetchSourceList } from '../lib/api';
-import { categoryLabel } from '../lib/labels';
-import type { SavedActionSummary, SourceDetail, SourceSummary } from '../lib/types';
+import type { SourceDetail, SourceSummary } from '../lib/types';
 import { usePagedList } from '../lib/usePagedList';
 import { SkeletonCard } from './SkeletonCard';
 import { SourceCard } from './SourceCard';
+import { SourceDetailPanel } from './SourceDetailPanel';
 
 type SourceListViewProps = Readonly<{
   initialSourceId: string | null;
@@ -32,8 +32,11 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
+  const requestIdRef = useRef<number>(0);
+
   useEffect(() => {
     if (initialSourceId === null) {
+      requestIdRef.current++;
       setSelectedId(null);
       setDetail(null);
       setDetailError(null);
@@ -42,18 +45,24 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
     if (initialSourceId === selectedIdRef.current) {
       return;
     }
+    const requestId = ++requestIdRef.current;
     setSelectedId(initialSourceId);
     setDetail(null);
     setDetailError(null);
     fetchSourceDetail(initialSourceId)
-      .then((result) => { setDetail(result); })
+      .then((result) => {
+        if (requestIdRef.current !== requestId) return;
+        setDetail(result);
+      })
       .catch((err: unknown) => {
+        if (requestIdRef.current !== requestId) return;
         const message = err instanceof Error ? err.message : '소스 상세 정보를 불러오지 못했습니다';
         setDetailError(message);
       });
   }, [initialSourceId]);
 
   function handleSelect(id: string): void {
+    const requestId = ++requestIdRef.current;
     setSelectedId(id);
     setDetail(null);
     setDetailError(null);
@@ -61,9 +70,11 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
 
     fetchSourceDetail(id)
       .then((result) => {
+        if (requestIdRef.current !== requestId) return;
         setDetail(result);
       })
       .catch((err: unknown) => {
+        if (requestIdRef.current !== requestId) return;
         const message = err instanceof Error ? err.message : '소스 상세 정보를 불러오지 못했습니다';
         setDetailError(message);
       });
@@ -142,7 +153,7 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
           <>
             <button
               className="mobile-back-btn"
-              onClick={() => { setSelectedId(null); setDetail(null); setDetailError(null); onSourceSelect(null); }}
+              onClick={() => { requestIdRef.current++; setSelectedId(null); setDetail(null); setDetailError(null); onSourceSelect(null); }}
             >
               &larr; 목록으로
             </button>
@@ -156,61 +167,5 @@ export function SourceListView({ initialSourceId, onSourceSelect }: SourceListVi
         )}
       </div>
     </section>
-  );
-}
-
-function SourceDetailPanel({ detail }: Readonly<{ detail: SourceDetail }>): ReactElement {
-  const date = new Date(detail.createdAt).toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  return (
-    <article className="card detail-panel">
-      <div className="card-header">
-        <div>
-          <p className="eyebrow">{categoryLabel(detail.sourceCategory)}</p>
-          <h3>{detail.title ?? '제목 없음'}</h3>
-        </div>
-      </div>
-
-      <dl className="meta-grid">
-        <div>
-          <dt>등록일</dt>
-          <dd>{date}</dd>
-        </div>
-        {detail.sourceUrl !== null ? (
-          <div>
-            <dt>URL</dt>
-            <dd><a href={detail.sourceUrl} target="_blank" rel="noopener noreferrer">{detail.sourceUrl}</a></dd>
-          </div>
-        ) : null}
-        <div>
-          <dt>추출된 액션</dt>
-          <dd>{detail.actions.length}개</dd>
-        </div>
-      </dl>
-
-      {detail.actions.length > 0 ? (
-        <div className="source-actions-list">
-          <strong>관련 액션</strong>
-          <ul>
-            {detail.actions.map((action: SavedActionSummary) => (
-              <li key={action.id} className="source-action-item">
-                <span className="source-action-title">{action.title}</span>
-                {action.dueAtLabel !== null ? (
-                  <span className="source-action-due">{action.dueAtLabel}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <p className="empty-hint">이 소스에서 추출된 액션이 없습니다.</p>
-      )}
-    </article>
   );
 }

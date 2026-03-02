@@ -361,3 +361,49 @@ describe('SourceListView - accessibility', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 });
+
+// --- Race condition ---
+
+describe('SourceListView - race condition', () => {
+  it('ignores stale detail response on rapid source selection', async () => {
+    const sources = [
+      makeSourceSummary({ id: 'src-1', title: '소스 A' }),
+      makeSourceSummary({ id: 'src-2', title: '소스 B' }),
+    ];
+    mockFetchSourceList.mockResolvedValue(makeSourceListResponse(sources));
+
+    const slowDetail = makeSourceDetail({ id: 'src-1', title: '소스 A' });
+    const fastDetail = makeSourceDetail({ id: 'src-2', title: '소스 B' });
+
+    let resolveSlow: (v: typeof slowDetail) => void;
+    const slowPromise = new Promise<typeof slowDetail>((r) => { resolveSlow = r; });
+
+    mockFetchSourceDetail
+      .mockReturnValueOnce(slowPromise)
+      .mockResolvedValueOnce(fastDetail);
+
+    renderView();
+    await waitFor(() => { screen.getByText('소스 A'); });
+
+    // Click first source (slow response)
+    fireEvent.click(screen.getByText('소스 A'));
+    // Immediately click second source (fast response)
+    fireEvent.click(screen.getByText('소스 B'));
+
+    // Fast response arrives first
+    await waitFor(() => {
+      expect(screen.getByText('소스 B')).toBeInTheDocument();
+    });
+
+    // Resolve stale slow response
+    resolveSlow!(slowDetail);
+    // Wait a tick for any potential state updates
+    await waitFor(() => {});
+
+    // The detail panel should still show 소스 B, not overwritten by 소스 A
+    // Verify that the detail panel heading still shows 소스 B
+    const detailHeadings = screen.getAllByRole('heading', { level: 3 });
+    const detailH3 = detailHeadings.find((h) => h.textContent === '소스 B');
+    expect(detailH3).toBeTruthy();
+  });
+});
