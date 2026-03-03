@@ -286,22 +286,24 @@ describe('App', () => {
     });
 
     it('auto-dismisses toast after 3 seconds', async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
+      vi.useFakeTimers();
       mockRequestText.mockResolvedValue(makeActionExtractionResponse());
 
       render(<App />);
 
-      fireEvent.click(screen.getByTestId('submit-text'));
-
-      // Wait for toast to appear (promise resolves with shouldAdvanceTime)
-      await waitFor(() => {
-        expect(screen.getByRole('status')).toBeInTheDocument();
+      // act(async) flushes all microtasks (Promise chains) before returning
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('submit-text'));
       });
+
+      // Toast should now be visible
+      expect(screen.getByRole('status')).toBeInTheDocument();
 
       // Advance past the 3s auto-dismiss timeout
       await act(async () => { vi.advanceTimersByTime(3100); });
 
       expect(screen.queryByRole('status')).toBeNull();
+      vi.useRealTimers();
     });
   });
 

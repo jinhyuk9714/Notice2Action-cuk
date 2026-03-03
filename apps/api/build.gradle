@@ -35,7 +35,8 @@ dependencies {
 
 tasks.named('test') {
   useJUnitPlatform()
-  systemProperty 'jna.library.path', '/opt/homebrew/lib'
+  def jnaPath = System.getenv('JNA_LIBRARY_PATH') ?: '/opt/homebrew/lib'
+  systemProperty 'jna.library.path', jnaPath
 }
 
 tasks.withType(JavaCompile).configureEach {
