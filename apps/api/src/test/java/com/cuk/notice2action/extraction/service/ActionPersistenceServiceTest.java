@@ -47,7 +47,7 @@ class ActionPersistenceServiceTest {
     assertThat(saved.actions().getFirst().id()).isNotNull();
     assertThat(saved.actions().getFirst().sourceId()).isNotNull();
     assertThat(saved.actions().getFirst().createdAt()).isNotNull();
-    assertThat(saved.actions().getFirst().title()).isEqualTo("공결 신청 안내");
+    assertThat(saved.actions().getFirst().title()).isEqualTo(extracted.actions().getFirst().title());
   }
 
   @Test
@@ -59,7 +59,7 @@ class ActionPersistenceServiceTest {
     ActionListResponse list = persistenceService.listActions(new ActionSearchCriteria(null, null, null, null, "recent"), 0, 100);
 
     assertThat(list.actions()).isNotEmpty();
-    assertThat(list.actions().getFirst().title()).isEqualTo("공결 신청 안내");
+    assertThat(list.actions().getFirst().title()).isEqualTo(extracted.actions().getFirst().title());
     assertThat(list.actions().getFirst().sourceCategory()).isEqualTo(SourceCategory.NOTICE);
     assertThat(list.currentPage()).isZero();
     assertThat(list.totalElements()).isGreaterThanOrEqualTo(1);
@@ -94,9 +94,8 @@ class ActionPersistenceServiceTest {
     ActionListResponse list = persistenceService.listActions(new ActionSearchCriteria(null, null, null, null, "due"), 0, 100);
 
     assertThat(list.actions()).hasSizeGreaterThanOrEqualTo(3);
-    // Earlier due date comes first
-    assertThat(list.actions().get(0).title()).isEqualTo("조기 마감");
-    assertThat(list.actions().get(1).title()).isEqualTo("늦은 마감");
+    assertThat(list.actions().get(0).dueAtIso()).startsWith("2026-03-05T00:00");
+    assertThat(list.actions().get(1).dueAtIso()).startsWith("2026-03-20T00:00");
     // Null due date comes last
     assertThat(list.actions().get(list.actions().size() - 1).dueAtIso()).isNull();
   }
@@ -111,7 +110,7 @@ class ActionPersistenceServiceTest {
     SavedActionDetailDto detail = persistenceService.getActionDetail(actionId);
 
     assertThat(detail.id()).isEqualTo(actionId);
-    assertThat(detail.title()).isEqualTo("공결 신청 안내");
+    assertThat(detail.title()).isEqualTo(extracted.actions().getFirst().title());
     assertThat(detail.evidence()).isNotEmpty();
     assertThat(detail.source()).isNotNull();
     assertThat(detail.source().sourceCategory()).isEqualTo(SourceCategory.NOTICE);

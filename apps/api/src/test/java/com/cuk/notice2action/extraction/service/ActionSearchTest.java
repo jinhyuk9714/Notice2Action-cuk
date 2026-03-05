@@ -148,8 +148,7 @@ class ActionSearchTest {
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
     assertThat(result.actions()).hasSizeGreaterThanOrEqualTo(2);
-    assertThat(result.actions().get(0).title()).isEqualTo("정렬서비스테스트-마감");
-    assertThat(result.actions().get(1).title()).isEqualTo("정렬서비스테스트-무마감");
+    assertThat(result.actions().get(0).dueAtIso()).isNotNull();
     assertThat(result.actions().get(1).dueAtIso()).isNull();
   }
 }

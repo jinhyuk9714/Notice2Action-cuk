@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +38,27 @@ public class NoticeSourceEntity {
   @Column(name = "content_hash", length = 64)
   private String contentHash;
 
+  @Column(name = "published_at")
+  private LocalDate publishedAt;
+
+  @Column(name = "external_notice_id", length = 64)
+  private String externalNoticeId;
+
+  @Column(name = "auto_collected", nullable = false)
+  private boolean autoCollected;
+
+  @Column(name = "actionability", nullable = false, length = 40)
+  private String actionability = "informational";
+
+  @Column(name = "primary_due_at")
+  private OffsetDateTime primaryDueAt;
+
+  @Column(name = "primary_due_label")
+  private String primaryDueLabel;
+
+  @Column(name = "attachments_json", nullable = false, columnDefinition = "TEXT")
+  private String attachmentsJson = "[]";
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -63,6 +85,10 @@ public class NoticeSourceEntity {
     return title;
   }
 
+  public void setTitle(String title) {
+    this.title = title;
+  }
+
   public SourceCategory getSourceCategory() {
     return sourceCategory;
   }
@@ -71,12 +97,76 @@ public class NoticeSourceEntity {
     return rawText;
   }
 
+  public void setRawText(String rawText) {
+    this.rawText = rawText;
+  }
+
   public String getSourceUrl() {
     return sourceUrl;
   }
 
+  public void setSourceUrl(String sourceUrl) {
+    this.sourceUrl = sourceUrl;
+  }
+
   public OffsetDateTime getCreatedAt() {
     return createdAt;
+  }
+
+  public LocalDate getPublishedAt() {
+    return publishedAt;
+  }
+
+  public void setPublishedAt(LocalDate publishedAt) {
+    this.publishedAt = publishedAt;
+  }
+
+  public String getExternalNoticeId() {
+    return externalNoticeId;
+  }
+
+  public void setExternalNoticeId(String externalNoticeId) {
+    this.externalNoticeId = externalNoticeId;
+  }
+
+  public boolean isAutoCollected() {
+    return autoCollected;
+  }
+
+  public void setAutoCollected(boolean autoCollected) {
+    this.autoCollected = autoCollected;
+  }
+
+  public String getActionability() {
+    return actionability;
+  }
+
+  public void setActionability(String actionability) {
+    this.actionability = actionability;
+  }
+
+  public OffsetDateTime getPrimaryDueAt() {
+    return primaryDueAt;
+  }
+
+  public void setPrimaryDueAt(OffsetDateTime primaryDueAt) {
+    this.primaryDueAt = primaryDueAt;
+  }
+
+  public String getPrimaryDueLabel() {
+    return primaryDueLabel;
+  }
+
+  public void setPrimaryDueLabel(String primaryDueLabel) {
+    this.primaryDueLabel = primaryDueLabel;
+  }
+
+  public String getAttachmentsJson() {
+    return attachmentsJson;
+  }
+
+  public void setAttachmentsJson(String attachmentsJson) {
+    this.attachmentsJson = attachmentsJson;
   }
 
   public String getContentHash() {

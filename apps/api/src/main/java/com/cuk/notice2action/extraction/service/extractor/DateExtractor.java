@@ -27,9 +27,20 @@ public class DateExtractor {
 
   // P2: ISO date — 2026.3.12(수) 18:00
   private static final Pattern ISO_DATE = Pattern.compile(
-      "(20\\d{2})[./-](\\d{1,2})[./-](\\d{1,2})"
+      "(20\\d{2})\\s*[./-]\\s*(\\d{1,2})\\s*[./-]\\s*(\\d{1,2})(?:\\.)?"
           + "(?:\\s*\\([가-힣]\\))?"
           + "(?:\\s*(\\d{1,2}):(\\d{2}))?"
+  );
+
+  // P2-1: ISO range end with time — 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00
+  private static final Pattern ISO_RANGE_END_WITH_TIME = Pattern.compile(
+      "(20\\d{2})\\s*[./-]\\s*(\\d{1,2})\\s*[./-]\\s*(\\d{1,2})(?:\\.)?"
+          + "(?:\\s*\\([가-힣]\\))?"
+          + "\\s*(\\d{1,2}):(\\d{2})"
+          + "\\s*[~～\\-]\\s*"
+          + "(\\d{1,2})\\s*[./-]\\s*(\\d{1,2})(?:\\.)?"
+          + "(?:\\s*\\([가-힣]\\))?"
+          + "\\s*(\\d{1,2}):(\\d{2})"
   );
 
   // P3: Korean month-day with optional Korean time — 3월 12일(수) 오후 6시 30분
@@ -87,10 +98,14 @@ public class DateExtractor {
   private static final Pattern DEADLINE_PROXIMITY = Pattern.compile(
       "(까지|마감|기한|이전|이내|내로|내에|자정)"
   );
+  private static final List<String> NON_DEADLINE_SCHEDULE_KEYWORDS = List.of(
+      "강의일정", "수업일정", "강의시간", "시간표", "매주", "주간 진행", "온라인 강의"
+  );
 
   public DateMatch extract(String text, List<EvidenceSnippetDto> evidence) {
     List<ScoredDateMatch> candidates = new ArrayList<>();
 
+    collectIsoRangeEndWithTime(text, candidates);
     collectKoreanFullDates(text, candidates);
     collectIsoDates(text, candidates);
     collectKoreanMonthDay24H(text, candidates);
@@ -160,9 +175,30 @@ public class DateExtractor {
       int minute = m.group(6) == null ? 0 : Integer.parseInt(m.group(6));
       if (hasTime && !isValidTime(hour, minute)) continue;
       String label = m.group(0).trim();
+      if (isNonDeadlineScheduleContext(text, label)) continue;
       double score = computeDateConfidence(true, hasTime, text, label);
       if (isStartDateContext(text, label)) score -= 0.15;
       candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(year, month, day, hour, minute)), Math.min(score, 0.95)));
+    }
+  }
+
+  private void collectIsoRangeEndWithTime(String text, List<ScoredDateMatch> candidates) {
+    Matcher m = ISO_RANGE_END_WITH_TIME.matcher(text);
+    while (m.find()) {
+      int year = Integer.parseInt(m.group(1));
+      int endMonth = Integer.parseInt(m.group(6));
+      int endDay = Integer.parseInt(m.group(7));
+      int endHour = Integer.parseInt(m.group(8));
+      int endMinute = Integer.parseInt(m.group(9));
+      if (!isValidDate(year, endMonth, endDay) || !isValidTime(endHour, endMinute)) {
+        continue;
+      }
+      String label = normalizeDateLabel(text.substring(m.start(6), m.end(9)).trim());
+      if (isNonDeadlineScheduleContext(text, label)) continue;
+      candidates.add(new ScoredDateMatch(
+          new DateMatch(label, new DateComponents(year, endMonth, endDay, endHour, endMinute)),
+          0.92
+      ));
     }
   }
 
@@ -177,7 +213,8 @@ public class DateExtractor {
       int hour = m.group(4) == null ? 0 : Integer.parseInt(m.group(4));
       int minute = m.group(5) == null ? 0 : Integer.parseInt(m.group(5));
       if (hasTime && !isValidTime(hour, minute)) continue;
-      String label = m.group(0).trim();
+      String label = normalizeDateLabel(m.group(0).trim());
+      if (isNonDeadlineScheduleContext(text, label)) continue;
       double score = computeDateConfidence(true, hasTime, text, label);
       if (isStartDateContext(text, label)) score -= 0.15;
       candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(year, month, day, hour, minute)), Math.min(score, 0.95)));
@@ -194,7 +231,8 @@ public class DateExtractor {
       int hour = Integer.parseInt(m.group(3));
       int minute = Integer.parseInt(m.group(4));
       if (!isValidTime(hour, minute)) continue;
-      String label = m.group(0).trim();
+      String label = normalizeDateLabel(m.group(0).trim());
+      if (isNonDeadlineScheduleContext(text, label)) continue;
       double score = computeDateConfidence(false, true, text, label);
       if (isStartDateContext(text, label)) score -= 0.15;
       candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, hour, minute)), Math.min(score, 0.95)));
@@ -213,7 +251,8 @@ public class DateExtractor {
       int hour = m.group(4) == null ? 0 : resolveHour(Integer.parseInt(m.group(4)), ampm);
       int minute = m.group(5) == null ? 0 : Integer.parseInt(m.group(5));
       if (hasTime && !isValidTime(hour, minute)) continue;
-      String label = m.group(0).trim();
+      String label = normalizeDateLabel(m.group(0).trim());
+      if (isNonDeadlineScheduleContext(text, label)) continue;
       double score = computeDateConfidence(false, hasTime, text, label);
       if (isStartDateContext(text, label)) score -= 0.15;
       candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, hour, minute)), Math.min(score, 0.95)));
@@ -230,7 +269,8 @@ public class DateExtractor {
       int hour = m.group(3) == null ? 0 : Integer.parseInt(m.group(3));
       int minute = m.group(4) == null ? 0 : Integer.parseInt(m.group(4));
       if (hasTime && !isValidTime(hour, minute)) continue;
-      String label = m.group(0).trim();
+      String label = normalizeDateLabel(m.group(0).trim());
+      if (isNonDeadlineScheduleContext(text, label)) continue;
       boolean nearDeadline = isNearDeadlineKeyword(text, label);
       double score = nearDeadline ? 0.70 : 0.60;
       if (isStartDateContext(text, label)) score -= 0.15;
@@ -245,7 +285,11 @@ public class DateExtractor {
       int day = Integer.parseInt(m.group(2));
       if (!isValidDate(currentYear(), month, day)) continue;
       String label = m.group(0).trim();
-      candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, 0, 0)), 0.85));
+      if (isNonDeadlineScheduleContext(text, label)) continue;
+      candidates.add(new ScoredDateMatch(
+          new DateMatch(label, new DateComponents(currentYear(), month, day, 0, 0)),
+          0.85 + contextPriorityBoost(text, label)
+      ));
     }
   }
 
@@ -255,8 +299,12 @@ public class DateExtractor {
       int month = Integer.parseInt(m.group(1));
       int day = Integer.parseInt(m.group(2));
       if (!isValidDate(currentYear(), month, day)) continue;
-      String label = m.group(0).trim();
-      candidates.add(new ScoredDateMatch(new DateMatch(label, new DateComponents(currentYear(), month, day, 0, 0)), 0.85));
+      String label = "~ " + month + "/" + day;
+      if (isNonDeadlineScheduleContext(text, label)) continue;
+      candidates.add(new ScoredDateMatch(
+          new DateMatch(label, new DateComponents(currentYear(), month, day, 0, 0)),
+          0.85 + contextPriorityBoost(text, label)
+      ));
     }
   }
 
@@ -354,6 +402,36 @@ public class DateExtractor {
     return DEADLINE_PROXIMITY.matcher(vicinity).find();
   }
 
+  private double contextPriorityBoost(String text, String matchLabel) {
+    int idx = text.indexOf(matchLabel);
+    if (idx < 0 && matchLabel.startsWith("~ ")) {
+      idx = text.indexOf("~" + matchLabel.substring(2));
+    }
+    if (idx < 0) return 0.0;
+    int searchStart = Math.max(0, idx - 24);
+    int searchEnd = Math.min(text.length(), idx + matchLabel.length() + 12);
+    String vicinity = text.substring(searchStart, searchEnd);
+    if (vicinity.contains("변경기간")) {
+      return 0.12;
+    }
+    if (vicinity.contains("신청기간")) {
+      return 0.08;
+    }
+    return 0.0;
+  }
+
+  private boolean isNonDeadlineScheduleContext(String text, String matchLabel) {
+    if (isNearDeadlineKeyword(text, matchLabel)) {
+      return false;
+    }
+    int idx = text.indexOf(matchLabel);
+    if (idx < 0) return false;
+    int searchStart = Math.max(0, idx - 20);
+    int searchEnd = Math.min(text.length(), idx + matchLabel.length() + 20);
+    String vicinity = text.substring(searchStart, searchEnd);
+    return NON_DEADLINE_SCHEDULE_KEYWORDS.stream().anyMatch(vicinity::contains);
+  }
+
   private double computeDateConfidence(boolean hasYear, boolean hasTime, String text, String matchLabel) {
     double base;
     if (hasYear && hasTime) {
@@ -369,6 +447,10 @@ public class DateExtractor {
       base += 0.08;
     }
     return Math.min(base, 0.95);
+  }
+
+  private String normalizeDateLabel(String label) {
+    return label.replaceAll("\\.\\(", ". (").replaceAll("\\s+", " ").trim();
   }
 
   private boolean isPartOfFullYearKoreanDate(String text, int matchStart) {

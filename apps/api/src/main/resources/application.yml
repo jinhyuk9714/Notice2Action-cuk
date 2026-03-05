@@ -36,6 +36,12 @@ management:
 app:
   extraction:
     timezone: Asia/Seoul
+  notice-feed:
+    enabled: true
+    list-url: https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=list&srCategoryId=21
+    fixed-delay: 3600000
+    max-pages-per-run: 3
+    bootstrap-on-startup: true
   ocr:
     tessdata-path: ${TESSDATA_PATH:/opt/homebrew/share/tessdata}
     languages: kor+eng

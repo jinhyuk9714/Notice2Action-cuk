@@ -81,6 +81,14 @@ public class ActionPersistenceService {
     return new ActionExtractionResponse(savedActions);
   }
 
+  @Transactional
+  public void replaceSourceActions(NoticeSourceEntity source, ActionExtractionResponse extractionResult) {
+    actionRepository.deleteAllBySourceId(source.getId());
+    actionRepository.flush();
+    source.getActions().clear();
+    persistActions(extractionResult.actions(), source, OffsetDateTime.now());
+  }
+
   private static final Set<String> OVERRIDABLE_FIELDS = Set.of(
       "title", "actionSummary", "dueAtIso", "dueAtLabel",
       "eligibility", "requiredItems", "systemHint");

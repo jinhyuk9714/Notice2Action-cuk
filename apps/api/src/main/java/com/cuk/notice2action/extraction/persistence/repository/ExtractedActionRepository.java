@@ -29,4 +29,6 @@ public interface ExtractedActionRepository extends JpaRepository<ExtractedAction
   List<ExtractedActionEntity> findAllByDueAtIsoIsNotNullOrderByDueAtIsoAsc();
 
   List<ExtractedActionEntity> findAllBySourceIdOrderByCreatedAtDesc(UUID sourceId);
+
+  void deleteAllBySourceId(UUID sourceId);
 }
