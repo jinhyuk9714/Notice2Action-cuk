@@ -12,6 +12,7 @@ type PersonalizedFeedViewProps = Readonly<{
   onNoticeSelect: (id: string | null) => void;
   onToggleSaved: (id: string) => void;
   onHide: (id: string) => void;
+  onUnhide: (id: string) => void;
 }>;
 
 export function PersonalizedFeedView({
@@ -21,6 +22,7 @@ export function PersonalizedFeedView({
   onNoticeSelect,
   onToggleSaved,
   onHide,
+  onUnhide,
 }: PersonalizedFeedViewProps): ReactElement {
   const [notices, setNotices] = useState<readonly PersonalizedNoticeSummary[]>([]);
   const [detail, setDetail] = useState<PersonalizedNoticeDetail | null>(null);
@@ -72,6 +74,7 @@ export function PersonalizedFeedView({
   }, [profileKey, selectedId]);
 
   const visibleNotices = notices.filter((notice) => !preferences.hiddenIds.includes(notice.id));
+  const hiddenNotices = notices.filter((notice) => preferences.hiddenIds.includes(notice.id));
 
   function selectNotice(id: string): void {
     setSelectedId(id);
@@ -113,6 +116,28 @@ export function PersonalizedFeedView({
             );
           })}
         </div>
+
+        {hiddenNotices.length > 0 ? (
+          <div className="detail-section">
+            <h3>숨긴 공지 {hiddenNotices.length}개</h3>
+            <div className="card-list">
+              {hiddenNotices.map((notice) => (
+                <article key={`hidden-${notice.id}`} className="action-card">
+                  <button className="summary-card-link" aria-label={`${notice.title} 상세 보기`} onClick={() => { selectNotice(notice.id); }}>
+                    <h3>{notice.title}</h3>
+                  </button>
+                  <div className="chip-row">
+                    <span className="badge">숨김됨</span>
+                    {notice.importanceReasons.map((reason) => <span key={`${notice.id}-${reason}`} className="badge">{reason}</span>)}
+                  </div>
+                  <div className="detail-actions-row">
+                    <button className="secondary-btn" onClick={() => { onUnhide(notice.id); }}>숨김 해제</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div>
@@ -124,6 +149,7 @@ export function PersonalizedFeedView({
             isHidden={preferences.hiddenIds.includes(detail.id)}
             onToggleSaved={onToggleSaved}
             onHide={onHide}
+            onUnhide={onUnhide}
           />
         ) : (
           <div className="panel"><p>공지를 선택하면 상세가 표시됩니다.</p></div>

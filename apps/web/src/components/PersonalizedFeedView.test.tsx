@@ -39,6 +39,7 @@ describe('PersonalizedFeedView', () => {
         onNoticeSelect={() => {}}
         onToggleSaved={() => {}}
         onHide={() => {}}
+        onUnhide={() => {}}
       />,
     );
 
@@ -63,6 +64,7 @@ describe('PersonalizedFeedView', () => {
         onNoticeSelect={() => {}}
         onToggleSaved={() => {}}
         onHide={() => {}}
+        onUnhide={() => {}}
       />,
     );
 
@@ -90,6 +92,7 @@ describe('PersonalizedFeedView', () => {
         onNoticeSelect={() => {}}
         onToggleSaved={onToggleSaved}
         onHide={onHide}
+        onUnhide={() => {}}
       />,
     );
 
@@ -102,5 +105,31 @@ describe('PersonalizedFeedView', () => {
 
     expect(onToggleSaved).toHaveBeenCalledWith('269011');
     expect(onHide).toHaveBeenCalledWith('269011');
+  });
+
+  it('shows hidden notices in a recovery section and allows unhide', async () => {
+    const onUnhide = vi.fn();
+
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={{ savedIds: [], hiddenIds: ['269011'] }}
+        initialNoticeId={null}
+        onNoticeSelect={() => {}}
+        onToggleSaved={() => {}}
+        onHide={() => {}}
+        onUnhide={onUnhide}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('숨긴 공지 1개')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: '숨김 해제' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '숨김 해제' }));
+
+    expect(onUnhide).toHaveBeenCalledWith('269011');
   });
 });

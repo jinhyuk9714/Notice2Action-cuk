@@ -173,6 +173,7 @@ export default function App(): ReactElement {
             onNoticeSelect={(id) => { navigate({ view: 'feed', noticeId: id }); }}
             onToggleSaved={handleToggleSaved}
             onHide={handleHideNotice}
+            onUnhide={handleUnhideNotice}
           />
         ) : null}
 
