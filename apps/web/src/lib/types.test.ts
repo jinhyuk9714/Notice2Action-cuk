@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  parseNoticeFeedResponse,
+  parsePersonalizedNoticeDetail,
   parseActionExtractionResponse,
   parseActionListResponse,
   parseSavedActionDetail,
@@ -249,6 +251,33 @@ const VALID_SOURCE_SUMMARY = {
   actionCount: 2,
 };
 
+const VALID_NOTICE_SUMMARY = {
+  id: 'notice-1',
+  title: '학생증 신청 안내',
+  publishedAt: '2026-02-27T00:00:00+09:00',
+  sourceUrl: 'https://example.com/notices/1',
+  importanceReasons: ['신입생 해당', '학생증 키워드'],
+  actionability: 'action_required',
+  dueHint: { dueAtIso: '2026-03-05T23:59:59+09:00', label: '3월 5일까지' },
+  relevanceScore: 105,
+};
+
+const VALID_NOTICE_DETAIL = {
+  ...VALID_NOTICE_SUMMARY,
+  body: '정제된 원문',
+  attachments: [{ name: '학생증 발급 신청서.hwp', url: 'https://example.com/download/1' }],
+  actionBlocks: [{
+    title: '학생증 신청',
+    summary: 'TRINITY에서 동의 후 신청',
+    dueAtIso: null,
+    dueAtLabel: null,
+    requiredItems: ['증명사진'],
+    systemHint: 'TRINITY',
+    evidence: [VALID_EVIDENCE],
+    confidenceScore: 0.91,
+  }],
+};
+
 describe('parseSourceListResponse', () => {
   it('throws for null', () => {
     expect(() => parseSourceListResponse(null)).toThrow();
@@ -331,5 +360,46 @@ describe('parseSourceDetail', () => {
       createdAt: '2026-03-01T00:00:00Z',
       actions: [],
     })).toThrow();
+  });
+});
+
+describe('parseNoticeFeedResponse', () => {
+  it('parses valid personalized notice feed', () => {
+    const result = parseNoticeFeedResponse({
+      notices: [VALID_NOTICE_SUMMARY],
+      currentPage: 0,
+      pageSize: 20,
+      totalElements: 1,
+      totalPages: 1,
+      hasNext: false,
+    });
+
+    expect(result.notices[0].title).toBe('학생증 신청 안내');
+    expect(result.notices[0].dueHint?.label).toBe('3월 5일까지');
+  });
+
+  it('throws when importanceReasons is missing', () => {
+    const { importanceReasons: _, ...broken } = VALID_NOTICE_SUMMARY;
+    expect(() => parseNoticeFeedResponse({
+      notices: [broken],
+      currentPage: 0,
+      pageSize: 20,
+      totalElements: 1,
+      totalPages: 1,
+      hasNext: false,
+    })).toThrow();
+  });
+});
+
+describe('parsePersonalizedNoticeDetail', () => {
+  it('parses valid personalized notice detail', () => {
+    const result = parsePersonalizedNoticeDetail(VALID_NOTICE_DETAIL);
+    expect(result.attachments).toHaveLength(1);
+    expect(result.actionBlocks).toHaveLength(1);
+  });
+
+  it('throws when body is missing', () => {
+    const { body: _, ...broken } = VALID_NOTICE_DETAIL;
+    expect(() => parsePersonalizedNoticeDetail(broken)).toThrow();
   });
 });

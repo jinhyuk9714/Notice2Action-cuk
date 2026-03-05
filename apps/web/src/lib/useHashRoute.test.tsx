@@ -35,9 +35,9 @@ describe('useHashRoute', () => {
     window.location.hash = '';
   });
 
-  it('returns initial route from empty hash as extract', () => {
+  it('returns initial route from empty hash as feed', () => {
     render(<TestComponent />);
-    expect(screen.getByTestId('view').textContent).toBe('extract');
+    expect(screen.getByTestId('view').textContent).toBe('feed');
   });
 
   it('returns inbox route when hash is #/inbox', () => {
@@ -62,7 +62,7 @@ describe('useHashRoute', () => {
 
   it('updates route when hashchange fires', () => {
     render(<TestComponent />);
-    expect(screen.getByTestId('view').textContent).toBe('extract');
+    expect(screen.getByTestId('view').textContent).toBe('feed');
 
     act(() => {
       window.location.hash = '#/inbox';

@@ -145,6 +145,56 @@ export const SourceDetailSchema = z.object({
 });
 export type SourceDetail = z.infer<typeof SourceDetailSchema>;
 
+// --- Personalized notice feed types ---
+
+export const NoticeDueHintSchema = z.object({
+  dueAtIso: z.string().nullable(),
+  label: z.string().nullable(),
+});
+export type NoticeDueHint = z.infer<typeof NoticeDueHintSchema>;
+
+export const NoticeAttachmentSchema = z.object({
+  name: z.string(),
+  url: z.string(),
+});
+export type NoticeAttachment = z.infer<typeof NoticeAttachmentSchema>;
+
+export const NoticeActionBlockSchema = z.object({
+  title: z.string(),
+  summary: z.string(),
+  dueAtIso: z.string().nullable(),
+  dueAtLabel: z.string().nullable(),
+  requiredItems: z.array(z.string()),
+  systemHint: z.string().nullable(),
+  evidence: z.array(EvidenceSnippetSchema),
+  confidenceScore: z.number(),
+});
+export type NoticeActionBlock = z.infer<typeof NoticeActionBlockSchema>;
+
+export const PersonalizedNoticeSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  publishedAt: z.string(),
+  sourceUrl: z.string().nullable(),
+  importanceReasons: z.array(z.string()),
+  actionability: z.enum(['action_required', 'informational']),
+  dueHint: NoticeDueHintSchema.nullable(),
+  relevanceScore: z.number(),
+});
+export type PersonalizedNoticeSummary = z.infer<typeof PersonalizedNoticeSummarySchema>;
+
+export const NoticeFeedResponseSchema = PaginationSchema.extend({
+  notices: z.array(PersonalizedNoticeSummarySchema),
+});
+export type NoticeFeedResponse = z.infer<typeof NoticeFeedResponseSchema>;
+
+export const PersonalizedNoticeDetailSchema = PersonalizedNoticeSummarySchema.extend({
+  body: z.string(),
+  attachments: z.array(NoticeAttachmentSchema),
+  actionBlocks: z.array(NoticeActionBlockSchema),
+});
+export type PersonalizedNoticeDetail = z.infer<typeof PersonalizedNoticeDetailSchema>;
+
 // --- Parse helpers ---
 
 function safeParse<T>(schema: z.ZodType<T>, value: unknown, label: string): T {
@@ -174,4 +224,12 @@ export function parseSourceListResponse(value: unknown): SourceListResponse {
 
 export function parseSourceDetail(value: unknown): SourceDetail {
   return safeParse(SourceDetailSchema, value, 'SourceDetail');
+}
+
+export function parseNoticeFeedResponse(value: unknown): NoticeFeedResponse {
+  return safeParse(NoticeFeedResponseSchema, value, 'NoticeFeedResponse');
+}
+
+export function parsePersonalizedNoticeDetail(value: unknown): PersonalizedNoticeDetail {
+  return safeParse(PersonalizedNoticeDetailSchema, value, 'PersonalizedNoticeDetail');
 }

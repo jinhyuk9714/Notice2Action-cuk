@@ -4,6 +4,8 @@ import {
   requestPdfExtraction,
   requestScreenshotExtraction,
   requestEmailExtraction,
+  fetchNoticeFeed,
+  fetchNoticeDetail,
   fetchActionList,
   fetchAllMatchingActions,
   deleteAction,
@@ -18,6 +20,9 @@ import {
   makeActionExtractionResponse,
   makeActionDetail,
   makeActionListResponse,
+  makeNoticeDetail,
+  makeNoticeFeedResponse,
+  makeNoticeSummary,
   makeActionSummary,
   makeSourceDetail,
   makeSourceListResponse,
@@ -245,6 +250,42 @@ describe('fetchActionList', () => {
 
     await expect(fetchActionList())
       .rejects.toThrow('액션 목록을 불러오지 못했습니다');
+  });
+});
+
+describe('notice feed api', () => {
+  it('requests personalized notice feed with repeated keyword params', async () => {
+    vi.mocked(fetch).mockResolvedValue(mockOkResponse(makeNoticeFeedResponse([makeNoticeSummary()])));
+
+    const result = await fetchNoticeFeed({
+      department: '컴퓨터공학과',
+      year: 1,
+      status: '신입생',
+      interestKeywords: ['학생증', '장학금'],
+    });
+
+    const url = vi.mocked(fetch).mock.calls[0][0] as string;
+    expect(url).toContain('/api/v1/notices/feed?');
+    expect(url).toContain('department=');
+    expect(url).toContain('year=1');
+    expect(url).toContain('status=');
+    expect(url).toContain('keyword=');
+    expect(result.notices[0].title).toBe('학생증 신청 안내');
+  });
+
+  it('requests personalized notice detail', async () => {
+    vi.mocked(fetch).mockResolvedValue(mockOkResponse(makeNoticeDetail()));
+
+    const result = await fetchNoticeDetail('notice-1', {
+      department: null,
+      year: null,
+      status: null,
+      interestKeywords: [],
+    });
+
+    const url = vi.mocked(fetch).mock.calls[0][0] as string;
+    expect(url).toContain('/api/v1/notices/notice-1');
+    expect(result.body).toBe('정제된 원문');
   });
 });
 

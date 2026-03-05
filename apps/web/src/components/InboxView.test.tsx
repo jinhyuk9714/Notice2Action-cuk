@@ -455,7 +455,7 @@ describe('InboxView - delete', () => {
 
     await waitFor(() => { screen.getByRole('status'); });
 
-    await act(async () => { vi.advanceTimersByTime(2500); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2600); });
     await waitFor(() => {
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
@@ -545,7 +545,7 @@ describe('InboxView - profile', () => {
     mockFetchActionList.mockResolvedValue(makeActionListResponse([makeActionSummary()]));
     renderInbox();
     await waitFor(() => {
-      expect(screen.getByText('내 프로필')).toBeInTheDocument();
+      expect(screen.getByText('개인화 기준')).toBeInTheDocument();
     });
   });
 

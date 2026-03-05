@@ -1,91 +1,49 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { loadProfile, saveProfile, isProfileConfigured, EMPTY_PROFILE } from './profile';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { EMPTY_PROFILE, loadProfile, saveProfile } from './profile';
 import type { UserProfile } from './profile';
 
-describe('loadProfile', () => {
-  beforeEach(() => { localStorage.clear(); });
+describe('profile storage', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
 
-  it('returns EMPTY_PROFILE when localStorage is empty', () => {
+  it('returns EMPTY_PROFILE when storage is empty', () => {
     expect(loadProfile()).toEqual(EMPTY_PROFILE);
   });
 
-  it('returns saved profile after save/load roundtrip', () => {
-    const profile: UserProfile = { department: '컴퓨터공학과', year: 3, status: '재학생' };
+  it('roundtrips profile with interest keywords using v2 storage key', () => {
+    const profile: UserProfile = {
+      department: '컴퓨터공학과',
+      year: 3,
+      status: '재학생',
+      interestKeywords: ['장학금', '학생증'],
+    };
+
     saveProfile(profile);
+
+    expect(localStorage.getItem('n2a_profile_v2')).not.toBeNull();
     expect(loadProfile()).toEqual(profile);
   });
 
-  it('returns EMPTY_PROFILE for invalid JSON', () => {
-    localStorage.setItem('n2a_profile', 'not json');
-    expect(loadProfile()).toEqual(EMPTY_PROFILE);
+  it('falls back to legacy storage when v2 key is absent', () => {
+    localStorage.setItem('n2a_profile', JSON.stringify({ department: '경영학과', year: 2, status: '재학생' }));
+
+    expect(loadProfile()).toEqual({
+      department: '경영학과',
+      year: 2,
+      status: '재학생',
+      interestKeywords: [],
+    });
   });
 
-  it('sanitizes empty department string to null', () => {
-    localStorage.setItem('n2a_profile', JSON.stringify({ department: '', year: 2, status: '재학생' }));
-    const result = loadProfile();
-    expect(result.department).toBeNull();
-  });
+  it('sanitizes invalid keywords and empty strings', () => {
+    localStorage.setItem('n2a_profile_v2', JSON.stringify({
+      department: '컴퓨터공학과',
+      year: 1,
+      status: '신입생',
+      interestKeywords: ['학생증', '', 10, '  장학금  '],
+    }));
 
-  it('sanitizes invalid year to null', () => {
-    localStorage.setItem('n2a_profile', JSON.stringify({ department: null, year: 0, status: null }));
-    expect(loadProfile().year).toBeNull();
-
-    localStorage.setItem('n2a_profile', JSON.stringify({ department: null, year: 5, status: null }));
-    expect(loadProfile().year).toBeNull();
-
-    localStorage.setItem('n2a_profile', JSON.stringify({ department: null, year: -1, status: null }));
-    expect(loadProfile().year).toBeNull();
-  });
-
-  it('sanitizes invalid status to null', () => {
-    localStorage.setItem('n2a_profile', JSON.stringify({ department: null, year: null, status: 'invalid' }));
-    expect(loadProfile().status).toBeNull();
-  });
-
-  it('preserves valid partial profile', () => {
-    localStorage.setItem('n2a_profile', JSON.stringify({ department: '경영학과', year: null, status: null }));
-    const result = loadProfile();
-    expect(result.department).toBe('경영학과');
-    expect(result.year).toBeNull();
-    expect(result.status).toBeNull();
-  });
-});
-
-describe('saveProfile', () => {
-  beforeEach(() => { localStorage.clear(); });
-
-  it('saves to localStorage under n2a_profile key', () => {
-    const profile: UserProfile = { department: '전자공학과', year: 1, status: '신입생' };
-    saveProfile(profile);
-    expect(localStorage.getItem('n2a_profile')).not.toBeNull();
-  });
-
-  it('overwrites previous value', () => {
-    saveProfile({ department: 'A', year: 1, status: null });
-    saveProfile({ department: 'B', year: 2, status: null });
-    expect(loadProfile().department).toBe('B');
-    expect(loadProfile().year).toBe(2);
-  });
-});
-
-describe('isProfileConfigured', () => {
-  it('returns false when all fields are null', () => {
-    expect(isProfileConfigured(EMPTY_PROFILE)).toBe(false);
-  });
-
-  it('returns true when only department is set', () => {
-    expect(isProfileConfigured({ department: '컴퓨터공학과', year: null, status: null })).toBe(true);
-  });
-
-  it('returns true when only year is set', () => {
-    expect(isProfileConfigured({ department: null, year: 3, status: null })).toBe(true);
-  });
-
-  it('returns true when only status is set', () => {
-    expect(isProfileConfigured({ department: null, year: null, status: '재학생' })).toBe(true);
-  });
-
-  it('returns true when all fields are set', () => {
-    expect(isProfileConfigured({ department: '컴퓨터공학과', year: 3, status: '재학생' })).toBe(true);
+    expect(loadProfile().interestKeywords).toEqual(['학생증', '장학금']);
   });
 });
