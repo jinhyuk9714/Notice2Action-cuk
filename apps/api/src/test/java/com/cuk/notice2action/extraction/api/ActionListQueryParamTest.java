@@ -9,12 +9,14 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionSearchCriteria;
+import com.cuk.notice2action.extraction.api.dto.ActionUpdateRequest;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
 import com.cuk.notice2action.extraction.service.ActionExtractionService;
 import com.cuk.notice2action.extraction.service.ActionPersistenceService;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,12 +38,12 @@ class ActionListQueryParamTest {
   @Autowired
   private ActionPersistenceService persistenceService;
 
-  private void persistSample(String text, String title) {
+  private UUID persistSample(String text, String title) {
     ActionExtractionRequest request = new ActionExtractionRequest(
         text, null, title, SourceCategory.NOTICE, List.of()
     );
     ActionExtractionResponse extracted = extractionService.extract(request);
-    persistenceService.persistExtraction(request, extracted);
+    return persistenceService.persistExtraction(request, extracted).actions().getFirst().id();
   }
 
   @Test
@@ -78,5 +80,48 @@ class ActionListQueryParamTest {
     assertThat(result.actions()).hasSize(2);
     assertThat(result.actions().get(0).dueAtIso()).isNotNull();
     assertThat(result.actions().get(1).dueAtIso()).isNull();
+  }
+
+  @Test
+  void listActions_filters_by_status() {
+    persistSample("2026년 3월 12일까지 신청하세요.", "진행중 액션");
+    UUID completedId = persistSample("2026년 3월 20일까지 제출하세요.", "완료 액션");
+
+    persistenceService.updateAction(
+        completedId,
+        new ActionUpdateRequest(null, null, null, null, null, null, null, null, "completed")
+    );
+
+    ActionListResponse result = persistenceService.listActions(
+        new ActionSearchCriteria(null, null, null, null, "recent", "completed"),
+        0,
+        20
+    );
+
+    assertThat(result.actions()).hasSize(1);
+    assertThat(result.actions().getFirst().id()).isEqualTo(completedId);
+    assertThat(result.actions().getFirst().status()).isEqualTo("completed");
+  }
+
+  @Test
+  void exportCalendar_filters_by_status() throws Exception {
+    persistSample("2026년 3월 12일까지 신청하세요.", "달력 진행중");
+    UUID completedId = persistSample("2026년 3월 20일까지 제출하세요.", "달력 완료");
+
+    persistenceService.updateAction(
+        completedId,
+        new ActionUpdateRequest(null, null, null, null, null, null, null, null, "completed")
+    );
+
+    String ics = mockMvc.perform(get("/api/v1/actions/calendar.ics")
+            .param("status", "completed"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    assertThat(ics).contains("DTSTART:20260319T150000Z");
+    assertThat(ics).doesNotContain("DTSTART:20260311T150000Z");
+    assertThat(ics.split("BEGIN:VEVENT")).hasSize(2);
   }
 }

@@ -16,7 +16,11 @@ describe('parseHash', () => {
   it('parses profile and keeps debug routes', () => {
     expect(parseHash('#/profile')).toEqual({ view: 'profile' });
     expect(parseHash('#/extract')).toEqual({ view: 'extract' });
-    expect(parseHash('#/inbox/abc?sort=due')).toEqual({ view: 'inbox', actionId: 'abc', filters: { sort: 'due' } });
+    expect(parseHash('#/inbox/abc?sort=due&status=completed')).toEqual({
+      view: 'inbox',
+      actionId: 'abc',
+      filters: { sort: 'due', status: 'completed' },
+    });
     expect(parseHash('#/sources/src-1')).toEqual({ view: 'sources', sourceId: 'src-1' });
   });
 
@@ -42,7 +46,7 @@ describe('buildHash', () => {
       { view: 'saved' as const, noticeId: 'notice-2' },
       { view: 'profile' as const },
       { view: 'extract' as const },
-      { view: 'inbox' as const, actionId: 'abc', filters: { sort: 'due' as const } },
+      { view: 'inbox' as const, actionId: 'abc', filters: { sort: 'due' as const, status: 'pending' } },
       { view: 'sources' as const, sourceId: 'src-1' },
     ];
 

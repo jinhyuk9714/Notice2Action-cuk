@@ -202,6 +202,29 @@ describe('ActionDetailPanel', () => {
     });
   });
 
+  describe('status toggle', () => {
+    it('toggles pending action to completed', async () => {
+      const updated = makeActionDetail({ status: 'completed' });
+      mockUpdateAction.mockResolvedValue(updated);
+      const onUpdated = vi.fn();
+
+      render(
+        <ActionDetailPanel
+          detail={makeActionDetail({ status: 'pending' })}
+          profile={EMPTY_PROFILE}
+          onActionUpdated={onUpdated}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: '완료로 표시' }));
+
+      await waitFor(() => {
+        expect(mockUpdateAction).toHaveBeenCalledWith('act-1', { status: 'completed' });
+        expect(onUpdated).toHaveBeenCalledWith(updated);
+      });
+    });
+  });
+
   // --- Revert workflow ---
 
   describe('revert', () => {
@@ -355,6 +378,46 @@ describe('ActionDetailPanel', () => {
       );
       expect(screen.queryByText('관련')).toBeNull();
       expect(screen.queryByText('해당없음')).toBeNull();
+    });
+
+    it('uses structured eligibility when raw eligibility is absent', () => {
+      render(
+        <ActionDetailPanel
+          detail={makeActionDetail({
+            eligibility: null,
+            structuredEligibility: {
+              universal: false,
+              statuses: [],
+              excludedStatuses: [],
+              years: [],
+              department: '컴퓨터공학',
+            },
+          })}
+          profile={FULL_PROFILE}
+        />,
+      );
+
+      expect(screen.getByText('관련')).toBeInTheDocument();
+    });
+  });
+
+  describe('additional dates', () => {
+    it('renders related dates when additionalDates exist', () => {
+      render(
+        <ActionDetailPanel
+          detail={makeActionDetail({
+            additionalDates: [
+              { isoAt: '2026-03-12T10:00:00+09:00', label: '3월 12일 설명회' },
+              { isoAt: '2026-03-14T18:00:00+09:00', label: '3월 14일 제출 전 확인' },
+            ],
+          })}
+          profile={EMPTY_PROFILE}
+        />,
+      );
+
+      expect(screen.getByText('관련 일정')).toBeInTheDocument();
+      expect(screen.getByText('3월 12일 설명회')).toBeInTheDocument();
+      expect(screen.getByText('3월 14일 제출 전 확인')).toBeInTheDocument();
     });
   });
 

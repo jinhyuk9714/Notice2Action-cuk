@@ -126,6 +126,20 @@ function InboxHeader({
         </select>
       </div>
 
+      <div className="status-tabs" role="tablist">
+        {(['all', 'pending', 'completed'] as const).map((status) => (
+          <button
+            key={status}
+            role="tab"
+            aria-selected={filters.statusFilter === status}
+            className={`status-tab${filters.statusFilter === status ? ' status-tab-active' : ''}`}
+            onClick={() => { filters.setStatusFilter(status); }}
+          >
+            {status === 'all' ? '전체' : status === 'pending' ? '진행중' : '완료'}
+          </button>
+        ))}
+      </div>
+
       <div className="sort-toggle">
         <button
           className={`sort-btn${filters.sort === 'due' ? ' sort-btn-active' : ''}`}
@@ -334,6 +348,7 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
             dueAtIso: updated.dueAtIso,
             dueAtLabel: updated.dueAtLabel,
             eligibility: updated.eligibility,
+            status: updated.status,
           }
         : action,
     ));

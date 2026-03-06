@@ -117,6 +117,27 @@ class ActionPersistenceServiceTest {
   }
 
   @Test
+  void getActionDetail_round_trips_structured_eligibility_and_additional_dates() {
+    ActionExtractionRequest request = new ActionExtractionRequest(
+        "컴퓨터정보공학부 재학생은 2026년 3월 12일 OT 참석 후 2026년 3월 15일 18시까지 TRINITY에서 공결 신청을 완료해야 합니다.",
+        null,
+        "공결 신청 안내",
+        SourceCategory.NOTICE,
+        List.of("컴퓨터정보공학부")
+    );
+
+    ActionExtractionResponse extracted = extractionService.extract(request);
+    ActionExtractionResponse saved = persistenceService.persistExtraction(request, extracted);
+    SavedActionDetailDto detail = persistenceService.getActionDetail(saved.actions().getFirst().id());
+
+    assertThat(detail.structuredEligibility()).isNotNull();
+    assertThat(detail.structuredEligibility().statuses()).contains("재학생");
+    assertThat(detail.structuredEligibility().department()).isEqualTo("컴퓨터정보공학");
+    assertThat(detail.additionalDates()).hasSize(1);
+    assertThat(detail.additionalDates().getFirst().label()).contains("2026년 3월 12일");
+  }
+
+  @Test
   void getActionDetail_throws_for_unknown_id() {
     UUID unknownId = UUID.randomUUID();
 

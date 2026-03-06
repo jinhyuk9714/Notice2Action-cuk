@@ -12,6 +12,24 @@ export const EvidenceSnippetSchema = z.object({
 });
 export type EvidenceSnippet = z.infer<typeof EvidenceSnippetSchema>;
 
+export const ActionStatusSchema = z.enum(['pending', 'completed']);
+export type ActionStatus = z.infer<typeof ActionStatusSchema>;
+
+export const AdditionalDateSchema = z.object({
+  isoAt: z.string(),
+  label: z.string(),
+});
+export type AdditionalDate = z.infer<typeof AdditionalDateSchema>;
+
+export const StructuredEligibilitySchema = z.object({
+  universal: z.boolean(),
+  statuses: z.array(z.string()),
+  excludedStatuses: z.array(z.string()),
+  years: z.array(z.number()),
+  department: z.string().nullable(),
+});
+export type StructuredEligibility = z.infer<typeof StructuredEligibilitySchema>;
+
 export const ExtractedActionSchema = z.object({
   id: z.string().nullable(),
   sourceId: z.string().nullable(),
@@ -19,7 +37,9 @@ export const ExtractedActionSchema = z.object({
   actionSummary: z.string(),
   dueAtIso: z.string().nullable(),
   dueAtLabel: z.string().nullable(),
+  additionalDates: z.array(AdditionalDateSchema).default([]),
   eligibility: z.string().nullable(),
+  structuredEligibility: StructuredEligibilitySchema.nullable().default(null),
   requiredItems: z.array(z.string()),
   systemHint: z.string().nullable(),
   sourceCategory: SourceCategorySchema,
@@ -55,6 +75,7 @@ export type ActionUpdatePayload = Readonly<{
   requiredItems?: readonly string[];
   systemHint?: string;
   revertFields?: readonly string[];
+  status?: ActionStatus;
 }>;
 
 // --- Inbox types ---
@@ -78,6 +99,7 @@ export const SavedActionSummarySchema = z.object({
   sourceTitle: z.string().nullable(),
   confidenceScore: z.number(),
   createdAt: z.string(),
+  status: ActionStatusSchema.default('pending'),
 });
 export type SavedActionSummary = z.infer<typeof SavedActionSummarySchema>;
 
@@ -107,6 +129,7 @@ export const SavedActionDetailSchema = z.object({
   dueAtIso: z.string().nullable(),
   dueAtLabel: z.string().nullable(),
   eligibility: z.string().nullable(),
+  structuredEligibility: StructuredEligibilitySchema.nullable().default(null),
   requiredItems: z.array(z.string()),
   systemHint: z.string().nullable(),
   inferred: z.boolean(),
@@ -115,6 +138,8 @@ export const SavedActionDetailSchema = z.object({
   source: SourceInfoSchema.nullable(),
   evidence: z.array(EvidenceSnippetSchema),
   overrides: z.array(FieldOverrideInfoSchema).default([]),
+  additionalDates: z.array(AdditionalDateSchema).default([]),
+  status: ActionStatusSchema.default('pending'),
 });
 export type SavedActionDetail = z.infer<typeof SavedActionDetailSchema>;
 

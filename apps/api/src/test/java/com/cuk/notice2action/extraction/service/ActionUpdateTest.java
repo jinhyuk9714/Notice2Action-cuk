@@ -105,6 +105,30 @@ class ActionUpdateTest {
         .hasMessageContaining("dueAtIso");
   }
 
+  @Test
+  void updateAction_updates_status_when_valid() {
+    UUID id = persistAndGetId();
+
+    SavedActionDetailDto result = persistenceService.updateAction(
+        id,
+        new ActionUpdateRequest(null, null, null, null, null, null, null, null, "completed")
+    );
+
+    assertThat(result.status()).isEqualTo("completed");
+  }
+
+  @Test
+  void updateAction_rejects_invalid_status() {
+    UUID id = persistAndGetId();
+
+    assertThatThrownBy(() -> persistenceService.updateAction(
+        id,
+        new ActionUpdateRequest(null, null, null, null, null, null, null, null, "done")
+    ))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("status");
+  }
+
   // --- Override tracking tests ---
 
   @Test
@@ -197,5 +221,26 @@ class ActionUpdateTest {
         .map(FieldOverrideInfoDto::fieldName)
         .collect(Collectors.toSet());
     assertThat(overriddenFields).containsExactlyInAnyOrder("title", "actionSummary", "eligibility");
+  }
+
+  @Test
+  void updateAction_recomputes_structured_eligibility_when_eligibility_changes() {
+    UUID id = persistAndGetId();
+
+    SavedActionDetailDto result = persistenceService.updateAction(id, new ActionUpdateRequest(
+        null,
+        null,
+        null,
+        null,
+        "컴퓨터정보공학부 3학년 재학생 대상",
+        null,
+        null,
+        null
+    ));
+
+    assertThat(result.structuredEligibility()).isNotNull();
+    assertThat(result.structuredEligibility().statuses()).contains("재학생");
+    assertThat(result.structuredEligibility().years()).contains(3);
+    assertThat(result.structuredEligibility().department()).isEqualTo("컴퓨터정보공학");
   }
 }

@@ -13,6 +13,7 @@ import com.cuk.notice2action.extraction.service.extractor.ActionVerbExtractor;
 import com.cuk.notice2action.extraction.service.extractor.DateExtractor;
 import com.cuk.notice2action.extraction.service.extractor.EligibilityExtractor;
 import com.cuk.notice2action.extraction.service.extractor.RequiredItemExtractor;
+import com.cuk.notice2action.extraction.service.extractor.StructuredEligibilityParser;
 import com.cuk.notice2action.extraction.service.extractor.SystemHintExtractor;
 import com.cuk.notice2action.extraction.service.extractor.TaskPhraseExtractor;
 import com.cuk.notice2action.extraction.service.extractor.TextNormalizer;
@@ -70,7 +71,8 @@ class NoticeQualityEvaluationSetTest {
         new ActionSegmenter(actionVerbExtractor, taskPhraseExtractor),
         new ActionSummaryBuilder(),
         new TitleDeriver(),
-        taskPhraseExtractor
+        taskPhraseExtractor,
+        new StructuredEligibilityParser()
     );
     classifier = new NoticeActionabilityClassifier();
   }

@@ -5,12 +5,16 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionSearchCriteria;
 import com.cuk.notice2action.extraction.api.dto.ActionUpdateRequest;
+import com.cuk.notice2action.extraction.api.dto.AdditionalDateDto;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.api.dto.FieldOverrideInfoDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionSummaryDto;
 import com.cuk.notice2action.extraction.api.dto.SourceInfoDto;
+import com.cuk.notice2action.extraction.domain.ActionStatus;
+import com.cuk.notice2action.extraction.service.extractor.StructuredEligibilityParser;
+import com.cuk.notice2action.extraction.service.model.StructuredEligibility;
 import com.cuk.notice2action.extraction.persistence.entity.EvidenceSnippetEntity;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
 import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
@@ -43,13 +47,16 @@ public class ActionPersistenceService {
   private final NoticeSourceRepository sourceRepository;
   private final ExtractedActionRepository actionRepository;
   private final ObjectMapper objectMapper;
+  private final StructuredEligibilityParser structuredEligibilityParser;
 
   public ActionPersistenceService(NoticeSourceRepository sourceRepository,
       ExtractedActionRepository actionRepository,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      StructuredEligibilityParser structuredEligibilityParser) {
     this.sourceRepository = sourceRepository;
     this.actionRepository = actionRepository;
     this.objectMapper = objectMapper;
+    this.structuredEligibilityParser = structuredEligibilityParser;
   }
 
   @Transactional
@@ -102,6 +109,7 @@ public class ActionPersistenceService {
 
     applyReverts(entity, request.revertFields(), machineValues);
     applyUpdates(entity, request, machineValues);
+    applyStatusUpdate(entity, request.status());
 
     entity.setMachineValuesJson(serializeMachineValues(machineValues));
     actionRepository.save(entity);
@@ -114,7 +122,10 @@ public class ActionPersistenceService {
       case "actionSummary" -> entity.setActionSummary(value);
       case "dueAtIso" -> entity.setDueAtIso(value != null ? OffsetDateTime.parse(value) : null);
       case "dueAtLabel" -> entity.setDueAtLabel(value);
-      case "eligibility" -> entity.setEligibility(value);
+      case "eligibility" -> {
+        entity.setEligibility(value);
+        entity.setStructuredEligibilityJson(toStructuredJson(structuredEligibilityParser.parse(value)));
+      }
       case "requiredItems" -> entity.setRequiredItemsJson(value != null ? value : "[]");
       case "systemHint" -> entity.setSystemHint(value);
       default -> { /* unreachable due to OVERRIDABLE_FIELDS check */ }
@@ -220,7 +231,8 @@ public class ActionPersistenceService {
         source != null ? source.getSourceCategory() : null,
         source != null ? source.getTitle() : null,
         entity.getConfidenceScore(),
-        entity.getCreatedAt()
+        entity.getCreatedAt(),
+        ActionStatus.defaultStatus(entity.getStatus())
     );
   }
 
@@ -278,6 +290,7 @@ public class ActionPersistenceService {
         toIsoString(entity.getDueAtIso()),
         entity.getDueAtLabel(),
         entity.getEligibility(),
+        fromStructuredJson(entity.getStructuredEligibilityJson()),
         fromJson(entity.getRequiredItemsJson()),
         entity.getSystemHint(),
         entity.isInferred(),
@@ -285,7 +298,9 @@ public class ActionPersistenceService {
         entity.getCreatedAt(),
         sourceInfo,
         evidence,
-        overrides
+        overrides,
+        fromAdditionalDatesJson(entity.getAdditionalDatesJson()),
+        ActionStatus.defaultStatus(entity.getStatus())
     );
   }
 
@@ -298,6 +313,50 @@ public class ActionPersistenceService {
   }
 
   private List<String> fromJson(String json) {
+    try {
+      return objectMapper.readValue(json, new TypeReference<>() {});
+    } catch (Exception e) {
+      return List.of();
+    }
+  }
+
+  private String toStructuredJson(StructuredEligibility structured) {
+    if (structured == null) {
+      return null;
+    }
+    try {
+      return objectMapper.writeValueAsString(structured);
+    } catch (JsonProcessingException e) {
+      return null;
+    }
+  }
+
+  private StructuredEligibility fromStructuredJson(String json) {
+    if (json == null || json.isBlank()) {
+      return null;
+    }
+    try {
+      return objectMapper.readValue(json, StructuredEligibility.class);
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  private String toAdditionalDatesJson(List<AdditionalDateDto> dates) {
+    if (dates == null || dates.isEmpty()) {
+      return "[]";
+    }
+    try {
+      return objectMapper.writeValueAsString(dates);
+    } catch (JsonProcessingException e) {
+      return "[]";
+    }
+  }
+
+  private List<AdditionalDateDto> fromAdditionalDatesJson(String json) {
+    if (json == null || json.isBlank()) {
+      return List.of();
+    }
     try {
       return objectMapper.readValue(json, new TypeReference<>() {});
     } catch (Exception e) {
@@ -389,7 +448,7 @@ public class ActionPersistenceService {
 
   private ExtractedActionEntity toExtractedActionEntity(ExtractedActionDto extractedAction,
       NoticeSourceEntity source, OffsetDateTime now) {
-    return new ExtractedActionEntity(
+    ExtractedActionEntity entity = new ExtractedActionEntity(
         UUID.randomUUID(),
         source,
         extractedAction.title(),
@@ -403,6 +462,10 @@ public class ActionPersistenceService {
         extractedAction.confidenceScore(),
         now
     );
+    entity.setStatus(ActionStatus.PENDING);
+    entity.setStructuredEligibilityJson(toStructuredJson(extractedAction.structuredEligibility()));
+    entity.setAdditionalDatesJson(toAdditionalDatesJson(extractedAction.additionalDates()));
+    return entity;
   }
 
   private void addEvidence(ExtractedActionEntity actionEntity, List<EvidenceSnippetDto> evidences,
@@ -429,7 +492,9 @@ public class ActionPersistenceService {
         entity.getActionSummary(),
         toIsoString(entity.getDueAtIso()),
         entity.getDueAtLabel(),
+        fromAdditionalDatesJson(entity.getAdditionalDatesJson()),
         entity.getEligibility(),
+        fromStructuredJson(entity.getStructuredEligibilityJson()),
         fromJson(entity.getRequiredItemsJson()),
         entity.getSystemHint(),
         source != null ? source.getSourceCategory() : null,
@@ -468,6 +533,13 @@ public class ActionPersistenceService {
     applyEligibilityUpdate(entity, request.eligibility(), machineValues);
     applyRequiredItemsUpdate(entity, request.requiredItems(), machineValues);
     applySystemHintUpdate(entity, request.systemHint(), machineValues);
+  }
+
+  private void applyStatusUpdate(ExtractedActionEntity entity, String status) {
+    String normalized = ActionStatus.normalizeNullable(status, "status");
+    if (normalized != null) {
+      entity.setStatus(normalized);
+    }
   }
 
   private void applyTitleUpdate(ExtractedActionEntity entity, String title,
@@ -516,6 +588,8 @@ public class ActionPersistenceService {
     }
     rememberMachineValueIfAbsent(machineValues, "eligibility", entity.getEligibility());
     entity.setEligibility(eligibility);
+    entity.setStructuredEligibilityJson(
+        toStructuredJson(structuredEligibilityParser.parse(eligibility)));
   }
 
   private void applyRequiredItemsUpdate(ExtractedActionEntity entity, List<String> requiredItems,
@@ -547,7 +621,8 @@ public class ActionPersistenceService {
     return (criteria.q() != null && !criteria.q().isBlank())
         || criteria.category() != null
         || criteria.dueDateFrom() != null
-        || criteria.dueDateTo() != null;
+        || criteria.dueDateTo() != null
+        || criteria.status() != null;
   }
 
   private Specification<ExtractedActionEntity> buildSearchSpec(ActionSearchCriteria criteria) {
@@ -563,6 +638,9 @@ public class ActionPersistenceService {
     }
     if (criteria.dueDateTo() != null) {
       spec = spec.and(ActionSpecifications.dueAtTo(criteria.dueDateTo()));
+    }
+    if (criteria.status() != null) {
+      spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), criteria.status()));
     }
     return spec;
   }

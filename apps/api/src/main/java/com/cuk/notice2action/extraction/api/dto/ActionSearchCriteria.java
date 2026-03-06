@@ -8,5 +8,16 @@ public record ActionSearchCriteria(
     SourceCategory category,
     OffsetDateTime dueDateFrom,
     OffsetDateTime dueDateTo,
-    String sort
-) {}
+    String sort,
+    String status
+) {
+  public ActionSearchCriteria(
+      String q,
+      SourceCategory category,
+      OffsetDateTime dueDateFrom,
+      OffsetDateTime dueDateTo,
+      String sort
+  ) {
+    this(q, category, dueDateFrom, dueDateTo, sort, null);
+  }
+}

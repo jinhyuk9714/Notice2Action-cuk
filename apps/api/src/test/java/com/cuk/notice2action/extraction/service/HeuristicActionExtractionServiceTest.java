@@ -13,6 +13,7 @@ import com.cuk.notice2action.extraction.service.extractor.ActionVerbExtractor;
 import com.cuk.notice2action.extraction.service.extractor.DateExtractor;
 import com.cuk.notice2action.extraction.service.extractor.EligibilityExtractor;
 import com.cuk.notice2action.extraction.service.extractor.RequiredItemExtractor;
+import com.cuk.notice2action.extraction.service.extractor.StructuredEligibilityParser;
 import com.cuk.notice2action.extraction.service.extractor.SystemHintExtractor;
 import com.cuk.notice2action.extraction.service.extractor.TaskPhraseExtractor;
 import com.cuk.notice2action.extraction.service.extractor.TextNormalizer;
@@ -46,7 +47,8 @@ class HeuristicActionExtractionServiceTest {
       new ActionSegmenter(actionVerbExtractor, taskPhraseExtractor),
       new ActionSummaryBuilder(),
       new TitleDeriver(),
-      taskPhraseExtractor
+      taskPhraseExtractor,
+      new StructuredEligibilityParser()
   );
 
   private ActionExtractionRequest request(String text) {
@@ -179,6 +181,24 @@ class HeuristicActionExtractionServiceTest {
 
       assertThat(response.actions().getFirst().dueAtIso()).isEqualTo("2026-03-25T17:00:00+09:00");
       assertThat(response.actions().getFirst().dueAtLabel()).contains("3. 25. (수) 17:00");
+    }
+
+    @Test
+    void extracts_additional_dates_and_structured_eligibility() {
+      ActionExtractionResponse response = service.extract(request(
+          """
+          컴퓨터정보공학부 재학생은 3월 12일 오리엔테이션 참석 후 3월 15일 18:00까지 TRINITY에서 공결 신청을 완료하세요.
+          """,
+          "공결 신청 안내"
+      ));
+
+      ExtractedActionDto action = response.actions().getFirst();
+      assertThat(action.structuredEligibility()).isNotNull();
+      assertThat(action.structuredEligibility().statuses()).contains("재학생");
+      assertThat(action.structuredEligibility().department()).isEqualTo("컴퓨터정보공학");
+      assertThat(action.additionalDates()).hasSize(1);
+      assertThat(action.additionalDates().getFirst().label()).contains("3월 12일");
+      assertThat(action.dueAtIso()).startsWith(currentYearPrefix() + "-03-15T18:00");
     }
 
     @Test

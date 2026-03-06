@@ -2,6 +2,7 @@ import {
   type ActionExtractionRequest,
   type ActionExtractionResponse,
   type ActionListResponse,
+  type ActionStatus,
   type ActionUpdatePayload,
   type NoticeFeedResponse,
   type PersonalizedNoticeDetail,
@@ -48,6 +49,7 @@ export type SearchParams = Readonly<{
   category?: SourceCategory;
   dueDateFrom?: string;
   dueDateTo?: string;
+  status?: ActionStatus;
 }>;
 
 export async function requestActionExtraction(
@@ -156,6 +158,7 @@ export async function fetchActionList(
   if (search?.category !== undefined) params.set('category', search.category);
   if (search?.dueDateFrom !== undefined) params.set('dueDateFrom', search.dueDateFrom);
   if (search?.dueDateTo !== undefined) params.set('dueDateTo', search.dueDateTo);
+  if (search?.status !== undefined) params.set('status', search.status);
 
   const response = await fetch(`/api/v1/actions?${params.toString()}`);
 

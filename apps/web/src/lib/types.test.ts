@@ -19,7 +19,15 @@ const VALID_EXTRACTED_ACTION = {
   actionSummary: '교내 장학금 신청',
   dueAtIso: '2026-03-15',
   dueAtLabel: '3월 15일',
+  additionalDates: [{ isoAt: '2026-03-12T10:00:00+09:00', label: '3월 12일 설명회' }],
   eligibility: '재학생',
+  structuredEligibility: {
+    universal: false,
+    statuses: ['재학생'],
+    excludedStatuses: [],
+    years: [3],
+    department: '컴퓨터정보공학',
+  },
   requiredItems: ['성적증명서'],
   systemHint: 'TRINITY',
   sourceCategory: 'NOTICE',
@@ -49,6 +57,7 @@ const VALID_DETAIL = {
   dueAtIso: null,
   dueAtLabel: null,
   eligibility: null,
+  structuredEligibility: null,
   requiredItems: [],
   systemHint: null,
   inferred: false,
@@ -57,6 +66,7 @@ const VALID_DETAIL = {
   source: null,
   evidence: [VALID_EVIDENCE],
   overrides: [],
+  additionalDates: [],
 };
 
 describe('SourceCategorySchema', () => {
@@ -98,6 +108,8 @@ describe('parseActionExtractionResponse', () => {
     const result = parseActionExtractionResponse({ actions: [VALID_EXTRACTED_ACTION], duplicate: false });
     expect(result.actions).toHaveLength(1);
     expect(result.actions[0].title).toBe('장학금 신청');
+    expect(result.actions[0].additionalDates).toHaveLength(1);
+    expect(result.actions[0].structuredEligibility?.department).toBe('컴퓨터정보공학');
   });
 
   it('throws when action missing title', () => {
@@ -198,6 +210,24 @@ describe('parseSavedActionDetail', () => {
     const result = parseSavedActionDetail(VALID_DETAIL);
     expect(result.id).toBe('123');
     expect(result.evidence).toHaveLength(1);
+    expect(result.additionalDates).toEqual([]);
+  });
+
+  it('parses detail with structured eligibility and additional dates', () => {
+    const result = parseSavedActionDetail({
+      ...VALID_DETAIL,
+      structuredEligibility: {
+        universal: false,
+        statuses: ['재학생'],
+        excludedStatuses: [],
+        years: [3],
+        department: '컴퓨터정보공학',
+      },
+      additionalDates: [{ isoAt: '2026-03-12T10:00:00+09:00', label: '3월 12일 설명회' }],
+    });
+
+    expect(result.structuredEligibility?.department).toBe('컴퓨터정보공학');
+    expect(result.additionalDates[0]?.label).toBe('3월 12일 설명회');
   });
 
   it('throws when missing evidence array', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeRelevance } from './relevance';
 import type { UserProfile } from './profile';
+import type { StructuredEligibility } from './types';
 
 const CONFIGURED: UserProfile = { department: '컴퓨터공학과', year: 3, status: '재학생' };
 const UNCONFIGURED: UserProfile = { department: null, year: null, status: null };
@@ -122,6 +123,52 @@ describe('computeRelevance', () => {
       expect(result.level).toBe('not_relevant');
       expect(result.reason).toContain('휴학생');
       expect(result.reason).toContain('1학년');
+    });
+  });
+
+  describe('structured eligibility', () => {
+    it('matches department with suffix-normalized structured department', () => {
+      const profile: UserProfile = { department: '컴퓨터정보공학부', year: null, status: null };
+      const structured: StructuredEligibility = {
+        universal: false,
+        statuses: [],
+        excludedStatuses: [],
+        years: [],
+        department: '컴퓨터정보공학',
+      };
+
+      const result = computeRelevance(null, profile, structured);
+      expect(result.level).toBe('relevant');
+      expect(result.reason).toContain('컴퓨터정보공학부');
+    });
+
+    it('uses raw eligibility fallback when structured data is not decisive', () => {
+      const profile: UserProfile = { department: '컴퓨터정보공학부', year: null, status: null };
+      const structured: StructuredEligibility = {
+        universal: false,
+        statuses: [],
+        excludedStatuses: [],
+        years: [],
+        department: null,
+      };
+
+      const result = computeRelevance('컴퓨터정보공학부 대상', profile, structured);
+      expect(result.level).toBe('relevant');
+      expect(result.reason).toContain('컴퓨터정보공학부');
+    });
+
+    it('returns not_relevant when structured status decisively excludes the profile', () => {
+      const profile: UserProfile = { department: null, year: null, status: '재학생' };
+      const structured: StructuredEligibility = {
+        universal: false,
+        statuses: ['휴학생'],
+        excludedStatuses: [],
+        years: [],
+        department: null,
+      };
+
+      const result = computeRelevance(null, profile, structured);
+      expect(result.level).toBe('not_relevant');
     });
   });
 
