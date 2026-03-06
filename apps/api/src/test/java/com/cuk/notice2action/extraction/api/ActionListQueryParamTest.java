@@ -55,7 +55,7 @@ class ActionListQueryParamTest {
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
     assertThat(result.actions()).hasSize(1);
-    assertThat(result.actions().getFirst().title()).isEqualTo("3월 액션");
+    assertThat(result.actions().getFirst().dueAtIso()).startsWith("2026-03-12T00:00");
   }
 
   @Test
@@ -76,8 +76,7 @@ class ActionListQueryParamTest {
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
     assertThat(result.actions()).hasSize(2);
-    assertThat(result.actions().get(0).title()).isEqualTo("정렬테스트-마감");
-    assertThat(result.actions().get(1).title()).isEqualTo("정렬테스트-무마감");
+    assertThat(result.actions().get(0).dueAtIso()).isNotNull();
     assertThat(result.actions().get(1).dueAtIso()).isNull();
   }
 }

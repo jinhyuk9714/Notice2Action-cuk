@@ -94,6 +94,10 @@ public class ExtractedActionEntity {
     return source;
   }
 
+  public void setSource(NoticeSourceEntity source) {
+    this.source = source;
+  }
+
   public String getTitle() {
     return title;
   }

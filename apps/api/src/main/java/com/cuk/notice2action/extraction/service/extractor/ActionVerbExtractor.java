@@ -16,7 +16,7 @@ public class ActionVerbExtractor {
 
   private static final Pattern NON_ACTION_CONTEXT = Pattern.compile(
       "(신청|제출|완료|등록|참석|납부|수강|접수|지원|확인|작성|출석|발급|예약|다운로드)"
-          + "\\s*(대상|기간|방법|안내|절차|현황|결과|일정|서류|목록|내역|자격)"
+          + "\\s*(대상|기간|방법|안내|절차|현황|결과|일정|서류|목록|내역|자격|이 필요한)"
   );
 
   public String extract(String text, List<EvidenceSnippetDto> evidence) {
@@ -25,6 +25,9 @@ public class ActionVerbExtractor {
       if (index >= 0) {
         int contextEnd = Math.min(text.length(), index + verb.length() + 5);
         String afterVerb = text.substring(index, contextEnd);
+        if (afterVerb.startsWith("수강과목")) {
+          continue;
+        }
         if (NON_ACTION_CONTEXT.matcher(afterVerb).find()) {
           continue;
         }
@@ -46,6 +49,9 @@ public class ActionVerbExtractor {
       if (index >= 0) {
         int contextEnd = Math.min(text.length(), index + verb.length() + 5);
         String afterVerb = text.substring(index, contextEnd);
+        if (afterVerb.startsWith("수강과목")) {
+          continue;
+        }
         if (NON_ACTION_CONTEXT.matcher(afterVerb).find()) {
           continue;
         }

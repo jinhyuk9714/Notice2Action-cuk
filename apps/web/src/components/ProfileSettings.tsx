@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import type { UserProfile, StudentStatus } from '../lib/profile';
 import { STUDENT_STATUSES } from '../lib/profile';
 
@@ -10,10 +10,15 @@ type ProfileSettingsProps = Readonly<{
 const YEARS = [1, 2, 3, 4] as const;
 
 export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsProps): ReactElement {
-  const [expanded, setExpanded] = useState<boolean>(false);
-
   function handleDepartmentChange(value: string): void {
-    onProfileChange({ ...profile, department: value.length > 0 ? value : null });
+    onProfileChange({ ...profile, department: value.trim().length > 0 ? value.trim() : null });
+  }
+
+  function handleKeywordChange(value: string): void {
+    onProfileChange({
+      ...profile,
+      interestKeywords: value.split(',').map((keyword) => keyword.trim()).filter((keyword) => keyword.length > 0),
+    });
   }
 
   function handleYearToggle(year: number): void {
@@ -28,61 +33,63 @@ export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsPro
   }
 
   return (
-    <div className="profile-settings">
-      <button
-        className="profile-settings-header"
-        onClick={() => { setExpanded((prev) => !prev); }}
-        aria-expanded={expanded}
-        aria-controls="profile-settings-body"
-      >
-        <span>내 프로필</span>
-        <span aria-hidden="true">{expanded ? '\u25B2' : '\u25BC'}</span>
-      </button>
+    <section className="panel profile-settings">
+      <div className="panel-header">
+        <div>
+          <p className="eyebrow">프로필</p>
+          <h2>개인화 기준</h2>
+        </div>
+      </div>
 
-      {expanded ? (
-        <div className="profile-settings-body" id="profile-settings-body">
-          <div className="profile-field">
-            <label htmlFor="profileDepartment">학과</label>
-            <input
-              id="profileDepartment"
-              type="text"
-              placeholder="예: 컴퓨터공학과"
-              value={profile.department ?? ''}
-              onChange={(e) => { handleDepartmentChange(e.target.value); }}
-            />
-          </div>
+      <div className="profile-settings-body">
+        <div className="profile-field">
+          <label htmlFor="profileDepartment">학과</label>
+          <input
+            id="profileDepartment"
+            type="text"
+            placeholder="예: 컴퓨터공학과"
+            value={profile.department ?? ''}
+            onChange={(e) => { handleDepartmentChange(e.target.value); }}
+          />
+        </div>
 
-          <div className="profile-field">
-            <label id="yearLabel">학년</label>
-            <div className="year-group" role="group" aria-labelledby="yearLabel">
-              {YEARS.map((y) => (
-                <button
-                  key={y}
-                  className={`year-btn${profile.year === y ? ' year-btn-active' : ''}`}
-                  onClick={() => { handleYearToggle(y); }}
-                  aria-pressed={profile.year === y}
-                >
-                  {y}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="profile-field">
-            <label htmlFor="profileStatus">신분</label>
-            <select
-              id="profileStatus"
-              value={profile.status ?? ''}
-              onChange={(e) => { handleStatusChange(e.target.value); }}
-            >
-              <option value="">선택 안 함</option>
-              {STUDENT_STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+        <div className="profile-field">
+          <label id="yearLabel">학년</label>
+          <div className="year-group" role="group" aria-labelledby="yearLabel">
+            {YEARS.map((year) => (
+              <button
+                key={year}
+                className={`year-btn${profile.year === year ? ' year-btn-active' : ''}`}
+                onClick={() => { handleYearToggle(year); }}
+                aria-pressed={profile.year === year}
+              >
+                {year}
+              </button>
+            ))}
           </div>
         </div>
-      ) : null}
-    </div>
+
+        <div className="profile-field">
+          <label htmlFor="profileStatus">신분</label>
+          <select id="profileStatus" value={profile.status ?? ''} onChange={(e) => { handleStatusChange(e.target.value); }}>
+            <option value="">선택 안 함</option>
+            {STUDENT_STATUSES.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="profile-field">
+          <label htmlFor="profileKeywords">관심 키워드</label>
+          <input
+            id="profileKeywords"
+            type="text"
+            placeholder="예: 장학금, 학생증, 수강신청"
+            value={(profile.interestKeywords ?? []).join(', ')}
+            onChange={(e) => { handleKeywordChange(e.target.value); }}
+          />
+        </div>
+      </div>
+    </section>
   );
 }

@@ -14,6 +14,7 @@ import com.cuk.notice2action.extraction.service.extractor.DateExtractor;
 import com.cuk.notice2action.extraction.service.extractor.EligibilityExtractor;
 import com.cuk.notice2action.extraction.service.extractor.RequiredItemExtractor;
 import com.cuk.notice2action.extraction.service.extractor.SystemHintExtractor;
+import com.cuk.notice2action.extraction.service.extractor.TaskPhraseExtractor;
 import com.cuk.notice2action.extraction.service.extractor.TextNormalizer;
 import com.cuk.notice2action.extraction.service.extractor.TitleDeriver;
 import java.time.LocalDate;
@@ -33,6 +34,7 @@ class HeuristicActionExtractionServiceTest {
   };
 
   private final ActionVerbExtractor actionVerbExtractor = new ActionVerbExtractor();
+  private final TaskPhraseExtractor taskPhraseExtractor = new TaskPhraseExtractor();
 
   private final HeuristicActionExtractionService service = new HeuristicActionExtractionService(
       new TextNormalizer(),
@@ -41,9 +43,10 @@ class HeuristicActionExtractionServiceTest {
       new RequiredItemExtractor(),
       actionVerbExtractor,
       new EligibilityExtractor(),
-      new ActionSegmenter(actionVerbExtractor),
+      new ActionSegmenter(actionVerbExtractor, taskPhraseExtractor),
       new ActionSummaryBuilder(),
-      new TitleDeriver()
+      new TitleDeriver(),
+      taskPhraseExtractor
   );
 
   private ActionExtractionRequest request(String text) {
@@ -167,6 +170,46 @@ class HeuristicActionExtractionServiceTest {
 
       assertThat(response.actions().getFirst().dueAtIso()).isNotNull();
       assertThat(response.actions().getFirst().dueAtLabel()).isNotNull();
+    }
+
+    @Test
+    void date_range_with_year_and_time_prefers_range_end() {
+      ActionExtractionResponse response =
+          service.extract(request("수강과목 취소 신청기간 : 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00"));
+
+      assertThat(response.actions().getFirst().dueAtIso()).isEqualTo("2026-03-25T17:00:00+09:00");
+      assertThat(response.actions().getFirst().dueAtLabel()).contains("3. 25. (수) 17:00");
+    }
+
+    @Test
+    void due_evidence_uses_context_line_instead_of_compact_token() {
+      ActionExtractionResponse response = service.extract(request(
+          """
+          2026학년도 신입생 수강신청 안내
+          수강신청 변경기간:
+          2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00 (주말 및 공휴일 제외)
+          """,
+          "2026학년도 신입생 수강신청 안내"
+      ));
+
+      EvidenceSnippetDto dueEvidence = response.actions().getFirst().evidence().stream()
+          .filter(evidence -> "dueAtLabel".equals(evidence.fieldName()))
+          .findFirst()
+          .orElseThrow();
+
+      assertThat(dueEvidence.snippet())
+          .contains("수강신청 변경기간")
+          .contains("2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00")
+          .isNotEqualTo("~ 3/9");
+    }
+
+    @Test
+    void lecture_schedule_range_is_not_treated_as_deadline() {
+      ActionExtractionResponse response =
+          service.extract(request("강의일정 : 2026년 3월 16일(월) ~ 6월 5일(금), 12주간 진행"));
+
+      assertThat(response.actions().getFirst().dueAtIso()).isNull();
+      assertThat(response.actions().getFirst().dueAtLabel()).isNull();
     }
 
     @Test
@@ -651,7 +694,8 @@ class HeuristicActionExtractionServiceTest {
       ActionExtractionResponse response =
           service.extract(request("3월 12일까지 TRINITY에서 신청하세요"));
 
-      assertThat(response.actions().getFirst().actionSummary()).startsWith("[신청]");
+      assertThat(response.actions().getFirst().actionSummary())
+          .isEqualTo("할 일: 신청. 마감: 3월 12일. 시스템: TRINITY.");
     }
 
     @Test
@@ -689,15 +733,104 @@ class HeuristicActionExtractionServiceTest {
     }
 
     @Test
-    void multi_action_titles_include_counter() {
+    void multi_action_titles_do_not_include_counter_when_titles_differ() {
       String text = """
           3월 12일까지 서류 제출하세요.
           3월 15일까지 면접 참석하세요.
           """;
       ActionExtractionResponse response = service.extract(request(text, "장학금"));
 
-      assertThat(response.actions().get(0).title()).contains("(1/2)");
-      assertThat(response.actions().get(1).title()).contains("(2/2)");
+      assertThat(response.actions().get(0).title()).doesNotContain("(1/2)");
+      assertThat(response.actions().get(1).title()).doesNotContain("(2/2)");
+    }
+
+    @Test
+    void task_title_prefers_notice_specific_phrase_over_source_title() {
+      ActionExtractionResponse response = service.extract(request(
+          "수강과목 취소 신청기간 : 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00\n"
+              + "신청이 필요한 학생은 기간 내 신청을 완료하시기 바랍니다.",
+          "[학사지원팀] 2026-1학기 수강과목 취소 기간 안내"
+      ));
+
+      assertThat(response.actions()).singleElement().satisfies(action -> {
+        assertThat(action.title()).isEqualTo("수강과목 취소 신청");
+        assertThat(action.actionSummary())
+            .isEqualTo("할 일: 수강과목 취소 신청. 마감: 3. 25. (수) 17:00.");
+      });
+    }
+
+    @Test
+    void procedural_steps_stay_in_single_action_when_they_share_same_task() {
+      String text = """
+          1. 수강과목 취소 신청기간 : 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00
+          2. 수강과목 취소 절차
+          가. [트리니티] - [수업/성적] - [수강신청] - [수강취소신청]
+          나. 취소신청 버튼 클릭
+          다. 취소 결과 확인
+          """;
+
+      ActionExtractionResponse response = service.extract(request(text, "[학사지원팀] 2026-1학기 수강과목 취소 기간 안내"));
+
+      assertThat(response.actions()).singleElement().satisfies(action -> {
+        assertThat(action.title()).isEqualTo("수강과목 취소 신청");
+        assertThat(action.systemHint()).isEqualTo("TRINITY");
+      });
+    }
+
+    @Test
+    void image_only_notice_uses_attachment_keywords_to_build_title_and_summary() {
+      ActionExtractionResponse response = service.extract(request(
+          "본문이 이미지로만 제공된 공지입니다.\n"
+              + "첨부파일: 1. 공결허가원(취업).hwp, 2. 개인정보 수집활용 동의서(재직조회).hwp, 3. 취업공결 확인서(학기 중 취업학생).hwp",
+          "[학사지원팀] 2026학년도 1학기 학기 중 취업학생 출결 사항 안내"
+      ));
+
+      assertThat(response.actions()).singleElement().satisfies(action -> {
+        assertThat(action.title()).isEqualTo("취업공결 관련 서류 준비 및 제출");
+        assertThat(action.actionSummary()).isEqualTo("할 일: 취업공결 관련 서류 준비 및 제출. 준비물: 공결허가원, 동의서, 확인서.");
+      });
+    }
+
+    @Test
+    void idesign_notice_collapses_to_single_registration_action() {
+      ActionExtractionResponse response = service.extract(request(
+          """
+          2026학년도 1학기 <I-DESIGN> 수강신청 관련 안내
+          해당 내용을 확인하시어 수강신청하시기 바랍니다.
+          ◎ 수강신청 기간
+          - 재수강 분반 수강신청: 2/3(화)~2/5(목)
+          - 신입생 분반 수강신청: 2/25(수)~2/26(목)
+          - 수강신청 변경기간: 3/3(화)~3/9(월), 09:00 ~ 17:00
+          """,
+          "[학부대학] 2026학년도 1학기 <I-DESIGN> 수강신청 관련 안내"
+      ));
+
+      assertThat(response.actions()).singleElement().satisfies(action -> {
+        assertThat(action.title()).isEqualTo("I-DESIGN 수강신청");
+        assertThat(action.dueAtLabel()).isEqualTo("~ 3/9");
+      });
+    }
+
+    @Test
+    void new_student_notice_prefers_notice_level_task_over_step_titles() {
+      ActionExtractionResponse response = service.extract(request(
+          """
+          2026학년도 신입생 수강신청 안내
+          수강신청 변경기간:
+          2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00
+          STEP 1. 교양영역에서 필수로 수강해야할 과목을 우선적으로 수강신청합니다.
+          ➊ 1학년 1학기에 필수 수강 교과목: 기초교양필수에서 [인간학1], 중핵교양선택필수 [I-DESIGN]
+          STEP 2. 본인의 학과 또는 선택할 학과의 전공기초 선수(필수) 과목을 수강신청합니다.
+          첨부파일: 2026 신입생 수강신청 방법 안내(최종).pptx
+          """,
+          "2026학년도 신입생 수강신청 안내"
+      ));
+
+      assertThat(response.actions()).singleElement().satisfies(action -> {
+        assertThat(action.title()).isEqualTo("신입생 수강신청");
+        assertThat(action.actionSummary()).contains("할 일: 신입생 수강신청.");
+        assertThat(action.dueAtLabel()).isEqualTo("~ 3/9");
+      });
     }
   }
 

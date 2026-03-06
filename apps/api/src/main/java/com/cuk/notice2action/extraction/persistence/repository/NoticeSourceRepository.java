@@ -26,4 +26,18 @@ public interface NoticeSourceRepository extends JpaRepository<NoticeSourceEntity
   Optional<NoticeSourceEntity> findByContentHash(String contentHash);
 
   Optional<NoticeSourceEntity> findBySourceUrl(String sourceUrl);
+
+  Optional<NoticeSourceEntity> findByExternalNoticeId(String externalNoticeId);
+
+  boolean existsByAutoCollectedTrue();
+
+  @Query("SELECT DISTINCT s FROM NoticeSourceEntity s "
+      + "LEFT JOIN FETCH s.actions "
+      + "WHERE s.autoCollected = true")
+  List<NoticeSourceEntity> findAllAutoCollectedNotices();
+
+  @Query("SELECT DISTINCT s FROM NoticeSourceEntity s "
+      + "LEFT JOIN FETCH s.actions "
+      + "WHERE s.id = :id")
+  Optional<NoticeSourceEntity> findDetailById(UUID id);
 }

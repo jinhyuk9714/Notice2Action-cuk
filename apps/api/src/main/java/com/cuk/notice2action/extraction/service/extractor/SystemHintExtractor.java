@@ -10,7 +10,7 @@ public class SystemHintExtractor {
 
   // Longer keywords first to avoid partial matches (e.g., "장학포털" before "포털")
   private static final List<String> SYSTEM_HINTS = List.of(
-      "TRINITY", "사이버캠퍼스", "웹메일", "우리WON",
+      "TRINITY", "트리니티", "사이버캠퍼스", "웹메일", "우리WON",
       "종정넷", "LMS", "e-class", "e-Campus",
       "학생생활관", "국제교류원",
       "취업지원센터", "장학포털", "학과사무실", "통합정보시스템",
@@ -24,7 +24,7 @@ public class SystemHintExtractor {
       if (index >= 0) {
         String contextSnippet = extractContext(text, index, candidate.length(), 40);
         evidence.add(new EvidenceSnippetDto("systemHint", contextSnippet, 0.78));
-        return candidate;
+        return "트리니티".equals(candidate) ? "TRINITY" : candidate;
       }
     }
     return null;

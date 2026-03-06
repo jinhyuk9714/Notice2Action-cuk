@@ -8,6 +8,9 @@ export type InboxFilters = Readonly<{
 }>;
 
 export type Route =
+  | Readonly<{ view: 'feed'; noticeId: string | null }>
+  | Readonly<{ view: 'saved'; noticeId: string | null }>
+  | Readonly<{ view: 'profile' }>
   | Readonly<{ view: 'extract' }>
   | Readonly<{ view: 'inbox'; actionId: string | null; filters: InboxFilters }>
   | Readonly<{ view: 'sources'; sourceId: string | null }>;
@@ -59,10 +62,19 @@ export function parseHash(hash: string): Route {
 
   const segments = pathPart.split('/').filter((s) => s.length > 0);
 
-  if (segments.length === 0) return { view: 'extract' };
+  if (segments.length === 0) return { view: 'feed', noticeId: null };
 
   const view = segments[0];
 
+  if (view === 'feed') {
+    return { view: 'feed', noticeId: segments[1] ?? null };
+  }
+  if (view === 'saved') {
+    return { view: 'saved', noticeId: segments[1] ?? null };
+  }
+  if (view === 'profile') {
+    return { view: 'profile' };
+  }
   if (view === 'inbox') {
     const filters = parseInboxFilters(queryPart);
     return { view: 'inbox', actionId: segments[1] ?? null, filters };
@@ -74,10 +86,17 @@ export function parseHash(hash: string): Route {
     return { view: 'extract' };
   }
 
-  return { view: 'extract' };
+  return { view: 'feed', noticeId: null };
 }
 
 export function buildHash(route: Route): string {
+  if (route.view === 'feed') {
+    return route.noticeId !== null ? `#/feed/${route.noticeId}` : '#/feed';
+  }
+  if (route.view === 'saved') {
+    return route.noticeId !== null ? `#/saved/${route.noticeId}` : '#/saved';
+  }
+  if (route.view === 'profile') return '#/profile';
   if (route.view === 'extract') return '#/extract';
   if (route.view === 'inbox') {
     const base = route.actionId !== null ? `#/inbox/${route.actionId}` : '#/inbox';
