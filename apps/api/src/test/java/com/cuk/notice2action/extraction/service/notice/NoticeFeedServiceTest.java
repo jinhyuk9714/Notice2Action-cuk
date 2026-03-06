@@ -530,6 +530,104 @@ class NoticeFeedServiceTest {
   }
 
   @Test
+  void prefersProceduralSystemEvidenceOverGenericSystemMention() {
+    UUID noticeId = UUID.randomUUID();
+    ExtractedActionEntity action = new ExtractedActionEntity(
+        UUID.randomUUID(),
+        null,
+        "수강과목 취소 신청",
+        "할 일: 수강과목 취소 신청. 시스템: TRINITY.",
+        null,
+        null,
+        null,
+        "[]",
+        "TRINITY",
+        false,
+        0.8,
+        OffsetDateTime.now(ZoneOffset.ofHours(9))
+    );
+
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        noticeId,
+        "[학사지원팀] 2026-1학기 수강과목 취소 기간 안내",
+        """
+        TRINITY에서 확인하시기 바랍니다.
+        수강과목 취소 절차
+        가. [TRINITY] - [수업/성적] - [수강신청] - [수강취소신청]
+        """,
+        LocalDate.of(2026, 3, 3),
+        "https://example.com/notices/269011",
+        List.of(),
+        "action_required",
+        null,
+        List.of(action)
+    );
+
+    when(noticeSourceRepository.findDetailById(noticeId)).thenReturn(java.util.Optional.of(notice));
+
+    PersonalizedNoticeDetailDto detail = service.getDetail(noticeId, new NoticeProfile(null, null, null, List.of()));
+
+    assertThat(detail.actionBlocks()).singleElement().satisfies(block -> {
+      assertThat(block.evidence()).extracting(evidence -> evidence.snippet())
+          .contains("가. [TRINITY] - [수업/성적] - [수강신청] - [수강취소신청]")
+          .noneSatisfy(snippet -> assertThat(snippet).contains("확인하시기 바랍니다"));
+    });
+  }
+
+  @Test
+  void excludesPipeDelimitedTableRowsFromDetailEvidence() {
+    UUID noticeId = UUID.randomUUID();
+    ExtractedActionEntity action = new ExtractedActionEntity(
+        UUID.randomUUID(),
+        null,
+        "신입생 수강신청",
+        "할 일: 신입생 수강신청.",
+        null,
+        null,
+        null,
+        "[]",
+        null,
+        false,
+        0.77,
+        OffsetDateTime.now(ZoneOffset.ofHours(9))
+    );
+    action.addEvidence(new EvidenceSnippetEntity(
+        UUID.randomUUID(),
+        action,
+        "summary",
+        "분반 | 계열 / 학과 | 강의시간표",
+        0.75,
+        OffsetDateTime.now(ZoneOffset.ofHours(9))
+    ));
+
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        noticeId,
+        "2026학년도 신입생 수강신청 안내",
+        """
+        2026학년도 신입생 수강신청 안내
+        분반 | 계열 / 학과 | 강의시간표
+        05 | 컴퓨터정보공학부 | 월1-3교시
+        STEP 1. 교양영역에서 필수로 수강해야할 과목을 우선적으로 수강신청합니다.
+        """,
+        LocalDate.of(2026, 2, 13),
+        "https://example.com/notices/268547",
+        List.of(),
+        "action_required",
+        null,
+        List.of(action)
+    );
+
+    when(noticeSourceRepository.findDetailById(noticeId)).thenReturn(java.util.Optional.of(notice));
+
+    PersonalizedNoticeDetailDto detail = service.getDetail(noticeId, new NoticeProfile(null, null, null, List.of()));
+
+    assertThat(detail.actionBlocks()).singleElement().satisfies(block ->
+        assertThat(block.evidence()).extracting(evidence -> evidence.snippet())
+            .noneSatisfy(snippet -> assertThat(snippet).contains("|"))
+    );
+  }
+
+  @Test
   void downgradesImageOnlyNoticeWithoutEvidenceToInformationalOnRead() {
     UUID noticeId = UUID.randomUUID();
     NoticeSourceEntity notice = NoticeFixtures.noticeSource(

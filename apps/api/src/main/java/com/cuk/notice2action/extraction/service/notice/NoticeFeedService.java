@@ -705,17 +705,24 @@ public class NoticeFeedService {
     }
     List<String> lines = splitDetailLines(rawText);
     List<String> terms = buildSystemSearchTerms(systemHint);
+    String fallback = null;
     for (String line : lines) {
       String normalizedLine = normalizeMatchValue(line);
       boolean matches = terms.stream()
           .map(this::normalizeMatchValue)
           .filter(NoticeFeedService::hasText)
           .anyMatch(normalizedLine::contains);
-      if (matches) {
+      if (!matches) {
+        continue;
+      }
+      if (isProceduralSystemLine(line)) {
         return sanitizeDueDisplayLine(line);
       }
+      if (!isExplanatoryDueLine(line) && fallback == null) {
+        fallback = sanitizeDueDisplayLine(line);
+      }
     }
-    return null;
+    return fallback;
   }
 
   private int findDueLineIndex(
@@ -865,6 +872,19 @@ public class NoticeFeedService {
         || normalized.contains("제외");
   }
 
+  private boolean isProceduralSystemLine(String line) {
+    String normalized = normalizeInlineText(line);
+    return normalized.contains("[")
+        || normalized.contains("]")
+        || normalized.contains(" - ")
+        || normalized.contains(" > ")
+        || normalized.contains("→")
+        || normalized.contains("/")
+        || normalized.startsWith("가.")
+        || normalized.startsWith("나.")
+        || normalized.startsWith("다.");
+  }
+
   private List<String> splitDetailLines(String rawText) {
     return rawText == null ? List.of() : rawText.lines()
         .map(NoticeFeedService::normalizeInlineText)
@@ -915,6 +935,7 @@ public class NoticeFeedService {
         || snippet.contains("안내드리오니")
         || snippet.contains("완료하시기 바랍니다")
         || snippet.contains("문의처")
+        || looksLikeTableRow(snippet)
         || isExplanatoryDueLine(snippet)) {
       return false;
     }
@@ -928,6 +949,12 @@ public class NoticeFeedService {
 
   private boolean hasPreferredEvidenceLength(String snippet) {
     return snippet.length() >= 12 && snippet.length() <= 140;
+  }
+
+  private boolean looksLikeTableRow(String snippet) {
+    String normalized = normalizeInlineText(snippet);
+    return normalized.contains(" | ")
+        || normalized.matches(".*\\|.*\\|.*");
   }
 
   private int evidencePriority(String fieldName) {
