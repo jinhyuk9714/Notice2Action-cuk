@@ -28,7 +28,7 @@
    - 날짜, 키워드, 시스템명, 대상, 준비물 추출은 규칙 기반 우선.
    - 불확실할 때만 LLM fallback을 고려한다.
 5. **Trust-building UI**
-   - 추출 결과와 함께 중요 이유, 행동 블록, 근거 snippet을 같이 보여준다.
+   - 추출 결과와 함께 중요 이유, 행동 블록, 행동 블록별 근거를 같이 보여준다.
 6. **Strict typing**
    - TypeScript strict
    - Java DTO/record/validation
@@ -46,7 +46,7 @@
 ### V1
 - representative notice auto-collection
 - personalized feed
-- notice detail with evidence
+- notice detail with action-block evidence
 - saved / hidden notices
 - local profile filters
 
@@ -59,7 +59,6 @@
 - legacy action inbox
 
 ### Later
-- relevance quality improvements
 - board expansion
 - reminder / export polish
 - team mode for 동아리/팀플 공지
