@@ -1,6 +1,6 @@
 # Notice2Action
 
-> 가톨릭대학교 성심교정 학생을 위한 **공지 → 행동 추출** 웹 서비스
+> 가톨릭대학교 성심교정 학생을 위한 개인화 공지 피드 웹 서비스
 
 ![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white)
@@ -8,214 +8,147 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 
-학교 공지사항을 요약하는 것이 아니라, **"지금 내가 해야 할 일(Action)"** 만 구조화해서 보여줍니다.
+Notice2Action는 성심교정 대표 공지를 자동 수집하고, 로컬 프로필을 바탕으로 **내게 중요한 공지**를 먼저 보여주는 서비스입니다. 핵심은 공지를 많이 보여주는 것이 아니라, 놓치면 안 되는 공지를 빠르게 걸러 주고 상세 화면에서 **왜 중요한지**, **지금 무엇을 해야 하는지**, **근거가 무엇인지**를 함께 보여주는 것입니다.
 
 ---
 
-## 해결하는 문제
+## 현재 제품이 해결하는 문제
 
-학생이 공지를 읽더라도 실제로 놓치는 것들이 있습니다:
+학생은 학교 공지를 읽을 수는 있어도, 실제로는 아래를 자주 놓칩니다.
 
-| 놓치는 것 | 예시 |
-|-----------|------|
-| **무엇**을 해야 하는지 | 신청, 제출, 등록, 참석 |
-| **언제까지** 해야 하는지 | 마감일시 |
-| **무엇을 준비**해야 하는지 | 성적증명서, 자기소개서 등 |
-| **내가 대상**인지 | 2학년 이상, 졸업예정자 등 |
-| **어디서** 해야 하는지 | TRINITY, 장학포털, LMS 등 |
+| 놓치기 쉬운 것 | 실제 질문 |
+|---|---|
+| 내가 봐야 하는 공지인지 | 이 공지가 내 학과, 학년, 재학 상태와 관련 있나? |
+| 지금 행동이 필요한지 | 그냥 안내인지, 실제 신청이나 제출이 필요한지? |
+| 언제까지 해야 하는지 | 마감이 있는지, 얼마나 급한지? |
+| 어디서 해야 하는지 | TRINITY, 학사포털, 공유대학, 외부 사이트 중 어디서 처리하나? |
+| 왜 이렇게 판단했는지 | 시스템이 임의로 추론한 건 아닌가? |
 
-```
-[입력]                        [추출 엔진]                        [출력]
+현재 메인 흐름은 아래와 같습니다.
 
-텍스트 붙여넣기  ──┐                                          ┌── 액션 카드 목록
-공지 URL         ──┤                                          ├── 마감일 · 시스템 · 준비물
-PDF 업로드       ──┼──→  Heuristic 추출 (규칙 기반)  ────────→├── 자격 요건
-스크린샷 OCR     ──┤     + SHA-256 중복 감지                  ├── 근거 snippet + confidence
-이메일 본문      ──┘     + confidence scoring                 ├── DB 저장 → 인박스
-                                                              └── 캘린더(.ics) · CSV 내보내기
+```text
+성심교정 대표 공지 자동 수집
+        ↓
+프로필 기반 관련도 계산
+        ↓
+개인화 공지 피드 (#/feed)
+        ↓
+상세 화면에서 중요 이유 + 행동 블록 + 근거 확인
+        ↓
+저장 / 숨김 / 나중에 다시 확인
 ```
 
 ---
 
-## 추출 데모
+## 메인 기능
 
-**입력** — 장학금 공지:
-```
-[2026학년도 1학기 교내장학금 신청 안내]
+### 1. 개인화 공지 피드
+- 성심교정 대표 공지를 자동 수집합니다.
+- 로컬 프로필(학과, 학년, 재학 상태, 관심 키워드)을 기준으로 관련도 점수를 계산합니다.
+- 피드 카드에는 제목, 게시일, 중요 이유, 행동 필요 여부, 마감 힌트를 표시합니다.
+- 기본 진입점은 `#/feed` 입니다.
 
-1. 신청 대상: 2학년 이상 재학생 (평균평점 3.5 이상)
-2. 신청 기간: 2026.3.1 ~ 2026.3.15 18:00
-3. 신청 방법: 장학포털에서 온라인 신청
-4. 제출 서류: 성적증명서, 자기소개서, 통장사본
-```
+### 2. 공지 상세 화면
+- 상세 화면은 아래 순서로 정보를 보여줍니다.
+  - 원문 본문
+  - 왜 중요한지
+  - 행동 블록
+  - 근거 snippet
+  - 첨부파일
+- 행동 블록은 deterministic 규칙 기반으로 생성합니다.
+- 정보성 공지는 행동 블록 대신 `행동 없음`으로 표시합니다.
 
-**추출 결과**:
+### 3. 저장 / 숨김
+- 공지는 로컬 상태로 저장하거나 숨길 수 있습니다.
+- 저장한 공지는 `#/saved` 에서 다시 볼 수 있습니다.
+- 숨긴 공지는 피드에서 제외되지만 복구할 수 있습니다.
 
-| 필드 | 값 |
-|------|-----|
-| 액션 요약 | `[신청] 2026-03-15 18:00까지 장학포털에서 준비물: 성적증명서, 자기소개서, 통장사본.` |
-| 마감일 | `2026-03-15T18:00:00+09:00` |
-| 시스템 힌트 | 장학포털 |
-| 준비물 | 성적증명서, 자기소개서, 통장사본 |
-| 자격 요건 | 2학년 이상 재학생 (평균평점 3.5 이상) |
-| 근거 | 각 필드별 원문 snippet + confidence 점수 |
+### 4. 프로필 기반 필터링
+- 프로필은 로컬 저장소에 유지됩니다.
+- 학과, 학년, 재학 상태, 관심 키워드가 중요 이유 계산에 반영됩니다.
+- 메인 UI에서는 프로필 설정이 부가 기능이 아니라 피드 품질의 핵심 입력입니다.
 
 ---
 
-## 주요 기능
+## 메인 API
 
-### 입력 (5종)
+모든 경로의 prefix는 `/api/v1` 입니다.
 
-| 소스 | 방식 | 기술 |
-|------|------|------|
-| 텍스트 | 직접 붙여넣기 | — |
-| URL | 공지 URL 입력 → HTML 자동 추출 | Jsoup |
-| PDF | 파일 업로드 (최대 10MB) | Apache PDFBox |
-| 스크린샷 | 이미지 업로드 → OCR | Tesseract (Tess4J) |
-| 이메일 | 본문 + 제목 + 발신자 입력 | — |
+### Personalized notice feed
 
-### 추출 엔진 (Heuristic, 규칙 기반)
+| Method | Path | 설명 |
+|---|---|---|
+| `GET` | `/notices/feed` | 개인화 공지 피드 조회 |
+| `GET` | `/notices/{id}` | 공지 상세 조회 |
 
-| 항목 | 규칙 수 | 예시 |
-|------|---------|------|
-| 날짜 패턴 | 7개 | 한글 전체(`2026년 3월 12일 18시`), ISO(`2026.03.12`), 연도 생략, 오전/오후 등 |
-| 시스템 힌트 | 17개 | TRINITY, 장학포털, LMS, 종정넷, 사이버캠퍼스 등 |
-| 준비물 키워드 | 22개 | 성적증명서, 자기소개서, 통장사본, 여권사본 등 |
-| 액션 동사 | 15개 | 신청, 제출, 완료, 등록, 참석, 납부 등 |
-| 자격 시그널 | 14개 | 대상, 졸업예정자, 재학생, 학년, 전공 등 |
-| 복수 액션 | 최대 5개 | 동사 앵커링 기반 문장 분할 |
+피드 응답은 다음 정보를 포함합니다.
+- `title`
+- `publishedAt`
+- `importanceReasons[]`
+- `actionability`
+- `dueHint`
+- `relevanceScore`
 
-### 신뢰 구축
-- 모든 추출 필드에 **원문 근거 snippet** + **confidence 점수** (0.0~1.0) 제공
-- 마감 키워드 근접 시 confidence 부스팅
-- SHA-256 content hash로 **중복 소스 감지**
+상세 응답은 다음 정보를 추가로 포함합니다.
+- `body`
+- `attachments[]`
+- `actionBlocks[]`
+- `actionBlocks[]` 내부의 `evidence[]`
 
-### 인박스 관리
-- **검색** — 제목 + 요약 전문 검색
-- **필터** — 소스 카테고리(공지/이메일/PDF/스크린샷), 마감일 범위
-- **정렬** — 최신순 / 마감 임박순 (NULLS LAST)
-- **편집/삭제** — 액션 필드 수정 (PATCH) + 삭제
-- **페이지네이션** — 무한 스크롤 방식
+### Secondary / legacy APIs
 
-### 부가 기능
-- **다크모드** — Light / Dark / System 전환 (localStorage 저장)
-- **캘린더 내보내기** — 마감일 있는 액션을 `.ics` 파일로 다운로드
-- **CSV 내보내기** — 전체 액션 목록을 CSV로 다운로드
-- **리마인더** — D-7, D-3, D-1, D-Day 알림 (Notification API)
-- **프로필 설정** — 학과/학년/재학상태 기반 관련도 필터링
-- **소스 히스토리** — 원문 소스별 추출 이력 조회
-- **URL 라우팅** — 해시 기반 (`#/inbox/{id}`, `#/sources/{id}`)
+아래 경로는 계속 유지되지만 현재 메인 제품 진입점은 아닙니다.
+
+| Method | Path | 설명 |
+|---|---|---|
+| `POST` | `/extractions/actions` | 텍스트/URL 기반 수동 추출 |
+| `POST` | `/extractions/pdf` | PDF 수동 추출 |
+| `POST` | `/extractions/email` | 이메일 수동 추출 |
+| `POST` | `/extractions/screenshot` | 스크린샷 OCR 추출 |
+| `GET` | `/actions` | legacy action inbox |
+| `GET` | `/actions/{id}` | legacy action detail |
+| `GET` | `/actions/calendar.ics` | legacy calendar export |
+| `GET` | `/sources` | 수집/추출 소스 조회 |
+| `GET` | `/sources/{id}` | 소스 상세 조회 |
+| `GET` | `/health` | 헬스 체크 |
+
+---
+
+## 수동 추출 기능의 현재 위치
+
+텍스트, URL, PDF, 스크린샷, 이메일 입력 기반 추출 기능은 삭제하지 않았습니다. 다만 지금의 메인 제품 설명에서는 **보조 기능**입니다.
+
+이 기능들은 아래처럼 쓰는 것이 맞습니다.
+- 디버그용 추출 확인
+- 품질 비교
+- 레거시 inbox 흐름 유지
+- 추출 엔진 회귀 테스트
+
+즉, 공개 문서의 기본 사용자 시나리오는 `manual extraction` 이 아니라 `personalized notice feed` 입니다.
 
 ---
 
 ## 기술 스택
 
 | 계층 | 기술 |
-|------|------|
-| Frontend | React 19 + Vite 7 + TypeScript 5.9 (strict) |
+|---|---|
+| Frontend | React 19 + Vite 7 + TypeScript 5.9 |
 | Backend | Spring Boot 3.5 + Java 21 + JPA + Flyway |
-| Database | PostgreSQL 16 (Docker) / H2 (테스트) |
-| PDF 추출 | Apache PDFBox 3.0 |
-| OCR | Tesseract (Tess4J 5.13) |
-| HTML 파싱 | Jsoup 1.18 |
-| 빌드 | Gradle 9.3 (API) + npm (Web) |
-| 테스트 | JUnit 5 + AssertJ (API) · Vitest + Testing Library (Web) |
-
----
-
-## 프로젝트 구조
-
-```
-Notice2Action/
-├── apps/
-│   ├── api/                                    # Spring Boot 백엔드
-│   │   └── src/main/java/.../extraction/
-│   │       ├── api/                            #   REST 컨트롤러
-│   │       │   └── dto/                        #   Request/Response DTO (records)
-│   │       ├── service/                        #   추출 엔진, 영속화, URL·PDF·OCR·iCal
-│   │       ├── domain/                         #   SourceCategory enum
-│   │       └── persistence/                    #   JPA 엔티티 + 리포지토리
-│   │
-│   └── web/                                    # React 프론트엔드
-│       └── src/
-│           ├── components/                     #   12개 컴포넌트
-│           │   ├── InboxView.tsx               #     검색/필터/정렬/인박스
-│           │   ├── ActionCard.tsx              #     액션 카드
-│           │   ├── ActionDetailPanel.tsx        #     상세 + 근거
-│           │   ├── SourceIngestionForm.tsx      #     입력 폼 (5종)
-│           │   ├── SourceListView.tsx           #     소스 히스토리
-│           │   ├── ProfileSettings.tsx          #     프로필 설정
-│           │   ├── ThemeToggle.tsx              #     다크모드 토글
-│           │   ├── FileDropZone.tsx             #     드래그앤드롭 업로드
-│           │   ├── SkeletonCard.tsx             #     로딩 스켈레톤
-│           │   └── ErrorBoundary.tsx            #     에러 바운더리
-│           └── lib/                            #   유틸리티
-│               ├── api.ts                      #     fetch 래퍼 (타입 가드 검증)
-│               ├── types.ts                    #     타입 정의 + runtime 타입 가드
-│               ├── router.ts                   #     해시 라우팅
-│               ├── theme.ts                    #     테마 관리
-│               ├── profile.ts                  #     프로필 저장/로드
-│               ├── reminder.ts                 #     리마인더 관리
-│               ├── relevance.ts                #     관련도 계산
-│               ├── csv.ts                      #     CSV 생성
-│               └── dateRange.ts                #     날짜 범위 파싱
-│
-├── docker-compose.yml                          # PostgreSQL 16
-├── CLAUDE.md                                   # Claude Code 프로젝트 메모리
-└── PROJECT_PLAN.md                             # 제품/개발 계획
-```
-
----
-
-## API 엔드포인트
-
-모든 경로의 prefix: `/api/v1`
-
-### 추출
-
-| Method | Path | 설명 |
-|--------|------|------|
-| `POST` | `/extractions/actions` | 텍스트/URL → 액션 추출 + DB 저장 |
-| `POST` | `/extractions/pdf` | PDF 파일 업로드 → 액션 추출 |
-| `POST` | `/extractions/email` | 이메일 본문 → 액션 추출 |
-| `POST` | `/extractions/screenshot` | 스크린샷 OCR → 액션 추출 |
-
-### 액션
-
-| Method | Path | 설명 |
-|--------|------|------|
-| `GET` | `/actions` | 목록 조회 (`sort`, `q`, `category`, `dueDateFrom`, `dueDateTo`, `page`, `size`) |
-| `GET` | `/actions/{id}` | 상세 조회 (근거 snippet 포함) |
-| `PATCH` | `/actions/{id}` | 액션 필드 수정 |
-| `DELETE` | `/actions/{id}` | 액션 삭제 |
-| `GET` | `/actions/calendar.ics` | 전체 액션 캘린더 내보내기 |
-| `GET` | `/actions/{id}/calendar.ics` | 단일 액션 캘린더 내보내기 |
-
-### 소스
-
-| Method | Path | 설명 |
-|--------|------|------|
-| `GET` | `/sources` | 소스 목록 조회 (페이지네이션) |
-| `GET` | `/sources/{id}` | 소스 상세 + 추출된 액션 목록 |
-
-### 기타
-
-| Method | Path | 설명 |
-|--------|------|------|
-| `GET` | `/health` | 헬스 체크 |
+| Database | PostgreSQL 16 |
+| Parsing | Jsoup, 규칙 기반 extractor |
+| OCR / PDF | Tesseract, Apache PDFBox |
+| Test | JUnit 5, AssertJ, Vitest, Testing Library |
 
 ---
 
 ## 로컬 실행
 
 ### Prerequisites
-
-- **Java 21** (Gradle toolchain이 자동 다운로드)
-- **Node.js 18+** / npm
-- **Docker** (PostgreSQL용)
-- **Tesseract** (스크린샷 OCR 사용 시)
-  - macOS: `brew install tesseract tesseract-lang`
-  - 기본 tessdata 경로: `/opt/homebrew/share/tessdata`
+- Java 21
+- Node.js 18+
+- npm
+- Docker
+- Tesseract (스크린샷 OCR 기능을 실제로 사용할 때만 필요)
 
 ### 1. Database
 
@@ -230,7 +163,7 @@ cd apps/api
 ./gradlew bootRun
 ```
 
-API 서버: `http://localhost:8080`
+기본 API 서버: `http://localhost:8080`
 
 ### 3. Frontend
 
@@ -240,69 +173,59 @@ npm install
 npm run dev
 ```
 
-개발 서버: `http://localhost:5173` (Vite proxy → `/api` → `localhost:8080`)
+개발 서버: `http://localhost:5173`
+
+현재 메인 진입점:
+- `http://localhost:5173/#/feed`
+- `http://localhost:5173/#/saved`
+- `http://localhost:5173/#/profile`
+
+보조 경로:
+- `http://localhost:5173/#/extract`
+- `http://localhost:5173/#/inbox`
+- `http://localhost:5173/#/sources`
 
 ---
 
 ## 환경 변수
 
 | 변수 | 기본값 | 설명 |
-|------|--------|------|
+|---|---|---|
 | `SERVER_PORT` | `8080` | API 서버 포트 |
 | `DATABASE_URL` | `jdbc:postgresql://localhost:5432/campus_action_inbox` | DB 접속 URL |
 | `DATABASE_USERNAME` | `campus` | DB 사용자 |
 | `DATABASE_PASSWORD` | `campus` | DB 비밀번호 |
-| `TESSDATA_PATH` | `/opt/homebrew/share/tessdata` | Tesseract 언어 데이터 경로 |
+| `TESSDATA_PATH` | `/opt/homebrew/share/tessdata` | Tesseract 데이터 경로 |
 
 ---
 
 ## 테스트
 
+### Backend
+
 ```bash
-# Backend — 15 테스트 클래스, ~179 테스트
-cd apps/api && ./gradlew test
-
-# Frontend — 17 테스트 파일, ~192 테스트
-cd apps/web && npx vitest run
-
-# Frontend — 타입 체크
-cd apps/web && npm run typecheck
+cd apps/api
+./gradlew test
 ```
 
-### 백엔드 테스트 범위
-추출 엔진, confidence 점수, 날짜 파싱, 중복 감지, 검색/필터, 액션 수정,
-PDF 추출, 스크린샷 OCR, URL 페칭, 이메일 추출, 캘린더 생성, 소스 히스토리,
-에러 핸들링, 프로필 정렬, 쿼리 파라미터 검증
+### Frontend
 
-### 프론트엔드 테스트 범위
-컴포넌트 렌더링, API 클라이언트, runtime 타입 가드, CSV 생성, 날짜 범위,
-D-Day 계산, 라벨 포맷, 프로필 관리, 리마인더, 해시 라우팅, 테마 전환
-
----
-
-## 설계 원칙
-
-1. **요약보다 행동** — 원문 소개가 아니라 "해야 할 일"이 우선
-2. **근거 없는 추론 금지** — 날짜·대상·제출물은 원문에 근거가 있어야 함
-3. **Deterministic first** — 규칙 기반 우선, LLM은 불확실할 때만 fallback
-4. **Trust-building UI** — 추출 결과와 근거 snippet을 함께 표시
+```bash
+cd apps/web
+npm run test
+npm run typecheck
+npm run build
+```
 
 ---
 
-## 로드맵
+## 현재 상태와 후속 과제
 
-| 단계 | 기능 | 상태 |
-|------|------|------|
-| **V1** | 텍스트/URL 입력, 액션 추출, 인박스, 상세+근거 | ✅ |
-| **V1.5** | 추출 개선 (날짜 7패턴, 시스템 17개, 준비물 22개, 복수 액션) | ✅ |
-| **V2** | PDF 업로드, 스크린샷 OCR, 프로필 필터링, 마감 정렬 | ✅ |
-| **V3** | 키보드 접근성, 신뢰도 점수 시각화, 에러 복구 UI | ✅ |
-| **V4** | 이메일 추출, 캘린더 export, 소스 히스토리, 안정성 개선 | ✅ |
-| **V5** | 다크모드, URL 라우팅, 날짜 필터, CSV 내보내기, 리마인더 | ✅ |
-| V-next | LLM fallback, 팀 모드, 캘린더 연동, 알림 push | 예정 |
+현재 `main` 기준으로 제품의 중심은 이미 개인화 공지 피드입니다. 남아 있는 후속 과제는 아래처럼 품질 보정 성격이 강합니다.
 
----
+- relevance reason 문구 더 다듬기
+- table-heavy 공지 본문 축약
+- 상세 evidence/snippet 품질 보정
+- 게시판 확장 여부 판단
 
-## License
-
-MIT
+레거시 수동 추출 기능은 계속 유지하되, 메인 제품 포지션은 바꾸지 않습니다.

@@ -1,58 +1,59 @@
 # Notice2Action CUK - Project plan
 
 ## 1. Pitch
-성심교정 학생이 공지/PDF/이메일/스크린샷을 넣으면,
-중요한 내용을 읽기 쉽게 요약하는 것이 아니라
-**실제로 해야 할 일(action)**만 추출해 주는 서비스.
+Notice2Action는 가톨릭대학교 성심교정 대표 공지를 자동 수집하고,
+학생 프로필에 맞춰 **내게 중요한 공지 전체 피드**를 먼저 보여주는 서비스입니다.
 
-## 2. Why it is interview-friendly
-- 문제를 10초 안에 설명할 수 있음
-- 학생 실사용성이 높음
-- AI가 왜 필요한지 설명이 쉬움
-- 데모가 강함
-- React + Spring Boot로 협업 친화적
+핵심은 공지를 요약하는 것이 아니라,
+- 이 공지가 나와 관련 있는지
+- 지금 행동이 필요한지
+- 왜 그렇게 판단했는지
+를 빠르게 확인할 수 있게 만드는 것입니다.
 
-## 3. Demo story
-1. 학교 공지 텍스트 또는 URL 입력
-2. 백엔드가 action / due date / system hint / evidence 추출
-3. 프론트에서 action inbox에 정리
-4. detail card에서 evidence snippet 보여주기
-5. "이 서비스는 요약기가 아니라 action inbox"라고 마무리
+## 2. Product story
+1. 시스템이 성심교정 대표 공지를 자동 수집한다.
+2. 로컬 프로필을 기준으로 관련도와 중요 이유를 계산한다.
+3. 피드에서 중요한 공지를 먼저 본다.
+4. 상세 화면에서 원문, 행동 블록, 근거를 함께 확인한다.
+5. 저장하거나 숨겨서 다시 관리한다.
 
-## 4. MVP screens
-- Source ingestion
-- Action inbox
-- Action detail
+즉, 이 서비스의 메인 경험은 `입력 도구`가 아니라 `개인화 공지 피드`입니다.
 
-## 5. 4-week build plan
-### Week 1
-- repo setup
-- React/Vite strict setup
-- Spring Boot API scaffold
-- extraction DTO and service
-- local postgres and migration
+## 3. Why this product matters
+학생은 보통 공지를 못 읽는 것이 아니라, 공지 속에서 **내가 지금 신경 써야 할 것**을 빠르게 가려내지 못합니다.
 
-### Week 2
-- text ingestion form
-- first action extraction heuristic
-- inbox list UI
-- action detail card
+이 제품은 그 문제를 다음 방식으로 줄입니다.
+- 대표 공지를 자동 수집한다.
+- 프로필 기반으로 우선순위를 계산한다.
+- 정보성 공지와 행동 필요 공지를 구분한다.
+- 상세 화면에서 근거를 같이 보여 신뢰를 만든다.
 
-### Week 3
-- URL/PDF input
-- evidence snippet rendering
-- better due date parsing
-- system hint extraction
+## 4. Current MVP screens
+- Personalized feed
+- Notice detail
+- Saved notices
+- Profile filters
 
-### Week 4
-- fallback LLM integration
-- screenshot input
-- polish demo data
-- interview script and README cleanup
+## 5. Supporting capabilities
+아래 기능은 아직 유효하지만 현재 메인 UX는 아닙니다.
+- legacy manual extraction
+- legacy action inbox
+- PDF / screenshot / email extraction
+- calendar export
+- source history
 
-## 6. Post-MVP ideas
-- user profile filtering
-- reminders
-- campus system deeplink hints
-- email forwarding
-- club/team project mode
+이 기능들은 디버그, 비교, 회귀 테스트, 보조 워크플로 용도로 남아 있습니다.
+
+## 6. Near-term product work
+- relevance 품질과 reason 문구 개선
+- detail evidence 품질 개선
+- table-heavy body 축약
+- 게시판 확장 여부 판단
+- image-only 공지 처리 품질 보정
+
+## 7. Engineering stance
+- Deterministic first
+- 근거 없는 추론 금지
+- trust-building UI
+- strict typing
+- frontend/backend contract drift 최소화
