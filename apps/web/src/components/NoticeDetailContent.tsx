@@ -1,5 +1,24 @@
-import type { ReactElement } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 import type { PersonalizedNoticeDetail } from '../lib/types';
+
+const BODY_COLLAPSE_LINE_THRESHOLD = 12;
+const BODY_COLLAPSE_CHAR_THRESHOLD = 700;
+const BODY_COLLAPSE_VISIBLE_LINES = 18;
+const TABLE_HEAVY_LINE_THRESHOLD = 3;
+
+function shouldCollapseBody(body: string): boolean {
+  const lines = body.split(/\r?\n/);
+  const tableHeavyLineCount = lines.filter((line) => line.includes(' | ')).length;
+  return (
+    lines.length > BODY_COLLAPSE_LINE_THRESHOLD
+    || body.length > BODY_COLLAPSE_CHAR_THRESHOLD
+    || tableHeavyLineCount >= TABLE_HEAVY_LINE_THRESHOLD
+  );
+}
+
+function getCollapsedBody(body: string): string {
+  return body.split(/\r?\n/).slice(0, BODY_COLLAPSE_VISIBLE_LINES).join('\n');
+}
 
 type NoticeDetailContentProps = Readonly<{
   detail: PersonalizedNoticeDetail;
@@ -18,6 +37,15 @@ export function NoticeDetailContent({
   onHide,
   onUnhide,
 }: NoticeDetailContentProps): ReactElement {
+  const [isBodyExpanded, setIsBodyExpanded] = useState(false);
+  const bodyIsCollapsible = useMemo(() => shouldCollapseBody(detail.body), [detail.body]);
+  const visibleBody = useMemo(() => {
+    if (!bodyIsCollapsible || isBodyExpanded) {
+      return detail.body;
+    }
+    return getCollapsedBody(detail.body);
+  }, [bodyIsCollapsible, detail.body, isBodyExpanded]);
+
   return (
     <section className="panel detail-panel">
       <div className="panel-header">
@@ -69,6 +97,16 @@ export function NoticeDetailContent({
                 {block.dueAtLabel !== null ? <p>마감: {block.dueAtLabel}</p> : null}
                 {block.systemHint !== null ? <p>시스템: {block.systemHint}</p> : null}
                 {block.requiredItems.length > 0 ? <p>준비물: {block.requiredItems.join(', ')}</p> : null}
+                {block.evidence.length > 0 ? (
+                  <div className="detail-block-evidence">
+                    <p className="detail-block-evidence-title">근거</p>
+                    <ul>
+                      {block.evidence.map((evidence, index) => (
+                        <li key={`${detail.id}-${block.title}-evidence-${index}`}>{evidence.snippet}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
@@ -77,7 +115,15 @@ export function NoticeDetailContent({
 
       <div className="detail-section">
         <h3>원문</h3>
-        <pre className="detail-body">{detail.body}</pre>
+        <pre className={`detail-body${bodyIsCollapsible && !isBodyExpanded ? ' detail-body-collapsed' : ''}`}>{visibleBody}</pre>
+        {bodyIsCollapsible ? (
+          <button
+            className="secondary-btn detail-body-toggle"
+            onClick={() => { setIsBodyExpanded((current) => !current); }}
+          >
+            {isBodyExpanded ? '본문 접기' : '본문 더보기'}
+          </button>
+        ) : null}
       </div>
 
       <div className="detail-section">
@@ -93,18 +139,6 @@ export function NoticeDetailContent({
         )}
       </div>
 
-      <div className="detail-section">
-        <h3>근거 snippet</h3>
-        {detail.actionBlocks.flatMap((block) => block.evidence).length === 0 ? (
-          <p>근거 없음</p>
-        ) : (
-          <ul>
-            {detail.actionBlocks.flatMap((block) => block.evidence).map((evidence, index) => (
-              <li key={`${detail.id}-evidence-${index}`}>{evidence.snippet}</li>
-            ))}
-          </ul>
-        )}
-      </div>
     </section>
   );
 }
