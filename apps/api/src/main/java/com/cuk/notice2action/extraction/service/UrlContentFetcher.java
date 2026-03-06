@@ -25,7 +25,10 @@ public class UrlContentFetcher {
           .timeout(TIMEOUT_MS)
           .maxBodySize(MAX_BODY_SIZE_BYTES)
           .followRedirects(true)
-          .userAgent("Notice2Action/1.0")
+          .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+          .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+          .header("Accept-Language", "ko-KR,ko;q=0.9,en;q=0.8")
+          .header("Accept-Encoding", "gzip, deflate, br")
           .get();
 
       String title = document.title();

@@ -12,7 +12,7 @@ public class EligibilityExtractor {
       "지원자격", "참여자격", "전체 학생",
       "졸업예정자", "대학원생", "해당 학과",
       "대상", "학년", "전공",
-      "재학생", "복학생", "신입생", "수료자", "휴학생"
+      "재학생", "복학생", "외국인", "유학생", "신입생", "수료자", "휴학생"
   );
 
   public String extract(String text, List<EvidenceSnippetDto> evidence) {

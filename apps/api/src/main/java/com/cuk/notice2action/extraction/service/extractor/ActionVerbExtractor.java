@@ -11,7 +11,8 @@ public class ActionVerbExtractor {
   private static final List<String> ACTION_VERBS = List.of(
       "신청", "제출", "완료", "등록", "참석",
       "납부", "수강", "접수", "지원", "확인",
-      "작성", "출석", "발급", "예약", "다운로드"
+      "작성", "출석", "발급", "예약", "다운로드",
+      "업로드", "수령"
   );
 
   private static final Pattern NON_ACTION_CONTEXT = Pattern.compile(
