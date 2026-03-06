@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import com.cuk.notice2action.extraction.api.dto.NoticeAttachmentDto;
 import com.cuk.notice2action.extraction.api.dto.NoticeFeedResponse;
 import com.cuk.notice2action.extraction.api.dto.PersonalizedNoticeDetailDto;
+import com.cuk.notice2action.extraction.persistence.entity.EvidenceSnippetEntity;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
 import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
 import com.cuk.notice2action.extraction.persistence.repository.NoticeSourceRepository;
@@ -260,5 +261,61 @@ class NoticeFeedServiceTest {
     assertThat(detail.actionBlocks().getFirst().title()).isEqualTo("Self-making Project Portfolio 참여 신청");
     assertThat(detail.actionBlocks()).extracting(block -> block.title())
         .doesNotContain("참여학생 결과 확인");
+  }
+
+  @Test
+  void expandsDetailDueLabelAndFiltersEvidenceToContextualTopThree() {
+    UUID noticeId = UUID.randomUUID();
+    ExtractedActionEntity action = new ExtractedActionEntity(
+        UUID.randomUUID(),
+        null,
+        "신입생 수강신청",
+        "할 일: 신입생 수강신청. 마감: ~ 3/9.",
+        OffsetDateTime.parse("2026-03-08T15:00:00Z"),
+        "~ 3/9",
+        "2026학년도 신입생 수강신청 안내",
+        "[]",
+        null,
+        false,
+        0.79,
+        OffsetDateTime.now(ZoneOffset.ofHours(9))
+    );
+    action.addEvidence(new EvidenceSnippetEntity(UUID.randomUUID(), action, "dueAtLabel", "~ 3/9", 0.85, OffsetDateTime.now(ZoneOffset.ofHours(9))));
+    action.addEvidence(new EvidenceSnippetEntity(UUID.randomUUID(), action, "actionVerb", "이수 - 자세한 내용은 [2026 학사제도 안내책자] 확인바랍니다.", 0.76, OffsetDateTime.now(ZoneOffset.ofHours(9))));
+    action.addEvidence(new EvidenceSnippetEntity(UUID.randomUUID(), action, "eligibility", "2026학년도 신입생 수강신청 안내", 0.75, OffsetDateTime.now(ZoneOffset.ofHours(9))));
+
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        noticeId,
+        "2026학년도 신입생 수강신청 안내",
+        """
+        2026학년도 신입생 수강신청 안내
+        수강신청 변경기간:
+        2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00
+        (주말 및 공휴일 제외)
+        STEP 1. 교양영역에서 필수로 수강해야할 과목을 우선적으로 수강신청합니다.
+        """,
+        LocalDate.of(2026, 2, 13),
+        "https://example.com/notices/268547",
+        List.of(),
+        "action_required",
+        OffsetDateTime.parse("2026-03-08T15:00:00Z"),
+        List.of(action)
+    );
+
+    when(noticeSourceRepository.findDetailById(noticeId)).thenReturn(java.util.Optional.of(notice));
+
+    PersonalizedNoticeDetailDto detail = service.getDetail(noticeId, new NoticeProfile("컴퓨터정보공학부", 1, null, List.of()));
+
+    assertThat(detail.actionBlocks()).singleElement().satisfies(block -> {
+      assertThat(block.dueAtLabel())
+          .contains("2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00")
+          .contains("(주말 및 공휴일 제외)");
+      assertThat(block.evidence()).hasSizeLessThanOrEqualTo(3);
+      assertThat(block.evidence()).extracting(evidence -> evidence.snippet())
+          .anySatisfy(snippet -> assertThat(snippet).contains("수강신청 변경기간"))
+          .noneSatisfy(snippet -> assertThat(snippet).isEqualTo("~ 3/9"))
+          .noneSatisfy(snippet -> assertThat(snippet).contains("자세한 내용은"))
+          .noneSatisfy(snippet -> assertThat(snippet).isEqualTo("2026학년도 신입생 수강신청 안내"));
+    });
   }
 }

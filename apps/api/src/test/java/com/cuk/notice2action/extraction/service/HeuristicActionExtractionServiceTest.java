@@ -182,6 +182,28 @@ class HeuristicActionExtractionServiceTest {
     }
 
     @Test
+    void due_evidence_uses_context_line_instead_of_compact_token() {
+      ActionExtractionResponse response = service.extract(request(
+          """
+          2026학년도 신입생 수강신청 안내
+          수강신청 변경기간:
+          2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00 (주말 및 공휴일 제외)
+          """,
+          "2026학년도 신입생 수강신청 안내"
+      ));
+
+      EvidenceSnippetDto dueEvidence = response.actions().getFirst().evidence().stream()
+          .filter(evidence -> "dueAtLabel".equals(evidence.fieldName()))
+          .findFirst()
+          .orElseThrow();
+
+      assertThat(dueEvidence.snippet())
+          .contains("수강신청 변경기간")
+          .contains("2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00")
+          .isNotEqualTo("~ 3/9");
+    }
+
+    @Test
     void lecture_schedule_range_is_not_treated_as_deadline() {
       ActionExtractionResponse response =
           service.extract(request("강의일정 : 2026년 3월 16일(월) ~ 6월 5일(금), 12주간 진행"));

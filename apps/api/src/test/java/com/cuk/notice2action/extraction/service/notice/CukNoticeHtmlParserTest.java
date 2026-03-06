@@ -97,6 +97,27 @@ class CukNoticeHtmlParserTest {
         .doesNotContain("QUICK MENU");
   }
 
+  @Test
+  void deduplicatesNestedScheduleBodyWhileKeepingStructuredBlocks() throws IOException {
+    String html = readFixture("fixtures/notice-feed/real/detail-268547-schedule-heavy.html");
+
+    CukNoticeDetail detail = parser.parseDetail(
+        html,
+        URI.create("https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268547&srCategoryId=21")
+    );
+
+    assertThat(detail.title()).isEqualTo("2026학년도 신입생 수강신청 안내");
+    assertThat(detail.body())
+        .contains("수강신청:")
+        .contains("수강신청 변경기간:")
+        .contains("STEP 1. 교양영역에서 필수로 수강해야할 과목을 우선적으로 수강신청합니다.")
+        .contains("교시 | 수업시간")
+        .doesNotContain("수강신청: 2026.02.25.(수) 09:00 ~ 17:00 2026.02.26.(목) 09:00 ~ 17:00 수강신청 변경기간:");
+
+    assertThat(detail.body().lines().filter(line -> line.contains("2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00")).count())
+        .isEqualTo(1);
+  }
+
   private String readFixture(String path) throws IOException {
     return new ClassPathResource(path).getContentAsString(StandardCharsets.UTF_8);
   }

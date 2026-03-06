@@ -61,4 +61,39 @@ describe('NoticeDetailContent', () => {
 
     expect(screen.getByText('행동 없음')).toBeInTheDocument();
   });
+
+  it('renders expanded due label and contextual evidence snippets', () => {
+    const detail = makeNoticeDetail({
+      actionBlocks: [
+        {
+          title: '신입생 수강신청',
+          summary: '할 일: 신입생 수강신청. 마감: 2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00 (주말 및 공휴일 제외).',
+          dueAtIso: '2026-03-08T15:00:00+09:00',
+          dueAtLabel: '2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00 (주말 및 공휴일 제외)',
+          requiredItems: [],
+          systemHint: null,
+          evidence: [
+            {
+              fieldName: 'dueAtLabel',
+              snippet: '수강신청 변경기간: 2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00 (주말 및 공휴일 제외)',
+              confidence: 0.95,
+            },
+          ],
+          confidenceScore: 0.87,
+        },
+      ],
+    });
+
+    render(
+      <NoticeDetailContent
+        detail={detail}
+        isSaved={false}
+        isHidden={false}
+        onToggleSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('마감: 2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00 (주말 및 공휴일 제외)')).toBeInTheDocument();
+    expect(screen.getByText('수강신청 변경기간: 2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00 (주말 및 공휴일 제외)')).toBeInTheDocument();
+  });
 });

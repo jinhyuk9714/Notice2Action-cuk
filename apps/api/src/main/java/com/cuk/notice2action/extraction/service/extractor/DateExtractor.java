@@ -117,7 +117,7 @@ public class DateExtractor {
     if (!candidates.isEmpty()) {
       candidates.sort((a, b) -> Double.compare(b.score(), a.score()));
       ScoredDateMatch best = candidates.getFirst();
-      evidence.add(new EvidenceSnippetDto("dueAtLabel", best.dateMatch().label(), best.score()));
+      evidence.add(new EvidenceSnippetDto("dueAtLabel", contextualDateSnippet(text, best.dateMatch().label()), best.score()));
       return best.dateMatch();
     }
 
@@ -127,28 +127,28 @@ public class DateExtractor {
     match = tryRelativeDay(text);
     if (match != null) {
       double confidence = isNearDeadlineKeyword(text, match.label()) ? 0.58 : 0.50;
-      evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), confidence));
+      evidence.add(new EvidenceSnippetDto("dueAtLabel", contextualDateSnippet(text, match.label()), confidence));
       return match;
     }
 
     match = tryRelativeWeekDay(text);
     if (match != null) {
       double confidence = isNearDeadlineKeyword(text, match.label()) ? 0.55 : 0.48;
-      evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), confidence));
+      evidence.add(new EvidenceSnippetDto("dueAtLabel", contextualDateSnippet(text, match.label()), confidence));
       return match;
     }
 
     match = tryRelativeNUnit(text);
     if (match != null) {
       double confidence = isNearDeadlineKeyword(text, match.label()) ? 0.55 : 0.48;
-      evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), confidence));
+      evidence.add(new EvidenceSnippetDto("dueAtLabel", contextualDateSnippet(text, match.label()), confidence));
       return match;
     }
 
     match = tryRelativePeriodEnd(text);
     if (match != null) {
       double confidence = isNearDeadlineKeyword(text, match.label()) ? 0.52 : 0.45;
-      evidence.add(new EvidenceSnippetDto("dueAtLabel", match.label(), confidence));
+      evidence.add(new EvidenceSnippetDto("dueAtLabel", contextualDateSnippet(text, match.label()), confidence));
       return match;
     }
 
@@ -451,6 +451,68 @@ public class DateExtractor {
 
   private String normalizeDateLabel(String label) {
     return label.replaceAll("\\.\\(", ". (").replaceAll("\\s+", " ").trim();
+  }
+
+  private String contextualDateSnippet(String text, String label) {
+    List<String> lines = text == null ? List.of() : text.lines()
+        .map(String::trim)
+        .filter(line -> !line.isBlank())
+        .toList();
+    if (lines.isEmpty()) {
+      return normalizeDateLabel(label);
+    }
+
+    int matchedIndex = -1;
+    for (int index = 0; index < lines.size(); index++) {
+      if (lineMatchesLabel(lines.get(index), label)) {
+        matchedIndex = index;
+        break;
+      }
+    }
+    if (matchedIndex < 0) {
+      return normalizeDateLabel(label);
+    }
+
+    String snippet = lines.get(matchedIndex);
+    if (matchedIndex > 0) {
+      String previous = lines.get(matchedIndex - 1);
+      if (previous.endsWith(":") || previous.contains("기간")) {
+        snippet = previous + " " + snippet;
+      }
+    }
+    if (matchedIndex + 1 < lines.size()) {
+      String next = lines.get(matchedIndex + 1);
+      if (isTrailingConditionLine(next)) {
+        snippet = snippet + " " + next;
+      }
+    }
+    return normalizeWhitespace(snippet);
+  }
+
+  private boolean lineMatchesLabel(String line, String label) {
+    String normalizedLine = normalizeContextValue(line);
+    String normalizedLabel = normalizeContextValue(label);
+    return !normalizedLabel.isEmpty() && normalizedLine.contains(normalizedLabel);
+  }
+
+  private boolean isTrailingConditionLine(String line) {
+    String normalized = normalizeWhitespace(line);
+    return normalized.startsWith("(")
+        || normalized.contains("주말")
+        || normalized.contains("공휴일")
+        || normalized.contains("제외");
+  }
+
+  private String normalizeContextValue(String value) {
+    return value == null ? "" : value
+        .replaceAll("\\s+", "")
+        .replaceAll("[()\\[\\].,:~～\\-_/]", "")
+        .replaceAll("^0+", "")
+        .toLowerCase(Locale.ROOT);
+  }
+
+  private String normalizeWhitespace(String value) {
+    return value == null ? "" : value.replaceAll("\\s+", " ").trim();
   }
 
   private boolean isPartOfFullYearKoreanDate(String text, int matchStart) {

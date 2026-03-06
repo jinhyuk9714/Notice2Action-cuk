@@ -322,7 +322,7 @@ public class NoticeFeedService {
         ));
 
     return grouped.values().stream()
-        .map(group -> mergeActionFamily(group, sourceTitleTask))
+        .map(group -> mergeActionFamily(group, sourceTitleTask, source.getTitle(), source.getRawText()))
         .filter(candidate -> shouldRetain(candidate, sourceTitleTask))
         .sorted(Comparator
             .comparingInt(ActionBlockCandidate::representativeScore).reversed()
@@ -352,7 +352,12 @@ public class NoticeFeedService {
     );
   }
 
-  private ActionBlockCandidate mergeActionFamily(List<ActionBlockCandidate> group, String sourceTitleTask) {
+  private ActionBlockCandidate mergeActionFamily(
+      List<ActionBlockCandidate> group,
+      String sourceTitleTask,
+      String sourceTitle,
+      String rawText
+  ) {
     ActionBlockCandidate representative = group.stream()
         .max(Comparator.comparingInt(ActionBlockCandidate::representativeScore)
             .thenComparingInt(candidate -> -candidate.originalIndex()))
@@ -377,6 +382,8 @@ public class NoticeFeedService {
         ? representative.systemHint()
         : group.stream().map(ActionBlockCandidate::systemHint).filter(NoticeFeedService::hasText).findFirst().orElse(null);
 
+    String detailDueAtLabel = expandDetailDueLabel(rawText, group, sourceTitleTask, dueAtIso, dueAtLabel);
+
     List<String> requiredItems = new ArrayList<>();
     Set<String> seenRequiredItems = new LinkedHashSet<>();
     for (ActionBlockCandidate candidate : group) {
@@ -398,18 +405,30 @@ public class NoticeFeedService {
       }
     }
 
-    String summary = actionSummaryBuilder.build(finalTitle, dueAtLabel, systemHint, requiredItems, representative.summary());
+    List<EvidenceSnippetDto> refinedEvidence = refineDetailEvidence(
+        rawText,
+        sourceTitle,
+        finalTitle,
+        dueAtIso,
+        detailDueAtLabel,
+        group,
+        systemHint,
+        requiredItems,
+        mergedEvidence
+    );
+
+    String summary = actionSummaryBuilder.build(finalTitle, detailDueAtLabel, systemHint, requiredItems, representative.summary());
     double confidenceScore = group.stream().mapToDouble(ActionBlockCandidate::confidenceScore).max().orElse(representative.confidenceScore());
-    int score = scoreRepresentativeAction(finalTitle, summary, dueAtIso, dueAtLabel, systemHint, requiredItems, sourceTitleTask);
+    int score = scoreRepresentativeAction(finalTitle, summary, dueAtIso, detailDueAtLabel, systemHint, requiredItems, sourceTitleTask);
 
     return new ActionBlockCandidate(
         finalTitle,
         summary,
         dueAtIso,
-        dueAtLabel,
+        detailDueAtLabel,
         requiredItems,
         systemHint,
-        mergedEvidence,
+        refinedEvidence,
         confidenceScore,
         group.stream().mapToInt(ActionBlockCandidate::originalIndex).min().orElse(representative.originalIndex()),
         score
@@ -540,6 +559,282 @@ public class NoticeFeedService {
       return "";
     }
     return DUPLICATE_SUFFIX.matcher(value.trim()).replaceFirst("").trim();
+  }
+
+  private String expandDetailDueLabel(
+      String rawText,
+      List<ActionBlockCandidate> group,
+      String sourceTitleTask,
+      OffsetDateTime dueAtIso,
+      String compactDueAtLabel
+  ) {
+    if (!hasText(rawText) || !hasText(compactDueAtLabel)) {
+      return compactDueAtLabel;
+    }
+    List<String> lines = splitDetailLines(rawText);
+    int dueLineIndex = findDueLineIndex(lines, dueAtIso, compactDueAtLabel, buildTaskTerms(group, sourceTitleTask));
+    if (dueLineIndex < 0) {
+      return compactDueAtLabel;
+    }
+    String expanded = lines.get(dueLineIndex);
+    if (dueLineIndex + 1 < lines.size() && isTrailingConditionLine(lines.get(dueLineIndex + 1))) {
+      expanded = expanded + " " + lines.get(dueLineIndex + 1);
+    }
+    return normalizeInlineText(expanded);
+  }
+
+  private List<EvidenceSnippetDto> refineDetailEvidence(
+      String rawText,
+      String sourceTitle,
+      String finalTitle,
+      OffsetDateTime dueAtIso,
+      String detailDueAtLabel,
+      List<ActionBlockCandidate> group,
+      String systemHint,
+      List<String> requiredItems,
+      List<EvidenceSnippetDto> mergedEvidence
+  ) {
+    List<EvidenceSnippetDto> candidates = new ArrayList<>();
+    String dueContextSnippet = buildDueContextSnippet(rawText, group, dueAtIso, detailDueAtLabel);
+    if (hasText(dueContextSnippet)) {
+      candidates.add(new EvidenceSnippetDto("dueAtLabel", dueContextSnippet, 0.95));
+    }
+    for (EvidenceSnippetDto evidence : mergedEvidence) {
+      String snippet = normalizeInlineText(evidence.snippet());
+      if (!isUsefulEvidence(snippet, sourceTitle, finalTitle, detailDueAtLabel, systemHint, requiredItems)) {
+        continue;
+      }
+      candidates.add(new EvidenceSnippetDto(evidence.fieldName(), snippet, evidence.confidence()));
+    }
+
+    List<EvidenceSnippetDto> sorted = candidates.stream()
+        .sorted(Comparator
+            .comparingInt((EvidenceSnippetDto evidence) -> evidencePriority(evidence.fieldName()))
+            .thenComparing((EvidenceSnippetDto evidence) -> !hasPreferredEvidenceLength(evidence.snippet()))
+            .thenComparing(EvidenceSnippetDto::confidence, Comparator.reverseOrder())
+            .thenComparing((EvidenceSnippetDto evidence) -> evidence.snippet().length(), Comparator.reverseOrder()))
+        .toList();
+
+    List<EvidenceSnippetDto> refined = new ArrayList<>();
+    for (EvidenceSnippetDto evidence : sorted) {
+      if (isRedundantEvidence(refined, evidence.snippet())) {
+        continue;
+      }
+      refined.add(evidence);
+      if (refined.size() == 3) {
+        break;
+      }
+    }
+    return refined;
+  }
+
+  private String buildDueContextSnippet(
+      String rawText,
+      List<ActionBlockCandidate> group,
+      OffsetDateTime dueAtIso,
+      String detailDueAtLabel
+  ) {
+    if (!hasText(rawText) || !hasText(detailDueAtLabel)) {
+      return null;
+    }
+    List<String> lines = splitDetailLines(rawText);
+    int dueLineIndex = findDueLineIndex(lines, dueAtIso, detailDueAtLabel, buildTaskTerms(group, null));
+    if (dueLineIndex < 0) {
+      return detailDueAtLabel;
+    }
+
+    String snippet = lines.get(dueLineIndex);
+    if (dueLineIndex > 0 && isDueHeadingLine(lines.get(dueLineIndex - 1))) {
+      snippet = lines.get(dueLineIndex - 1) + " " + snippet;
+    }
+    if (dueLineIndex + 1 < lines.size() && isTrailingConditionLine(lines.get(dueLineIndex + 1))) {
+      snippet = snippet + " " + lines.get(dueLineIndex + 1);
+    }
+    return normalizeInlineText(snippet);
+  }
+
+  private int findDueLineIndex(
+      List<String> lines,
+      OffsetDateTime dueAtIso,
+      String dueAtLabel,
+      List<String> taskTerms
+  ) {
+    for (int index = 0; index < lines.size(); index++) {
+      if (lineMatchesDueInstant(lines.get(index), dueAtIso)) {
+        return index;
+      }
+    }
+    for (int index = 0; index < lines.size(); index++) {
+      if (lineMatchesDueLabel(lines.get(index), dueAtLabel)) {
+        return index;
+      }
+    }
+    for (int index = 0; index < lines.size(); index++) {
+      String line = lines.get(index);
+      if (!looksLikeDueLine(line)) {
+        continue;
+      }
+      if (matchesTaskWindow(lines, index, taskTerms)) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  private boolean lineMatchesDueInstant(String line, OffsetDateTime dueAtIso) {
+    if (dueAtIso == null) {
+      return false;
+    }
+    OffsetDateTime localDueAt = dueAtIso.withOffsetSameInstant(APP_OFFSET);
+    String normalizedLine = normalizeMatchValue(line);
+    List<String> tokens = List.of(
+        String.format(Locale.ROOT, "%04d%02d%02d", localDueAt.getYear(), localDueAt.getMonthValue(), localDueAt.getDayOfMonth()),
+        String.format(Locale.ROOT, "%02d%d", localDueAt.getMonthValue(), localDueAt.getDayOfMonth()),
+        String.format(Locale.ROOT, "%d%02d", localDueAt.getMonthValue(), localDueAt.getDayOfMonth()),
+        String.format(Locale.ROOT, "%02d%d%02d%02d", localDueAt.getMonthValue(), localDueAt.getDayOfMonth(), localDueAt.getHour(), localDueAt.getMinute())
+    );
+    return tokens.stream()
+        .filter(NoticeFeedService::hasText)
+        .anyMatch(normalizedLine::contains);
+  }
+
+  private List<String> buildTaskTerms(List<ActionBlockCandidate> group, String sourceTitleTask) {
+    Set<String> terms = new LinkedHashSet<>();
+    if (hasText(sourceTitleTask)) {
+      terms.add(sourceTitleTask);
+      String family = extractActionFamily(normalizeActionTitle(sourceTitleTask));
+      if (family != null) {
+        terms.add(family);
+      }
+    }
+    for (ActionBlockCandidate candidate : group) {
+      if (hasText(candidate.title())) {
+        terms.add(stripDuplicateSuffix(candidate.title()));
+        String family = extractActionFamily(normalizeActionTitle(candidate.title()));
+        if (family != null) {
+          terms.add(family);
+        }
+      }
+    }
+    return new ArrayList<>(terms);
+  }
+
+  private boolean matchesTaskWindow(List<String> lines, int index, List<String> taskTerms) {
+    if (taskTerms == null || taskTerms.isEmpty()) {
+      return false;
+    }
+    String current = normalizeMatchValue(lines.get(index));
+    String previous = index > 0 ? normalizeMatchValue(lines.get(index - 1)) : "";
+    for (String term : taskTerms) {
+      String normalizedTerm = normalizeMatchValue(term);
+      if (normalizedTerm.isEmpty()) {
+        continue;
+      }
+      if (current.contains(normalizedTerm) || previous.contains(normalizedTerm)) {
+        return true;
+      }
+    }
+    return index > 0 && isDueHeadingLine(lines.get(index - 1));
+  }
+
+  private boolean lineMatchesDueLabel(String line, String dueAtLabel) {
+    String normalizedLine = normalizeMatchValue(line);
+    String normalizedDueLabel = normalizeMatchValue(dueAtLabel);
+    return hasText(normalizedDueLabel) && normalizedLine.contains(normalizedDueLabel);
+  }
+
+  private boolean looksLikeDueLine(String line) {
+    String normalized = normalizeInlineText(line);
+    return normalized.contains("~")
+        || normalized.matches(".*20\\d{2}.*\\d{1,2}:\\d{2}.*")
+        || normalized.matches(".*\\d{1,2}[./]\\d{1,2}.*");
+  }
+
+  private boolean isDueHeadingLine(String line) {
+    String normalized = normalizeInlineText(line);
+    return normalized.endsWith(":")
+        || normalized.contains("기간")
+        || normalized.contains("마감");
+  }
+
+  private boolean isTrailingConditionLine(String line) {
+    String normalized = normalizeInlineText(line);
+    return normalized.startsWith("(")
+        || normalized.contains("주말")
+        || normalized.contains("공휴일")
+        || normalized.contains("제외");
+  }
+
+  private List<String> splitDetailLines(String rawText) {
+    return rawText == null ? List.of() : rawText.lines()
+        .map(NoticeFeedService::normalizeInlineText)
+        .filter(NoticeFeedService::hasText)
+        .toList();
+  }
+
+  private boolean isUsefulEvidence(
+      String snippet,
+      String sourceTitle,
+      String finalTitle,
+      String detailDueAtLabel,
+      String systemHint,
+      List<String> requiredItems
+  ) {
+    if (!hasText(snippet) || snippet.length() < 12) {
+      return false;
+    }
+    String normalizedSnippet = normalizeMatchValue(snippet);
+    if (normalizedSnippet.equals(normalizeMatchValue(sourceTitle))
+        || normalizedSnippet.equals(normalizeMatchValue(finalTitle))
+        || normalizedSnippet.equals(normalizeMatchValue(detailDueAtLabel))) {
+      return false;
+    }
+    if (snippet.contains("자세한 내용은")
+        || snippet.contains("확인바랍니다")
+        || snippet.contains("참고")
+        || snippet.contains("이수")) {
+      return false;
+    }
+    if (!hasPreferredEvidenceLength(snippet)
+        && !(hasText(systemHint) && snippet.contains(systemHint))
+        && requiredItems.stream().noneMatch(snippet::contains)) {
+      return false;
+    }
+    return true;
+  }
+
+  private boolean hasPreferredEvidenceLength(String snippet) {
+    return snippet.length() >= 12 && snippet.length() <= 140;
+  }
+
+  private int evidencePriority(String fieldName) {
+    return switch (fieldName) {
+      case "dueAtLabel" -> 0;
+      case "systemHint" -> 1;
+      case "requiredItems" -> 2;
+      default -> 3;
+    };
+  }
+
+  private boolean isRedundantEvidence(List<EvidenceSnippetDto> existing, String candidateSnippet) {
+    String normalizedCandidate = normalizeMatchValue(candidateSnippet);
+    for (EvidenceSnippetDto evidence : existing) {
+      String normalizedExisting = normalizeMatchValue(evidence.snippet());
+      if (normalizedExisting.contains(normalizedCandidate) || normalizedCandidate.contains(normalizedExisting)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static String normalizeInlineText(String value) {
+    return value == null ? "" : value.replaceAll("\\s+", " ").trim();
+  }
+
+  private String normalizeMatchValue(String value) {
+    return normalizeInlineText(value)
+        .replaceAll("[()\\[\\].,:~～\\-_/]", "")
+        .toLowerCase(Locale.ROOT);
   }
 
   private List<String> parseRequiredItems(String json) {
