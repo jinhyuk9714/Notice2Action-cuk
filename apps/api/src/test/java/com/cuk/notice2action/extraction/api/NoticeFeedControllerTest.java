@@ -43,7 +43,7 @@ class NoticeFeedControllerTest {
                 "학생증 신청 안내",
                 "2026-02-27T00:00:00+09:00",
                 "https://example.com/notice/268986",
-                List.of("신입생 해당", "학생증 키워드"),
+                List.of("신입생 공지", "학생증 관련"),
                 "action_required",
                 new NoticeDueHintDto("2026-03-05T23:59:59+09:00", "3월 5일까지"),
                 105
@@ -62,7 +62,7 @@ class NoticeFeedControllerTest {
             .param("keyword", "학생증"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.notices[0].title").value("학생증 신청 안내"))
-        .andExpect(jsonPath("$.notices[0].importanceReasons[0]").value("신입생 해당"))
+        .andExpect(jsonPath("$.notices[0].importanceReasons[0]").value("신입생 공지"))
         .andExpect(jsonPath("$.notices[0].actionability").value("action_required"));
   }
 
@@ -75,7 +75,7 @@ class NoticeFeedControllerTest {
             "학생증 신청 안내",
             "2026-02-27T00:00:00+09:00",
             "https://example.com/notice/268986",
-            List.of("행동 필요 공지", "7일 이내 마감"),
+            List.of("행동 필요", "7일 안에 마감"),
             "action_required",
             new NoticeDueHintDto("2026-03-05T23:59:59+09:00", "3월 5일까지"),
             50,

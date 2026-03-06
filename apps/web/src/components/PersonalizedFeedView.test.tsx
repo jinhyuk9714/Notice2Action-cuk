@@ -47,7 +47,7 @@ describe('PersonalizedFeedView', () => {
       expect(screen.getByText('[학사지원팀] 2026-1학기 수강과목 취소 기간 안내')).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText('행동 필요 공지')).not.toHaveLength(0);
+    expect(screen.getAllByText('행동 필요')).not.toHaveLength(0);
     expect(screen.queryByText('프로필 미설정')).not.toBeInTheDocument();
     expect(screen.getByText('3. 25. (수) 17:00')).toBeInTheDocument();
     expect(screen.getAllByText('행동 필요')).not.toHaveLength(0);
@@ -57,7 +57,7 @@ describe('PersonalizedFeedView', () => {
     mockFetchNoticeFeed.mockResolvedValue(makeNoticeFeedResponse([
       {
         ...QUALITY_ACTION_NOTICE,
-        importanceReasons: ['컴퓨터정보공학부 해당', '학생증 키워드', '행동 필요 공지', '7일 이내 마감'],
+        importanceReasons: ['컴퓨터정보공학부 공지', '학생증 관련', '행동 필요', '7일 안에 마감'],
       },
     ]));
 
@@ -77,17 +77,17 @@ describe('PersonalizedFeedView', () => {
       expect(screen.getByText('[학사지원팀] 2026-1학기 수강과목 취소 기간 안내')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('컴퓨터정보공학부 해당')).toBeInTheDocument();
-    expect(screen.getByText('학생증 키워드')).toBeInTheDocument();
-    expect(screen.getByText('행동 필요 공지')).toBeInTheDocument();
-    expect(screen.queryByText('7일 이내 마감')).not.toBeInTheDocument();
+    expect(screen.getByText('컴퓨터정보공학부 공지')).toBeInTheDocument();
+    expect(screen.getByText('학생증 관련')).toBeInTheDocument();
+    expect(screen.getAllByText('행동 필요')).not.toHaveLength(0);
+    expect(screen.queryByText('7일 안에 마감')).not.toBeInTheDocument();
   });
 
   it('renders exclusion reasons with the new wording', async () => {
     mockFetchNoticeFeed.mockResolvedValue(makeNoticeFeedResponse([
       {
         ...QUALITY_INFORMATIONAL_NOTICE,
-        importanceReasons: ['다른 대상 공지', '최근 공지'],
+        importanceReasons: ['다른 대상 공지', '최근 등록'],
       },
     ]));
 

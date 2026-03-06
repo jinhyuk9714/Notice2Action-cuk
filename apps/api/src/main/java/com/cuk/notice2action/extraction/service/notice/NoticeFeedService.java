@@ -137,29 +137,27 @@ public class NoticeFeedService {
 
     if ("action_required".equals(effectiveActionability)) {
       score += 15;
-      reasons.add("행동 필요 공지");
+      reasons.add("행동 필요");
     }
 
     if (effectiveDueHint != null) {
       long dueDays = ChronoUnit.DAYS.between(OffsetDateTime.now(APP_OFFSET), OffsetDateTime.parse(effectiveDueHint.dueAtIso()));
       if (dueDays <= 7) {
         score += 20;
-        reasons.add("7일 이내 마감");
+        reasons.add("7일 안에 마감");
       } else if (dueDays <= 14) {
         score += 10;
-        reasons.add("14일 이내 마감");
+        reasons.add("14일 안에 마감");
       }
     }
 
     String freshnessReason = resolveFreshnessReason(source.getPublishedAt());
     if (freshnessReason != null && reasons.size() < 2) {
-      score += "최근 공지".equals(freshnessReason) ? 5 : 2;
+      score += "최근 등록".equals(freshnessReason) ? 5 : 2;
       reasons.add(freshnessReason);
     }
 
-    List<String> dedupedReasons = new ArrayList<>(new LinkedHashSet<>(reasons)).stream()
-        .limit(3)
-        .toList();
+    List<String> dedupedReasons = orderDisplayReasons(reasons);
     PersonalizedNoticeSummaryDto summary = new PersonalizedNoticeSummaryDto(
         source.getId(),
         source.getTitle(),
@@ -185,7 +183,7 @@ public class NoticeFeedService {
 
     if (hasText(profile.status())) {
       if (containsIncludedTerm(searchable, profile.status())) {
-        reasons.add(profile.status() + " 해당");
+        reasons.add(profile.status() + " 공지");
         matched = true;
       } else if (containsAnyOtherStatus(searchable, profile.status())) {
         excluded = true;
@@ -195,7 +193,7 @@ public class NoticeFeedService {
     if (profile.year() != null) {
       YearMatch yearMatch = matchYear(searchable, profile.year());
       if (yearMatch.relevant()) {
-        reasons.add(profile.year() + "학년 해당");
+        reasons.add(profile.year() + "학년 공지");
         matched = true;
       } else if (yearMatch.explicitlyExcluded()) {
         excluded = true;
@@ -203,7 +201,7 @@ public class NoticeFeedService {
     }
 
     if (hasText(profile.department()) && containsDepartment(searchable, profile.department())) {
-      reasons.add(profile.department() + " 해당");
+      reasons.add(profile.department() + " 공지");
       matched = true;
     }
 
@@ -233,7 +231,7 @@ public class NoticeFeedService {
           continue;
         }
         matchedKeywords.add(normalized);
-        reasons.add(keyword.trim() + " 키워드");
+        reasons.add(keyword.trim() + " 관련");
       }
     }
     return reasons;
@@ -245,12 +243,57 @@ public class NoticeFeedService {
     }
     long freshnessDays = ChronoUnit.DAYS.between(publishedAt, LocalDate.now(APP_OFFSET));
     if (freshnessDays <= 3) {
-      return "최근 공지";
+      return "최근 등록";
     }
     if (freshnessDays <= 7) {
-      return "이번 주 공지";
+      return "이번 주 등록";
     }
     return null;
+  }
+
+  private List<String> orderDisplayReasons(List<String> reasons) {
+    List<String> deduped = new ArrayList<>(new LinkedHashSet<>(reasons));
+    boolean hasExclusion = deduped.contains("다른 대상 공지");
+
+    List<String> ordered = deduped.stream()
+        .filter(reason -> !"다른 대상 공지".equals(reason))
+        .sorted(Comparator.comparingInt(this::reasonPriority))
+        .toList();
+
+    List<String> selected = new ArrayList<>();
+    int limit = hasExclusion ? 2 : 3;
+    for (String reason : ordered) {
+      if (selected.size() == limit) {
+        break;
+      }
+      selected.add(reason);
+    }
+    if (hasExclusion && selected.size() < 3) {
+      selected.add("다른 대상 공지");
+    }
+    return selected;
+  }
+
+  private int reasonPriority(String reason) {
+    if ("다른 대상 공지".equals(reason)) {
+      return 99;
+    }
+    if (reason.endsWith("공지")) {
+      return 0;
+    }
+    if (reason.endsWith("관련")) {
+      return 1;
+    }
+    if ("행동 필요".equals(reason)) {
+      return 2;
+    }
+    if (reason.contains("마감")) {
+      return 3;
+    }
+    if ("최근 등록".equals(reason) || "이번 주 등록".equals(reason)) {
+      return 4;
+    }
+    return 10;
   }
 
   private boolean containsIncludedTerm(String searchable, String term) {

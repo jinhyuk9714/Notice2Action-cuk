@@ -16,7 +16,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "최근 공지"
+        "최근 등록"
       ],
       "expectedActions": []
     },
@@ -29,7 +29,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "최근 공지"
+        "최근 등록"
       ],
       "expectedActions": []
     },
@@ -42,7 +42,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "최근 공지"
+        "최근 등록"
       ],
       "expectedActions": []
     },
@@ -55,7 +55,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "이번 주 공지"
+        "이번 주 등록"
       ],
       "expectedActions": []
     },
@@ -79,7 +79,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "최근 공지"
+        "최근 등록"
       ],
       "expectedActions": []
     },
@@ -92,8 +92,8 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "3. 25. (수) 17:00",
       "expectedImportanceReasons": [
-        "행동 필요 공지",
-        "최근 공지"
+        "행동 필요",
+        "최근 등록"
       ],
       "expectedActions": [
         {
@@ -115,7 +115,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "최근 공지"
+        "최근 등록"
       ],
       "expectedActions": []
     },
@@ -128,7 +128,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "최근 공지"
+        "최근 등록"
       ],
       "expectedActions": []
     },
@@ -141,7 +141,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "최근 공지"
+        "최근 등록"
       ],
       "expectedActions": []
     },
@@ -154,7 +154,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "이번 주 공지"
+        "이번 주 등록"
       ],
       "expectedActions": []
     },
@@ -167,7 +167,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "행동 필요 공지"
+        "행동 필요"
       ],
       "expectedActions": [
         {
@@ -189,7 +189,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "행동 필요 공지"
+        "행동 필요"
       ],
       "expectedActions": [
         {
@@ -212,8 +212,8 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "3일 이내",
       "expectedImportanceReasons": [
-        "행동 필요 공지",
-        "7일 이내 마감"
+        "행동 필요",
+        "7일 안에 마감"
       ],
       "expectedActions": [
         {
@@ -257,7 +257,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "행동 필요 공지"
+        "행동 필요"
       ],
       "expectedActions": [
         {
@@ -334,7 +334,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "행동 필요 공지"
+        "행동 필요"
       ],
       "expectedActions": [
         {
@@ -356,8 +356,8 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "~ 3/9",
       "expectedImportanceReasons": [
-        "행동 필요 공지",
-        "7일 이내 마감"
+        "행동 필요",
+        "7일 안에 마감"
       ],
       "expectedActions": [
         {
@@ -390,7 +390,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "행동 필요 공지"
+        "행동 필요"
       ],
       "expectedActions": [
         {
@@ -423,7 +423,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "행동 필요 공지"
+        "행동 필요"
       ],
       "expectedActions": [
         {
@@ -445,8 +445,8 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "~ 3/9",
       "expectedImportanceReasons": [
-        "행동 필요 공지",
-        "7일 이내 마감"
+        "행동 필요",
+        "7일 안에 마감"
       ],
       "expectedActions": [
         {
@@ -468,7 +468,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "행동 필요 공지"
+        "행동 필요"
       ],
       "expectedActions": [
         {

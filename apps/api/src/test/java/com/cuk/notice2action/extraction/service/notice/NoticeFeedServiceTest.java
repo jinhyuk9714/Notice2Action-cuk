@@ -69,7 +69,7 @@ class NoticeFeedServiceTest {
     assertThat(response.notices()).hasSize(2);
     assertThat(response.notices().get(0).title()).isEqualTo("신입생 학생증 신청 안내");
     assertThat(response.notices().get(0).importanceReasons())
-        .containsExactly("신입생 해당", "학생증 키워드", "행동 필요 공지");
+        .containsExactly("신입생 공지", "학생증 관련", "행동 필요");
     assertThat(response.notices().get(0).importanceReasons()).hasSizeLessThanOrEqualTo(3);
     assertThat(response.notices().get(0).relevanceScore()).isGreaterThan(response.notices().get(1).relevanceScore());
   }
@@ -89,7 +89,7 @@ class NoticeFeedServiceTest {
     NoticeFeedResponse response = service.getFeed(new NoticeProfile(null, null, null, List.of()), 0, 20);
 
     assertThat(response.notices()).singleElement().satisfies(summary -> {
-      assertThat(summary.importanceReasons()).containsExactly("행동 필요 공지", "14일 이내 마감");
+      assertThat(summary.importanceReasons()).containsExactly("행동 필요", "14일 안에 마감");
       assertThat(summary.importanceReasons()).doesNotContain("프로필 미설정");
       assertThat(summary.relevanceScore()).isGreaterThan(0);
     });
@@ -110,7 +110,7 @@ class NoticeFeedServiceTest {
     NoticeFeedResponse response = service.getFeed(new NoticeProfile("컴퓨터공학과", 3, "재학생", List.of()), 0, 20);
 
     assertThat(response.notices()).singleElement().satisfies(summary -> {
-      assertThat(summary.importanceReasons()).containsExactly("행동 필요 공지", "7일 이내 마감");
+      assertThat(summary.importanceReasons()).containsExactly("행동 필요", "7일 안에 마감");
       assertThat(summary.importanceReasons()).doesNotContain("프로필 추가 확인 필요", "다른 대상 공지");
       assertThat(summary.relevanceScore()).isEqualTo(35);
     });
@@ -170,8 +170,8 @@ class NoticeFeedServiceTest {
 
     assertThat(response.notices()).extracting(summary -> summary.title())
         .containsExactly("수강신청 일정 안내", "도서관 휴관 안내");
-    assertThat(response.notices().get(0).importanceReasons()).doesNotContain("최근 공지", "이번 주 공지");
-    assertThat(response.notices().get(1).importanceReasons()).containsExactly("최근 공지");
+    assertThat(response.notices().get(0).importanceReasons()).doesNotContain("최근 등록", "이번 주 등록");
+    assertThat(response.notices().get(1).importanceReasons()).containsExactly("최근 등록");
   }
 
   @Test
@@ -198,7 +198,7 @@ class NoticeFeedServiceTest {
       assertThat(block.title()).isEqualTo("학생증 신청");
       assertThat(block.confidenceScore()).isEqualTo(0.88);
     });
-    assertThat(detail.importanceReasons()).contains("신입생 해당", "학생증 키워드");
+    assertThat(detail.importanceReasons()).contains("신입생 공지", "학생증 관련");
   }
 
   @Test
@@ -664,7 +664,7 @@ class NoticeFeedServiceTest {
     assertThat(feed.notices()).singleElement().satisfies(summary -> {
       assertThat(summary.actionability()).isEqualTo("informational");
       assertThat(summary.dueHint()).isNull();
-      assertThat(summary.importanceReasons()).doesNotContain("행동 필요 공지");
+      assertThat(summary.importanceReasons()).doesNotContain("행동 필요");
     });
   }
 

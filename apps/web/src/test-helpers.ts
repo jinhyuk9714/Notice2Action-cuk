@@ -160,7 +160,7 @@ export function makeNoticeSummary(overrides: Partial<PersonalizedNoticeSummary> 
     title: '학생증 신청 안내',
     publishedAt: '2026-02-27T00:00:00+09:00',
     sourceUrl: 'https://example.com/notices/1',
-    importanceReasons: ['신입생 해당', '학생증 키워드'],
+    importanceReasons: ['신입생 공지', '학생증 관련'],
     actionability: 'action_required',
     dueHint: { dueAtIso: '2026-03-05T23:59:59+09:00', label: '3월 5일까지' },
     relevanceScore: 105,
