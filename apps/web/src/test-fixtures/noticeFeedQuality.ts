@@ -5,10 +5,10 @@ export const QUALITY_ACTION_NOTICE: PersonalizedNoticeSummary = {
   title: '[학사지원팀] 2026-1학기 수강과목 취소 기간 안내',
   publishedAt: '2026-03-03T00:00:00+09:00',
   sourceUrl: 'https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=269011&srCategoryId=21',
-  importanceReasons: ['프로필 미설정', '행동 필요 공지'],
+  importanceReasons: ['행동 필요 공지', '이번 주 공지'],
   actionability: 'action_required',
   dueHint: { dueAtIso: '2026-03-25T17:00:00+09:00', label: '3. 25. (수) 17:00' },
-  relevanceScore: 30,
+  relevanceScore: 17,
 };
 
 export const QUALITY_INFORMATIONAL_NOTICE: PersonalizedNoticeSummary = {
@@ -16,10 +16,10 @@ export const QUALITY_INFORMATIONAL_NOTICE: PersonalizedNoticeSummary = {
   title: '[학사지원팀] 2026-1학기 강의시간표 등 변경사항 안내(전공강좌) / 일별 업데이트(2026.03.05.) / 폐강 포함',
   publishedAt: '2026-02-25T00:00:00+09:00',
   sourceUrl: 'https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268838&srCategoryId=21',
-  importanceReasons: ['프로필 미설정'],
+  importanceReasons: ['최근 공지'],
   actionability: 'informational',
   dueHint: null,
-  relevanceScore: 15,
+  relevanceScore: 5,
 };
 
 export const QUALITY_INFORMATIONAL_DETAIL: PersonalizedNoticeDetail = {

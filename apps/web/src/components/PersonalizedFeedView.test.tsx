@@ -47,10 +47,68 @@ describe('PersonalizedFeedView', () => {
       expect(screen.getByText('[학사지원팀] 2026-1학기 수강과목 취소 기간 안내')).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText('프로필 미설정')).not.toHaveLength(0);
     expect(screen.getAllByText('행동 필요 공지')).not.toHaveLength(0);
+    expect(screen.queryByText('프로필 미설정')).not.toBeInTheDocument();
     expect(screen.getByText('3. 25. (수) 17:00')).toBeInTheDocument();
     expect(screen.getAllByText('행동 필요')).not.toHaveLength(0);
+  });
+
+  it('renders at most three reasons per card', async () => {
+    mockFetchNoticeFeed.mockResolvedValue(makeNoticeFeedResponse([
+      {
+        ...QUALITY_ACTION_NOTICE,
+        importanceReasons: ['컴퓨터정보공학부 해당', '학생증 키워드', '행동 필요 공지', '7일 이내 마감'],
+      },
+    ]));
+
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={EMPTY_PREFS}
+        initialNoticeId={null}
+        onNoticeSelect={() => {}}
+        onToggleSaved={() => {}}
+        onHide={() => {}}
+        onUnhide={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('[학사지원팀] 2026-1학기 수강과목 취소 기간 안내')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('컴퓨터정보공학부 해당')).toBeInTheDocument();
+    expect(screen.getByText('학생증 키워드')).toBeInTheDocument();
+    expect(screen.getByText('행동 필요 공지')).toBeInTheDocument();
+    expect(screen.queryByText('7일 이내 마감')).not.toBeInTheDocument();
+  });
+
+  it('renders exclusion reasons with the new wording', async () => {
+    mockFetchNoticeFeed.mockResolvedValue(makeNoticeFeedResponse([
+      {
+        ...QUALITY_INFORMATIONAL_NOTICE,
+        importanceReasons: ['다른 대상 공지', '최근 공지'],
+      },
+    ]));
+
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={EMPTY_PREFS}
+        initialNoticeId={null}
+        onNoticeSelect={() => {}}
+        onToggleSaved={() => {}}
+        onHide={() => {}}
+        onUnhide={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('[학사지원팀] 2026-1학기 강의시간표 등 변경사항 안내(전공강좌) / 일별 업데이트(2026.03.05.) / 폐강 포함')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('다른 대상 공지')).toBeInTheDocument();
+    expect(screen.queryByText('프로필 추가 확인 필요')).not.toBeInTheDocument();
   });
 
   it('loads detail when a notice is selected and shows informational empty state', async () => {

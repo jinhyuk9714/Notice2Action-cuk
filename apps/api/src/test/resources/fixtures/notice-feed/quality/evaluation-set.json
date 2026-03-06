@@ -16,7 +16,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정"
+        "최근 공지"
       ],
       "expectedActions": []
     },
@@ -29,7 +29,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정"
+        "최근 공지"
       ],
       "expectedActions": []
     },
@@ -42,7 +42,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정"
+        "최근 공지"
       ],
       "expectedActions": []
     },
@@ -55,7 +55,6 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "이번 주 공지"
       ],
       "expectedActions": []
@@ -68,9 +67,7 @@
       "body": "2026-1학기 강의시간표 등 변경사항 안내(전공강좌)\n2026-1학기 강의시간표 등 수업 관련 변경사항을 안내하오니 확인하시기 바랍니다.\n□ 강의시간표 변경사항 안내 : 2026. 2. 3.(화) 이후\n□ 강의시간표 변경사항 적용 : 2026. 2. 3.(화) 오전 10시부터\n□ 변경내용 (강의실은 수강신청 기간 중 수시로 변경될 수 있음에 따라 2026. 2. 4. 이후 별도 공지하지 않을 예정임)\n2026. 2. 3.\n교무처장",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -82,7 +79,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정"
+        "최근 공지"
       ],
       "expectedActions": []
     },
@@ -95,8 +92,8 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "3. 25. (수) 17:00",
       "expectedImportanceReasons": [
-        "프로필 미설정",
-        "행동 필요 공지"
+        "행동 필요 공지",
+        "최근 공지"
       ],
       "expectedActions": [
         {
@@ -118,7 +115,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정"
+        "최근 공지"
       ],
       "expectedActions": []
     },
@@ -131,7 +128,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정"
+        "최근 공지"
       ],
       "expectedActions": []
     },
@@ -144,7 +141,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정"
+        "최근 공지"
       ],
       "expectedActions": []
     },
@@ -157,7 +154,7 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정"
+        "이번 주 공지"
       ],
       "expectedActions": []
     },
@@ -170,7 +167,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지"
       ],
       "expectedActions": [
@@ -193,7 +189,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지"
       ],
       "expectedActions": [
@@ -217,7 +212,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "3일 이내",
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지",
         "7일 이내 마감"
       ],
@@ -240,9 +234,7 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -253,9 +245,7 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -267,7 +257,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지"
       ],
       "expectedActions": [
@@ -289,9 +278,7 @@
       "body": "[2026학년도 신입생 입학미사 안내]\n신입생 여러분의 입학을 축하드리며, 2026학년도 신입생 입학미사를 안내해 드리오니 참석하여 주시기 바랍니다.\n❏ 2026학년도 신입생 입학미사\n- 일시 : 2026년 3월 3일(화) 오후 3시\n- 장소 : 명동대성당\n- 미사집전 : 구요비 주교님과 본교 사제단\n▶ 초대장 바로가기(링크)\n❏ 참석대상 : 2026학년도 신입생\n❏ 수업운영 : 입학식(3월 3일) 당일 전체과목 수업 대체(2026학년도 신입생만 해당되며, 출석표 배부는 없습니다)\n❏ 안내사항\n• 성당 내 공간이 협소하여 성당 내에는 신입생만 입장 가능하며, 학부모 입장은 제한됩니다. 같이 오신 학부모님들께서는 명동성당 외부 또는 별도의 안내 장소에서 대기해 주실 것을 요청 드립니다.\n• 원활한 행사 진행을 위하여 미사 시작 15분 전까지 입장하여 주시기 바랍니다.\n• 당일 명동성당 주변 극심한 교통 혼란이 예상되므로 가급적 대중교통을 이용해 주시기 바랍니다.\n• 명동성당 내 주차료 할인 또는 감면이 없습니다.\n• 명동성당 내에서는 정숙을 유지하여 주시기 바랍니다.\n❏ 문의처\n- 학사지원팀 입학미사 담당 : 02-2164-6522\n2026. 2. 24.\n가톨릭대학교 교무처장",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -302,9 +289,7 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -315,9 +300,7 @@
       "body": "2026학년도 학점이월제도 안내\n학점이월제도를 아래와 같이 안내드리오니 학생 여러분들께서는 확인하여, 수강신청 및 학점이수 등 학사관리 업무에 참고하시기 바랍니다.\n1. 제도개요 : 학생이 당해연도 1학기의 잔여 학점(1~2학점)을 다음 학기(2학기)로 이월할 수 있는 제도\n구분\n1학기 수강학점\n2학기로 이월 가능 학점\n비고\n1\n16학점 이하\n0학점(없음)\n기준학점 산정 시점은 수강취소 전 학점 기준임\n2\n17학점\n2학점\n3\n18학점\n1학점\n4\n19학점 이상\n2. 운영지침\n가. 학점이월은 동일 학년도 내에서만 1학기에서 2학기로 가능(차년도로의 이월 불가)\n나. 1학기 수강취소 전까지의 수강신청 학점에 따라 2학기로 학점 이월 가능\n다. 9차 학기부터는 학점이월 불가\n라. 1학기 평점 2.5 미만인 자는 학점이월 불가\n마. 학석사 연계과정 및 약학과 학생은 학점이월 불가\n바. 1학기 성적 4.0 이상 우수자(17학점 이상 이수)는 2학기 학점이월 대상에서 제외함(이월하지 않아도 22학점까지 수강 가능)\n사. 사랑나누기(봉사), 단기기업인턴십, 국내학점교류 과목의 경우에는 학점이월 대상자를 선정하기 위한 기준학점을 산정할 때는 포함시킴\n아. 어학연수, 교환학생 등 1학기에 수강신청 학점이 없는 자는 학점이월 대상에서 제외\n자. 졸업요건을 충족하더라도, 조기졸업 신청자 이외에는 8학기 등록 의무임\n차. 수강과목 취소기간에 취소한 학점은 이월되지 않음\n3. 기타사항\n가. 이월 가능 학점은 수강신청 시 자동으로 계산되며, 대상이 아닌자가 초과 학점을 신청하면 “수강 가능 학점 초과”라는 문구가 나타나며, 초과 대상 과목은 수강신청이 되지 않음을 알려드림\n나. 확인방법 : [트리니티] - [학사정보] - [수업/성적] - [수강신청_학생(성심)]\n4. 문의처 : 학사지원팀 수업 담당자(02-2164-4289 / nsw7348@catholic.ac.kr)\n2026. 2. 23.\n교무처장",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -328,9 +311,7 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -341,9 +322,7 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -355,7 +334,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지"
       ],
       "expectedActions": [
@@ -378,7 +356,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "~ 3/9",
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지",
         "7일 이내 마감"
       ],
@@ -401,9 +378,7 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -415,7 +390,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지"
       ],
       "expectedActions": [
@@ -437,9 +411,7 @@
       "body": "2026-1학기 강의시간표 등 변경사항 안내(전공강좌)\n2026-1학기 강의시간표 등 수업 관련 변경사항을 안내하오니 확인하시기 바랍니다.\n□ 강의시간표 변경사항 안내 : 2026. 2. 3.(화) 이후\n□ 강의시간표 변경사항 적용 : 2026. 2. 3.(화) 오전 10시부터\n□ 변경내용 (강의실은 수강신청 기간 중 수시로 변경될 수 있음에 따라 2026. 2. 4. 이후 별도 공지하지 않을 예정임)\n2026. 2. 3.\n교무처장",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "프로필 미설정"
-      ],
+      "expectedImportanceReasons": [],
       "expectedActions": []
     },
     {
@@ -451,7 +423,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지"
       ],
       "expectedActions": [
@@ -474,7 +445,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "~ 3/9",
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지",
         "7일 이내 마감"
       ],
@@ -498,7 +468,6 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
         "행동 필요 공지"
       ],
       "expectedActions": [

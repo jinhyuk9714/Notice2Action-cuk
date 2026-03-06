@@ -98,13 +98,14 @@ export function PersonalizedFeedView({
         <div className="card-list">
           {visibleNotices.map((notice) => {
             const saved = preferences.savedIds.includes(notice.id);
+            const visibleReasons = notice.importanceReasons.slice(0, 3);
             return (
               <article key={notice.id} className="action-card">
                 <button className="summary-card-link" aria-label={`${notice.title} 상세 보기`} onClick={() => { selectNotice(notice.id); }}>
                   <h3>{notice.title}</h3>
                 </button>
                 <div className="chip-row">
-                  {notice.importanceReasons.map((reason) => <span key={reason} className="badge">{reason}</span>)}
+                  {visibleReasons.map((reason) => <span key={reason} className="badge">{reason}</span>)}
                 </div>
                 <p>{notice.dueHint?.label ?? '마감 정보 없음'}</p>
                 <p>{notice.actionability === 'action_required' ? '행동 필요' : '정보성 공지'}</p>
@@ -121,20 +122,23 @@ export function PersonalizedFeedView({
           <div className="detail-section">
             <h3>숨긴 공지 {hiddenNotices.length}개</h3>
             <div className="card-list">
-              {hiddenNotices.map((notice) => (
-                <article key={`hidden-${notice.id}`} className="action-card">
+              {hiddenNotices.map((notice) => {
+                const visibleReasons = notice.importanceReasons.slice(0, 3);
+                return (
+                  <article key={`hidden-${notice.id}`} className="action-card">
                   <button className="summary-card-link" aria-label={`${notice.title} 상세 보기`} onClick={() => { selectNotice(notice.id); }}>
                     <h3>{notice.title}</h3>
                   </button>
                   <div className="chip-row">
                     <span className="badge">숨김됨</span>
-                    {notice.importanceReasons.map((reason) => <span key={`${notice.id}-${reason}`} className="badge">{reason}</span>)}
+                    {visibleReasons.map((reason) => <span key={`${notice.id}-${reason}`} className="badge">{reason}</span>)}
                   </div>
                   <div className="card-actions-row">
                     <button className="secondary-btn" onClick={() => { onUnhide(notice.id); }}>숨김 해제</button>
                   </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </div>
         ) : null}

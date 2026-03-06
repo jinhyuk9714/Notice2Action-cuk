@@ -75,7 +75,7 @@ class NoticeFeedControllerTest {
             "학생증 신청 안내",
             "2026-02-27T00:00:00+09:00",
             "https://example.com/notice/268986",
-            List.of("프로필 미설정"),
+            List.of("행동 필요 공지", "7일 이내 마감"),
             "action_required",
             new NoticeDueHintDto("2026-03-05T23:59:59+09:00", "3월 5일까지"),
             50,

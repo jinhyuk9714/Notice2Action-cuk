@@ -69,12 +69,13 @@ class NoticeFeedServiceTest {
     assertThat(response.notices()).hasSize(2);
     assertThat(response.notices().get(0).title()).isEqualTo("신입생 학생증 신청 안내");
     assertThat(response.notices().get(0).importanceReasons())
-        .contains("신입생 해당", "학생증 키워드", "7일 이내 마감", "행동 필요 공지");
+        .containsExactly("신입생 해당", "학생증 키워드", "행동 필요 공지");
+    assertThat(response.notices().get(0).importanceReasons()).hasSizeLessThanOrEqualTo(3);
     assertThat(response.notices().get(0).relevanceScore()).isGreaterThan(response.notices().get(1).relevanceScore());
   }
 
   @Test
-  void marksUnconfiguredProfileButStillUsesFreshnessAndActionability() {
+  void omitsProfileReasonWhenProfileIsUnconfigured() {
     NoticeSourceEntity notice = NoticeFixtures.noticeSource(
         "수강신청 일정 안내",
         "TRINITY에서 수강신청을 진행합니다.",
@@ -88,9 +89,89 @@ class NoticeFeedServiceTest {
     NoticeFeedResponse response = service.getFeed(new NoticeProfile(null, null, null, List.of()), 0, 20);
 
     assertThat(response.notices()).singleElement().satisfies(summary -> {
-      assertThat(summary.importanceReasons()).contains("프로필 미설정", "14일 이내 마감", "행동 필요 공지");
+      assertThat(summary.importanceReasons()).containsExactly("행동 필요 공지", "14일 이내 마감");
+      assertThat(summary.importanceReasons()).doesNotContain("프로필 미설정");
       assertThat(summary.relevanceScore()).isGreaterThan(0);
     });
+  }
+
+  @Test
+  void omitsProfileReasonWhenProfileIsConfiguredButEvidenceIsInsufficient() {
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        "수강신청 일정 안내",
+        "TRINITY에서 수강신청을 진행합니다.",
+        LocalDate.now(),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(5),
+        List.of(NoticeFixtures.action("수강신청", null, 0.8))
+    );
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(notice));
+
+    NoticeFeedResponse response = service.getFeed(new NoticeProfile("컴퓨터공학과", 3, "재학생", List.of()), 0, 20);
+
+    assertThat(response.notices()).singleElement().satisfies(summary -> {
+      assertThat(summary.importanceReasons()).containsExactly("행동 필요 공지", "7일 이내 마감");
+      assertThat(summary.importanceReasons()).doesNotContain("프로필 추가 확인 필요", "다른 대상 공지");
+      assertThat(summary.relevanceScore()).isEqualTo(35);
+    });
+  }
+
+  @Test
+  void pushesExplicitlyExcludedNoticeDownAndUsesOtherAudienceReason() {
+    NoticeSourceEntity excluded = NoticeFixtures.noticeSource(
+        "2학년 대상 학생증 신청 안내",
+        "2학년 대상 학생증 신청 공지입니다.",
+        LocalDate.of(2026, 3, 4),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(3),
+        List.of(NoticeFixtures.action("학생증 신청", "2학년", 0.9))
+    );
+    NoticeSourceEntity matched = NoticeFixtures.noticeSource(
+        "3학년 학생증 신청 안내",
+        "3학년 대상 학생증 신청 공지입니다.",
+        LocalDate.of(2026, 3, 1),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(4),
+        List.of(NoticeFixtures.action("학생증 신청", "3학년", 0.9))
+    );
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(excluded, matched));
+
+    NoticeFeedResponse response = service.getFeed(new NoticeProfile(null, 3, null, List.of("학생증")), 0, 20);
+
+    assertThat(response.notices()).extracting(summary -> summary.title())
+        .containsExactly("3학년 학생증 신청 안내", "2학년 대상 학생증 신청 안내");
+    assertThat(response.notices().get(1).importanceReasons()).contains("다른 대상 공지");
+    assertThat(response.notices().get(1).relevanceScore()).isLessThan(response.notices().get(0).relevanceScore());
+  }
+
+  @Test
+  void usesFreshnessOnlyAsFallbackReason() {
+    NoticeSourceEntity informational = NoticeFixtures.noticeSource(
+        "도서관 휴관 안내",
+        "전체 학생 대상 도서관 휴관 안내입니다.",
+        LocalDate.now().minusDays(1),
+        "informational",
+        null,
+        List.of()
+    );
+    NoticeSourceEntity actionRequired = NoticeFixtures.noticeSource(
+        "수강신청 일정 안내",
+        "TRINITY에서 수강신청을 진행합니다.",
+        LocalDate.now(),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(5),
+        List.of(NoticeFixtures.action("수강신청", null, 0.8))
+    );
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(informational, actionRequired));
+
+    NoticeFeedResponse response = service.getFeed(new NoticeProfile(null, null, null, List.of()), 0, 20);
+
+    assertThat(response.notices()).extracting(summary -> summary.title())
+        .containsExactly("수강신청 일정 안내", "도서관 휴관 안내");
+    assertThat(response.notices().get(0).importanceReasons()).doesNotContain("최근 공지", "이번 주 공지");
+    assertThat(response.notices().get(1).importanceReasons()).containsExactly("최근 공지");
   }
 
   @Test

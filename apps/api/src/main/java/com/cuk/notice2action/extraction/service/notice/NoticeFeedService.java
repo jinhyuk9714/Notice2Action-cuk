@@ -151,18 +151,15 @@ public class NoticeFeedService {
       }
     }
 
-    if (source.getPublishedAt() != null) {
-      long freshnessDays = ChronoUnit.DAYS.between(source.getPublishedAt(), LocalDate.now(APP_OFFSET));
-      if (freshnessDays <= 3) {
-        score += 10;
-        reasons.add("최근 공지");
-      } else if (freshnessDays <= 7) {
-        score += 5;
-        reasons.add("이번 주 공지");
-      }
+    String freshnessReason = resolveFreshnessReason(source.getPublishedAt());
+    if (freshnessReason != null && reasons.size() < 2) {
+      score += "최근 공지".equals(freshnessReason) ? 5 : 2;
+      reasons.add(freshnessReason);
     }
 
-    List<String> dedupedReasons = new ArrayList<>(new LinkedHashSet<>(reasons));
+    List<String> dedupedReasons = new ArrayList<>(new LinkedHashSet<>(reasons)).stream()
+        .limit(3)
+        .toList();
     PersonalizedNoticeSummaryDto summary = new PersonalizedNoticeSummaryDto(
         source.getId(),
         source.getTitle(),
@@ -178,7 +175,7 @@ public class NoticeFeedService {
 
   private ProfileRelevance computeProfileRelevance(NoticeSourceEntity source, NoticeProfile profile) {
     if (!profile.isConfigured()) {
-      return new ProfileRelevance(15, List.of("프로필 미설정"));
+      return new ProfileRelevance(0, List.of());
     }
 
     String searchable = buildSearchableText(source);
@@ -214,13 +211,14 @@ public class NoticeFeedService {
       return new ProfileRelevance(60, reasons);
     }
     if (excluded) {
-      return new ProfileRelevance(-40, List.of("대상 아님"));
+      return new ProfileRelevance(-40, List.of("다른 대상 공지"));
     }
-    return new ProfileRelevance(15, List.of("프로필 추가 확인 필요"));
+    return new ProfileRelevance(0, List.of());
   }
 
   private Set<String> keywordReasons(NoticeSourceEntity source, List<String> keywords) {
     Set<String> reasons = new LinkedHashSet<>();
+    List<String> matchedKeywords = new ArrayList<>();
     if (keywords == null || keywords.isEmpty()) {
       return reasons;
     }
@@ -231,10 +229,28 @@ public class NoticeFeedService {
       }
       String normalized = keyword.trim().toLowerCase(Locale.ROOT);
       if (searchable.contains(normalized)) {
+        if (matchedKeywords.stream().anyMatch(existing -> existing.contains(normalized) || normalized.contains(existing))) {
+          continue;
+        }
+        matchedKeywords.add(normalized);
         reasons.add(keyword.trim() + " 키워드");
       }
     }
     return reasons;
+  }
+
+  private String resolveFreshnessReason(LocalDate publishedAt) {
+    if (publishedAt == null) {
+      return null;
+    }
+    long freshnessDays = ChronoUnit.DAYS.between(publishedAt, LocalDate.now(APP_OFFSET));
+    if (freshnessDays <= 3) {
+      return "최근 공지";
+    }
+    if (freshnessDays <= 7) {
+      return "이번 주 공지";
+    }
+    return null;
   }
 
   private boolean containsIncludedTerm(String searchable, String term) {
