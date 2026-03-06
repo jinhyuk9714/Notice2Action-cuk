@@ -6,6 +6,12 @@ const BODY_COLLAPSE_CHAR_THRESHOLD = 700;
 const BODY_COLLAPSE_VISIBLE_LINES = 18;
 const TABLE_HEAVY_LINE_THRESHOLD = 3;
 
+type BodyBlock = Readonly<{
+  id: string;
+  kind: 'text' | 'heading' | 'table';
+  lines: string[];
+}>;
+
 function shouldCollapseBody(body: string): boolean {
   const lines = body.split(/\r?\n/);
   const tableHeavyLineCount = lines.filter((line) => line.includes(' | ')).length;
@@ -16,8 +22,100 @@ function shouldCollapseBody(body: string): boolean {
   );
 }
 
-function getCollapsedBody(body: string): string {
-  return body.split(/\r?\n/).slice(0, BODY_COLLAPSE_VISIBLE_LINES).join('\n');
+function isHeadingLine(line: string): boolean {
+  return (
+    /^STEP\s+\d+/u.test(line)
+    || /^참고\d*/u.test(line)
+    || /^첨부파일:?/u.test(line)
+    || /^<.+>$/u.test(line)
+  );
+}
+
+function splitBodyIntoBlocks(body: string): BodyBlock[] {
+  const lines = body.split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0);
+  const blocks: BodyBlock[] = [];
+  let textLines: string[] = [];
+  let tableLines: string[] = [];
+
+  const flushText = () => {
+    if (textLines.length === 0) {
+      return;
+    }
+    blocks.push({
+      id: `text-${blocks.length}`,
+      kind: 'text',
+      lines: textLines,
+    });
+    textLines = [];
+  };
+
+  const flushTable = () => {
+    if (tableLines.length === 0) {
+      return;
+    }
+    blocks.push({
+      id: `table-${blocks.length}`,
+      kind: 'table',
+      lines: tableLines,
+    });
+    tableLines = [];
+  };
+
+  for (const line of lines) {
+    if (line.includes(' | ')) {
+      flushText();
+      tableLines.push(line);
+      continue;
+    }
+
+    flushTable();
+
+    if (isHeadingLine(line)) {
+      flushText();
+      blocks.push({
+        id: `heading-${blocks.length}`,
+        kind: 'heading',
+        lines: [line],
+      });
+      continue;
+    }
+
+    textLines.push(line);
+  }
+
+  flushTable();
+  flushText();
+
+  return blocks;
+}
+
+function getCollapsedBlocks(blocks: BodyBlock[]): BodyBlock[] {
+  const visibleBlocks: BodyBlock[] = [];
+  let remainingLines = BODY_COLLAPSE_VISIBLE_LINES;
+
+  for (const block of blocks) {
+    if (remainingLines <= 0) {
+      break;
+    }
+
+    if (block.kind === 'table') {
+      visibleBlocks.push(block);
+      remainingLines -= Math.min(2, remainingLines);
+      continue;
+    }
+
+    const visibleLines = block.lines.slice(0, remainingLines);
+    if (visibleLines.length === 0) {
+      break;
+    }
+    visibleBlocks.push({
+      ...block,
+      lines: visibleLines,
+    });
+    remainingLines -= visibleLines.length;
+  }
+
+  return visibleBlocks;
 }
 
 type NoticeDetailContentProps = Readonly<{
@@ -38,13 +136,23 @@ export function NoticeDetailContent({
   onUnhide,
 }: NoticeDetailContentProps): ReactElement {
   const [isBodyExpanded, setIsBodyExpanded] = useState(false);
+  const [expandedTableIds, setExpandedTableIds] = useState<string[]>([]);
   const bodyIsCollapsible = useMemo(() => shouldCollapseBody(detail.body), [detail.body]);
-  const visibleBody = useMemo(() => {
+  const bodyBlocks = useMemo(() => splitBodyIntoBlocks(detail.body), [detail.body]);
+  const visibleBlocks = useMemo(() => {
     if (!bodyIsCollapsible || isBodyExpanded) {
-      return detail.body;
+      return bodyBlocks;
     }
-    return getCollapsedBody(detail.body);
-  }, [bodyIsCollapsible, detail.body, isBodyExpanded]);
+    return getCollapsedBlocks(bodyBlocks);
+  }, [bodyBlocks, bodyIsCollapsible, isBodyExpanded]);
+
+  const toggleTable = (blockId: string) => {
+    setExpandedTableIds((current) => (
+      current.includes(blockId)
+        ? current.filter((id) => id !== blockId)
+        : [...current, blockId]
+    ));
+  };
 
   return (
     <section className="panel detail-panel">
@@ -115,7 +223,46 @@ export function NoticeDetailContent({
 
       <div className="detail-section">
         <h3>원문</h3>
-        <pre className={`detail-body${bodyIsCollapsible && !isBodyExpanded ? ' detail-body-collapsed' : ''}`}>{visibleBody}</pre>
+        <div className={`detail-body${bodyIsCollapsible && !isBodyExpanded ? ' detail-body-collapsed' : ''}`}>
+          {visibleBlocks.map((block) => {
+            if (block.kind === 'table') {
+              const isExpanded = expandedTableIds.includes(block.id);
+              const headerRow = block.lines[0] ?? '';
+              return (
+                <div key={block.id} className="detail-body-block detail-table-block">
+                  {isExpanded ? (
+                    <pre className="detail-table-rows">{block.lines.join('\n')}</pre>
+                  ) : (
+                    <div className="detail-table-summary">
+                      <pre className="detail-table-header">{headerRow}</pre>
+                      <p className="detail-table-meta">총 {block.lines.length}행</p>
+                    </div>
+                  )}
+                  <button
+                    className="secondary-btn detail-table-toggle"
+                    onClick={() => { toggleTable(block.id); }}
+                  >
+                    {isExpanded ? '표 접기' : '표 펼치기'}
+                  </button>
+                </div>
+              );
+            }
+
+            if (block.kind === 'heading') {
+              return (
+                <pre key={block.id} className="detail-body-block detail-body-heading">
+                  {block.lines.join('\n')}
+                </pre>
+              );
+            }
+
+            return (
+              <pre key={block.id} className="detail-body-block detail-body-text">
+                {block.lines.join('\n')}
+              </pre>
+            );
+          })}
+        </div>
         {bodyIsCollapsible ? (
           <button
             className="secondary-btn detail-body-toggle"
