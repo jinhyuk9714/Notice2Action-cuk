@@ -50,7 +50,7 @@ function renderInbox(overrides: Partial<Parameters<typeof InboxView>[0]> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useRealTimers();
 });
 
 afterEach(() => {
@@ -200,6 +200,7 @@ describe('InboxView - sorting', () => {
 
 describe('InboxView - search', () => {
   it('debounces search input by 300ms', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockFetchActionList.mockResolvedValue(makeActionListResponse([makeActionSummary()]));
     renderInbox();
     await waitFor(() => { screen.getByText('1개'); });
@@ -210,7 +211,7 @@ describe('InboxView - search', () => {
 
     expect(mockFetchActionList.mock.calls.length).toBe(callsBefore);
 
-    await act(async () => { vi.advanceTimersByTime(300); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
 
     await waitFor(() => {
       const calls = mockFetchActionList.mock.calls;
@@ -435,6 +436,7 @@ describe('InboxView - delete', () => {
   });
 
   it('clears toast after 2500ms', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockFetchActionList.mockResolvedValue(
       makeActionListResponse([
         makeActionSummary({ id: 'a1', title: 'X' }),
@@ -511,17 +513,19 @@ describe('InboxView - CSV export', () => {
   });
 
   it('auto-dismisses CSV error after 4 seconds', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockFetchActionList.mockResolvedValue(makeActionListResponse([makeActionSummary()]));
     mockFetchAllMatchingActions.mockRejectedValue(new Error('실패'));
     renderInbox();
     await waitFor(() => { screen.getByText('1개'); });
 
     fireEvent.click(screen.getByText('CSV 내보내기'));
-    await waitFor(() => { screen.getByText('실패'); });
+    const errorBanner = await screen.findByRole('alert');
+    expect(errorBanner).toHaveTextContent('실패');
 
-    await act(async () => { vi.advanceTimersByTime(4000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
     await waitFor(() => {
-      expect(screen.queryByText('실패')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
   });
 
