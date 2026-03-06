@@ -146,6 +146,42 @@ class NoticeFeedServiceTest {
   }
 
   @Test
+  void keepsOtherAudienceNoticeBelowMatchedNoticeEvenWhenBodyMentionsDepartment() {
+    NoticeSourceEntity excluded = NoticeFixtures.noticeSource(
+        "2026학년도 신입생 수강신청 안내",
+        "컴퓨터정보공학부 분반 안내가 포함된 신입생 수강신청 공지입니다.",
+        LocalDate.of(2026, 2, 13),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(3),
+        List.of(NoticeFixtures.action("신입생 수강신청", "컴퓨터정보공학부", 0.9))
+    );
+    NoticeSourceEntity matched = NoticeFixtures.noticeSource(
+        "[학부대학] 2026학년도 1학기 <I-DESIGN> 수강신청 관련 안내",
+        "컴퓨터정보공학부 학생 분반 수강신청 안내입니다.",
+        LocalDate.of(2026, 2, 20),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(4),
+        List.of(NoticeFixtures.action("I-DESIGN 수강신청", "컴퓨터정보공학부", 0.92))
+    );
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(excluded, matched));
+
+    NoticeFeedResponse response = service.getFeed(
+        new NoticeProfile("컴퓨터정보공학부", 3, "재학생", List.of()),
+        0,
+        20
+    );
+
+    assertThat(response.notices()).extracting(summary -> summary.title())
+        .containsExactly(
+            "[학부대학] 2026학년도 1학기 <I-DESIGN> 수강신청 관련 안내",
+            "2026학년도 신입생 수강신청 안내"
+        );
+    assertThat(response.notices().get(1).importanceReasons()).contains("다른 대상 공지");
+    assertThat(response.notices().get(1).importanceReasons()).doesNotContain("컴퓨터정보공학부 공지");
+  }
+
+  @Test
   void usesFreshnessOnlyAsFallbackReason() {
     NoticeSourceEntity informational = NoticeFixtures.noticeSource(
         "도서관 휴관 안내",

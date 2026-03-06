@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PersonalizedFeedView } from './PersonalizedFeedView';
 import { EMPTY_PROFILE, makeNoticeFeedResponse } from '../test-helpers';
@@ -87,7 +87,7 @@ describe('PersonalizedFeedView', () => {
     mockFetchNoticeFeed.mockResolvedValue(makeNoticeFeedResponse([
       {
         ...QUALITY_INFORMATIONAL_NOTICE,
-        importanceReasons: ['다른 대상 공지', '최근 등록'],
+        importanceReasons: ['최근 등록', '다른 대상 공지'],
       },
     ]));
 
@@ -109,6 +109,14 @@ describe('PersonalizedFeedView', () => {
 
     expect(screen.getByText('다른 대상 공지')).toBeInTheDocument();
     expect(screen.queryByText('프로필 추가 확인 필요')).not.toBeInTheDocument();
+    const card = screen
+      .getByText('[학사지원팀] 2026-1학기 강의시간표 등 변경사항 안내(전공강좌) / 일별 업데이트(2026.03.05.) / 폐강 포함')
+      .closest('article');
+    expect(card).not.toBeNull();
+    const chipRow = (card as HTMLElement).querySelector('.chip-row');
+    expect(chipRow).not.toBeNull();
+    const badges = within(chipRow as HTMLElement).getAllByText(/등록|공지/);
+    expect(badges.at(-1)).toHaveTextContent('다른 대상 공지');
   });
 
   it('loads detail when a notice is selected and shows informational empty state', async () => {

@@ -1,9 +1,9 @@
 {
   "evaluationDate": "2026-03-06",
   "profile": {
-    "department": null,
-    "year": null,
-    "status": null,
+    "department": "컴퓨터정보공학부",
+    "year": 3,
+    "status": "재학생",
     "keywords": []
   },
   "notices": [
@@ -15,10 +15,9 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "최근 등록"
-      ],
-      "expectedActions": []
+      "expectedImportanceReasons": [],
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "269125",
@@ -28,10 +27,9 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "최근 등록"
-      ],
-      "expectedActions": []
+      "expectedImportanceReasons": [],
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "269089",
@@ -41,10 +39,9 @@
       "body": "2026-1학기 개강미사 및 수업운영 안내\n개강미사는 1995년 가톨릭대학교가 종합대학이 된 이후 지금까지 이어온 우리대학의 고유한 전통입니다. 매 학기 초에 봉헌되는 이 미사는 우리대학 공동체 구성원 모두가 함께하는 교내 유일한 전례ㆍ행사입니다. 학생, 교수, 직원 여러분들의 적극적인 참여를 바랍니다.\n1. 일시/장소 : 2026. 3. 12.(목) 10:00 / 콘서트홀\n2. 미사집전 : 최준규 총장 신부와 사제단\n3. 기타사항 : 미사 참석은 동일 시간 수업을 대체하는 것으로 보강 불필요\n개강미사는 동일 시간대(2~3교시) 수업을 대체합니다. 따라서, 이 시간에 수업이 있는 학생들은 출석에 대한 부담 없이 자유롭게 미사에 참여할 수 있습니다. 또한, 동일 시간대 수업이 있으신 교수님들께서는 가급적 학생들과 함께 미사에 참석하여 주시기 바랍니다. 개강미사로 대체하는 수업은 보강의 의무가 없습니다.\n※ 수업인정 절차\n1. 미사 참석 학생은 미사 중간에 퇴장할 수 없습니다.\n2. 미사 후 콘서트홀 입구에서 배부되는 ‘교무처장 명의의 출석표’를 받아 담당 교수님께 제출합니다.\n2026. 3. 4.\n교무처장",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "최근 등록"
-      ],
-      "expectedActions": []
+      "expectedImportanceReasons": [],
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268989",
@@ -55,9 +52,10 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "이번 주 등록"
+        "3학년 공지"
       ],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "mid"
     },
     {
       "id": "268838",
@@ -68,7 +66,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "269093",
@@ -78,10 +77,9 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "최근 등록"
-      ],
-      "expectedActions": []
+      "expectedImportanceReasons": [],
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "269011",
@@ -93,7 +91,7 @@
       "expectedPrimaryDueLabel": "3. 25. (수) 17:00",
       "expectedImportanceReasons": [
         "행동 필요",
-        "최근 등록"
+        "이번 주 등록"
       ],
       "expectedActions": [
         {
@@ -104,7 +102,8 @@
             "수강과목 취소 신청기간"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "mid"
     },
     {
       "id": "269059",
@@ -114,10 +113,9 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "최근 등록"
-      ],
-      "expectedActions": []
+      "expectedImportanceReasons": [],
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "269046",
@@ -127,10 +125,9 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "최근 등록"
-      ],
-      "expectedActions": []
+      "expectedImportanceReasons": [],
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "269021",
@@ -140,10 +137,9 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "최근 등록"
-      ],
-      "expectedActions": []
+      "expectedImportanceReasons": [],
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "269005",
@@ -153,10 +149,9 @@
       "body": "본문이 이미지로만 제공된 공지입니다.",
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
-      "expectedImportanceReasons": [
-        "이번 주 등록"
-      ],
-      "expectedActions": []
+      "expectedImportanceReasons": [],
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268935",
@@ -178,7 +173,8 @@
             "신청방법 : 학사지원팀 담당자 이메일로 신청서 양식 송부"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "mid"
     },
     {
       "id": "268869",
@@ -201,7 +197,8 @@
             "개인정보 수집활용 동의서"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "mid"
     },
     {
       "id": "268851",
@@ -224,7 +221,8 @@
             "공결 신청 변경 안내"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "mid"
     },
     {
       "id": "268888",
@@ -235,7 +233,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268871",
@@ -246,7 +245,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268768",
@@ -257,7 +257,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "행동 필요"
+        "다른 대상 공지"
       ],
       "expectedActions": [
         {
@@ -268,7 +268,8 @@
             "학번조회 안내"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268767",
@@ -279,7 +280,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268680",
@@ -290,7 +292,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268679",
@@ -301,7 +304,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268630",
@@ -312,7 +316,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268629",
@@ -323,7 +328,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268584",
@@ -334,7 +340,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "행동 필요"
+        "다른 대상 공지"
       ],
       "expectedActions": [
         {
@@ -345,7 +351,8 @@
             "편입생 학점인정 및 수강신청 안내"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268547",
@@ -356,8 +363,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "~ 3/9",
       "expectedImportanceReasons": [
-        "행동 필요",
-        "7일 안에 마감"
+        "다른 대상 공지"
       ],
       "expectedActions": [
         {
@@ -368,7 +374,8 @@
             "신입생 수강신청 안내"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268396",
@@ -379,7 +386,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268391",
@@ -401,7 +409,8 @@
             "수요조사 안내"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "mid"
     },
     {
       "id": "268255",
@@ -412,7 +421,8 @@
       "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [],
-      "expectedActions": []
+      "expectedActions": [],
+      "expectedPriorityTier": "low"
     },
     {
       "id": "268242",
@@ -434,7 +444,8 @@
             "군 복무 학점(군 e-러닝) 수강신청 안내"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "mid"
     },
     {
       "id": "268226",
@@ -445,6 +456,7 @@
       "expectedActionability": "action_required",
       "expectedPrimaryDueLabel": "~ 3/9",
       "expectedImportanceReasons": [
+        "컴퓨터정보공학부 공지",
         "행동 필요",
         "7일 안에 마감"
       ],
@@ -457,7 +469,8 @@
             "I-DESIGN 수강신청 관련 안내"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "high"
     },
     {
       "id": "268212",
@@ -479,7 +492,8 @@
             "교과목 참여 학생 모집 안내"
           ]
         }
-      ]
+      ],
+      "expectedPriorityTier": "mid"
     }
   ]
 }

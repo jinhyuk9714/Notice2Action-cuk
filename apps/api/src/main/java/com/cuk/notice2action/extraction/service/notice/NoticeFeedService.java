@@ -13,6 +13,7 @@ import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
 import com.cuk.notice2action.extraction.persistence.repository.NoticeSourceRepository;
 import com.cuk.notice2action.extraction.service.extractor.ActionSummaryBuilder;
 import com.cuk.notice2action.extraction.service.extractor.TaskPhraseExtractor;
+import com.cuk.notice2action.extraction.service.model.StructuredEligibility;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -175,41 +176,50 @@ public class NoticeFeedService {
     if (!profile.isConfigured()) {
       return new ProfileRelevance(0, List.of());
     }
-
-    String searchable = buildSearchableText(source);
+    ProfileSignals signals = collectProfileSignals(source);
+    String profileSearchText = signals.titleText() + "\n" + signals.actionEligibilityText();
+    String explicitAudienceText = signals.titleText();
+    String departmentSearchText = profileSearchText + "\n" + signals.rawBodyText();
     List<String> reasons = new ArrayList<>();
-    boolean matched = false;
-    boolean excluded = false;
+    boolean statusMatched = false;
+    boolean statusExcluded = false;
+    boolean yearMatched = false;
+    boolean yearExcluded = false;
+    boolean departmentMatched = false;
 
     if (hasText(profile.status())) {
-      if (containsIncludedTerm(searchable, profile.status())) {
+      if (signals.includedStatuses().contains(profile.status())
+          || containsIncludedTerm(profileSearchText, profile.status())) {
         reasons.add(profile.status() + " 공지");
-        matched = true;
-      } else if (containsAnyOtherStatus(searchable, profile.status())) {
-        excluded = true;
+        statusMatched = true;
+      } else if (containsAnyOtherStatus(explicitAudienceText, profile.status())) {
+        statusExcluded = true;
       }
     }
 
     if (profile.year() != null) {
-      YearMatch yearMatch = matchYear(searchable, profile.year());
-      if (yearMatch.relevant()) {
+      YearMatch yearMatch = matchYear(profileSearchText, profile.year());
+      YearMatch explicitYearMatch = matchYear(explicitAudienceText, profile.year());
+      if (signals.years().contains(profile.year()) || yearMatch.relevant()) {
         reasons.add(profile.year() + "학년 공지");
-        matched = true;
-      } else if (yearMatch.explicitlyExcluded()) {
-        excluded = true;
+        yearMatched = true;
+      } else if (explicitYearMatch.explicitlyExcluded()) {
+        yearExcluded = true;
       }
     }
 
-    if (hasText(profile.department()) && containsDepartment(searchable, profile.department())) {
+    if (hasText(profile.department())
+        && (signals.departments().contains(normalizeDepartment(profile.department()))
+        || containsDepartment(departmentSearchText, profile.department()))) {
       reasons.add(profile.department() + " 공지");
-      matched = true;
+      departmentMatched = true;
     }
 
-    if (matched) {
-      return new ProfileRelevance(60, reasons);
-    }
-    if (excluded) {
+    if ((statusExcluded && !statusMatched) || (yearExcluded && !yearMatched)) {
       return new ProfileRelevance(-40, List.of("다른 대상 공지"));
+    }
+    if (statusMatched || yearMatched || departmentMatched) {
+      return new ProfileRelevance(60, new ArrayList<>(new LinkedHashSet<>(reasons)));
     }
     return new ProfileRelevance(0, List.of());
   }
@@ -315,7 +325,7 @@ public class NoticeFeedService {
   }
 
   private YearMatch matchYear(String searchable, int year) {
-    Matcher rangeMatcher = Pattern.compile("(\\d)\\s*[~\\-–]\\s*(\\d)\\s*학년").matcher(searchable);
+    Matcher rangeMatcher = Pattern.compile("(?<!\\d)(\\d)\\s*[~\\-–]\\s*(\\d)\\s*학년(?!도)").matcher(searchable);
     while (rangeMatcher.find()) {
       int start = Integer.parseInt(rangeMatcher.group(1));
       int end = Integer.parseInt(rangeMatcher.group(2));
@@ -325,7 +335,7 @@ public class NoticeFeedService {
       return YearMatch.excludedMatch();
     }
 
-    Matcher singleMatcher = Pattern.compile("(\\d)\\s*학년").matcher(searchable);
+    Matcher singleMatcher = Pattern.compile("(?<!\\d)(\\d)\\s*학년(?!도)").matcher(searchable);
     boolean anyYearMention = false;
     while (singleMatcher.find()) {
       anyYearMention = true;
@@ -342,15 +352,62 @@ public class NoticeFeedService {
     return searchable.contains(department) || searchable.contains(normalizedDepartment);
   }
 
-  private String buildSearchableText(NoticeSourceEntity source) {
-    StringBuilder builder = new StringBuilder();
-    builder.append(source.getTitle() == null ? "" : source.getTitle()).append('\n');
-    builder.append(source.getRawText() == null ? "" : source.getRawText()).append('\n');
+  private ProfileSignals collectProfileSignals(NoticeSourceEntity source) {
+    Set<String> includedStatuses = new LinkedHashSet<>();
+    Set<String> excludedStatuses = new LinkedHashSet<>();
+    Set<Integer> years = new LinkedHashSet<>();
+    Set<String> departments = new LinkedHashSet<>();
+    boolean hasExplicitYears = false;
+    StringBuilder eligibilityText = new StringBuilder();
+
     for (ExtractedActionEntity action : source.getActions()) {
-      builder.append(action.getEligibility() == null ? "" : action.getEligibility()).append('\n');
-      builder.append(action.getActionSummary() == null ? "" : action.getActionSummary()).append('\n');
+      StructuredEligibility structured = parseStructuredEligibility(action.getStructuredEligibilityJson());
+      if (structured != null) {
+        includedStatuses.addAll(structured.statuses());
+        excludedStatuses.addAll(structured.excludedStatuses());
+        if (!structured.years().isEmpty()) {
+          years.addAll(structured.years());
+          hasExplicitYears = true;
+        }
+        if (hasText(structured.department())) {
+          departments.add(normalizeDepartment(structured.department()));
+        }
+      }
+
+      if (hasText(action.getEligibility())) {
+        if (eligibilityText.length() > 0) {
+          eligibilityText.append('\n');
+        }
+        eligibilityText.append(action.getEligibility());
+        for (String status : STUDENT_STATUSES) {
+          if (containsIncludedTerm(action.getEligibility(), status)) {
+            includedStatuses.add(status);
+          }
+        }
+      }
     }
-    return builder.toString();
+
+    return new ProfileSignals(
+        source.getTitle() == null ? "" : source.getTitle(),
+        source.getRawText() == null ? "" : source.getRawText(),
+        eligibilityText.toString(),
+        includedStatuses,
+        excludedStatuses,
+        years,
+        departments,
+        hasExplicitYears
+    );
+  }
+
+  private StructuredEligibility parseStructuredEligibility(String value) {
+    if (!hasText(value) || "null".equalsIgnoreCase(value)) {
+      return null;
+    }
+    try {
+      return objectMapper.readValue(value, StructuredEligibility.class);
+    } catch (JsonProcessingException exception) {
+      return null;
+    }
   }
 
   private NoticeActionBlockDto toActionBlock(ExtractedActionEntity action) {
@@ -1272,6 +1329,17 @@ public class NoticeFeedService {
       return new YearMatch(false, false);
     }
   }
+
+  private record ProfileSignals(
+      String titleText,
+      String rawBodyText,
+      String actionEligibilityText,
+      Set<String> includedStatuses,
+      Set<String> excludedStatuses,
+      Set<Integer> years,
+      Set<String> departments,
+      boolean hasExplicitYears
+  ) {}
 
   private record ScoredNotice(NoticeSourceEntity source, PersonalizedNoticeSummaryDto summary) {}
 
