@@ -664,4 +664,50 @@ class NoticeFeedServiceTest {
       assertThat(summary.importanceReasons()).doesNotContain("행동 필요 공지");
     });
   }
+
+  @Test
+  void buildsSingleConservativeBlockForImageOnlyNoticeWithAttachmentForms() {
+    UUID noticeId = UUID.randomUUID();
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        noticeId,
+        "[학사지원팀] 2026학년도 1학기 학기 중 취업학생 출결 사항 안내",
+        "본문이 이미지로만 제공된 공지입니다.",
+        LocalDate.of(2026, 2, 27),
+        "https://example.com/notices/269154",
+        List.of(
+            new CukNoticeAttachment("1. 공결허가원(취업).hwp", "https://example.com/files/1"),
+            new CukNoticeAttachment("2. 개인정보 수집활용 동의서(재직조회).hwp", "https://example.com/files/2"),
+            new CukNoticeAttachment("3. 취업공결 확인서(학기 중 취업학생).hwp", "https://example.com/files/3")
+        ),
+        "informational",
+        null,
+        List.of()
+    );
+
+    when(noticeSourceRepository.findDetailById(noticeId)).thenReturn(java.util.Optional.of(notice));
+
+    PersonalizedNoticeDetailDto detail = service.getDetail(noticeId, new NoticeProfile(null, null, null, List.of()));
+
+    assertThat(detail.actionability()).isEqualTo("action_required");
+    assertThat(detail.actionBlocks()).singleElement().satisfies(block -> {
+      assertThat(block.title()).isEqualTo("취업공결 관련 서류 준비 및 제출");
+      assertThat(block.summary()).contains("할 일: 취업공결 관련 서류 준비 및 제출.");
+      assertThat(block.summary()).contains("준비물:");
+      assertThat(block.summary()).doesNotContain("마감:");
+      assertThat(block.summary()).doesNotContain("시스템:");
+      assertThat(block.dueAtIso()).isNull();
+      assertThat(block.dueAtLabel()).isNull();
+      assertThat(block.systemHint()).isNull();
+      assertThat(block.requiredItems())
+          .containsExactly(
+              "1. 공결허가원(취업).hwp",
+              "2. 개인정보 수집활용 동의서(재직조회).hwp",
+              "3. 취업공결 확인서(학기 중 취업학생).hwp"
+          );
+      assertThat(block.evidence()).hasSizeLessThanOrEqualTo(3);
+      assertThat(block.evidence()).extracting(evidence -> evidence.snippet())
+          .contains("[학사지원팀] 2026학년도 1학기 학기 중 취업학생 출결 사항 안내")
+          .anySatisfy(snippet -> assertThat(snippet).contains("공결허가원"));
+    });
+  }
 }

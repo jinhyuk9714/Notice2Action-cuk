@@ -329,6 +329,10 @@ public class NoticeFeedService {
     if (!"action_required".equals(actionability)) {
       return List.of();
     }
+    List<CukNoticeAttachment> attachments = parseAttachments(source.getAttachmentsJson());
+    if (isImageOnlyBody(source.getRawText())) {
+      return buildImageOnlyActionBlocks(source, attachments);
+    }
     String sourceTitleTask = taskPhraseExtractor.extract(source.getTitle(), source.getRawText(), null, List.of());
     List<ActionBlockCandidate> candidates = new ArrayList<>();
     int index = 0;
@@ -352,6 +356,43 @@ public class NoticeFeedService {
         .limit(3)
         .map(ActionBlockCandidate::toDto)
         .toList();
+  }
+
+  private List<NoticeActionBlockDto> buildImageOnlyActionBlocks(NoticeSourceEntity source, List<CukNoticeAttachment> attachments) {
+    String imageOnlyText = appendAttachmentNames(source.getRawText(), attachments);
+    List<String> requiredItems = extractAttachmentFormNames(attachments);
+    String taskTitle = taskPhraseExtractor.extract(source.getTitle(), imageOnlyText, null, requiredItems);
+    if (!hasText(taskTitle)) {
+      return List.of();
+    }
+
+    List<EvidenceSnippetDto> evidence = new ArrayList<>();
+    if (hasText(source.getTitle())) {
+      evidence.add(new EvidenceSnippetDto("title", normalizeInlineText(source.getTitle()), 0.95));
+    }
+    for (String item : requiredItems.stream().limit(2).toList()) {
+      evidence.add(new EvidenceSnippetDto("requiredItems", item, 0.9));
+    }
+    if (evidence.isEmpty()) {
+      return List.of();
+    }
+
+    String summary = actionSummaryBuilder.build(taskTitle, null, null, requiredItems, source.getTitle());
+    double confidence = source.getActions().stream()
+        .mapToDouble(ExtractedActionEntity::getConfidenceScore)
+        .max()
+        .orElse(requiredItems.isEmpty() ? 0.72 : 0.82);
+
+    return List.of(new NoticeActionBlockDto(
+        taskTitle,
+        summary,
+        null,
+        null,
+        requiredItems,
+        null,
+        evidence,
+        confidence
+    ));
   }
 
   private ActionBlockCandidate toActionCandidate(ExtractedActionEntity action, String sourceTitleTask, int originalIndex) {
@@ -1039,11 +1080,56 @@ public class NoticeFeedService {
   }
 
   private String resolveActionability(NoticeSourceEntity source) {
+    List<CukNoticeAttachment> attachments = parseAttachments(source.getAttachmentsJson());
     return noticeActionabilityClassifier.classify(
         source.getTitle(),
-        source.getRawText(),
+        appendAttachmentNames(source.getRawText(), attachments),
         source.getActions().stream().map(this::toExtractedActionDto).toList()
     );
+  }
+
+  private boolean isImageOnlyBody(String rawText) {
+    return normalizeInlineText(rawText).contains("본문이 이미지로만 제공된 공지입니다");
+  }
+
+  private String appendAttachmentNames(String rawText, List<CukNoticeAttachment> attachments) {
+    String baseText = rawText == null ? "" : rawText;
+    if (attachments == null || attachments.isEmpty()) {
+      return baseText;
+    }
+    if (baseText.contains("첨부파일:")) {
+      return baseText;
+    }
+    String attachmentText = attachments.stream()
+        .map(CukNoticeAttachment::name)
+        .filter(NoticeFeedService::hasText)
+        .distinct()
+        .reduce((a, b) -> a + ", " + b)
+        .orElse("");
+    if (!hasText(attachmentText)) {
+      return baseText;
+    }
+    return baseText + "\n첨부파일: " + attachmentText;
+  }
+
+  private List<String> extractAttachmentFormNames(List<CukNoticeAttachment> attachments) {
+    if (attachments == null || attachments.isEmpty()) {
+      return List.of();
+    }
+    List<String> formKeywords = List.of("신청서", "허가원", "동의서", "확인서");
+    Set<String> names = new LinkedHashSet<>();
+    for (CukNoticeAttachment attachment : attachments) {
+      String name = attachment == null ? null : attachment.name();
+      if (!hasText(name)) {
+        continue;
+      }
+      String normalized = normalizeInlineText(name);
+      boolean matches = formKeywords.stream().anyMatch(normalized::contains);
+      if (matches) {
+        names.add(name.trim());
+      }
+    }
+    return List.copyOf(names);
   }
 
   private ExtractedActionDto toExtractedActionDto(ExtractedActionEntity action) {

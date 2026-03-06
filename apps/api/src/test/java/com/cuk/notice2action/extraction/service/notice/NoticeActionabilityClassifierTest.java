@@ -62,6 +62,45 @@ class NoticeActionabilityClassifierTest {
   }
 
   @Test
+  void classifiesImageOnlyActionTitleWithGenericAttachmentAsInformational() {
+    String result = classifier.classify(
+        "[2~4학년] 2026학년도 1학기 부전공(2차) 신청/변경 안내",
+        """
+        본문이 이미지로만 제공된 공지입니다.
+        첨부파일: 부전공 안내문.pdf
+        """,
+        List.of()
+    );
+
+    assertThat(result).isEqualTo("informational");
+  }
+
+  @Test
+  void classifiesImageOnlyActionTitleWithFormAttachmentAsActionRequired() {
+    String result = classifier.classify(
+        "[2~4학년] 2026학년도 1학기 부전공(2차) 신청/변경 안내",
+        """
+        본문이 이미지로만 제공된 공지입니다.
+        첨부파일: 부전공 신청서.hwp, 부전공 변경 신청서.hwp
+        """,
+        List.of()
+    );
+
+    assertThat(result).isEqualTo("action_required");
+  }
+
+  @Test
+  void classifiesImageOnlyActionTitleAsActionRequiredWhenDeterministicEvidenceExists() {
+    String result = classifier.classify(
+        "2026학년도 신·편입생(등록완료자) 학번조회 안내",
+        "본문이 이미지로만 제공된 공지입니다.",
+        List.of(action("학번조회", null, "TRINITY", List.of(), 0.82))
+    );
+
+    assertThat(result).isEqualTo("action_required");
+  }
+
+  @Test
   void classifiesDropPeriodNoticeAsActionRequiredFromBodyAndDueDate() {
     String result = classifier.classify(
         "[학사지원팀] 2026-1학기 수강과목 취소 기간 안내",

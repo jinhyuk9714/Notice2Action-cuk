@@ -42,18 +42,21 @@ public class NoticeActionabilityClassifier {
     boolean informationalTitle = containsAny(normalizedTitle, INFORMATIONAL_TITLE_KEYWORDS);
     boolean actionableTitle = containsAny(normalizedTitle, ACTION_TITLE_KEYWORDS);
     boolean imageOnlyBody = normalizedBody.contains("본문이 이미지로만 제공된 공지입니다.");
-    boolean attachmentFormSignals = hasAttachmentFormSignals(normalizedTitle, normalizedBody);
+    boolean attachmentFormSignals = containsAny(normalizedBody, ATTACHMENT_FORM_KEYWORDS);
     boolean strongActionSignals = hasStrongActionSignals(actions, normalizedBody);
 
     if (imageOnlyBody) {
-      if (attachmentFormSignals || hasEvidenceBackedSignals(actions)) {
+      if (actionableTitle && (attachmentFormSignals || hasEvidenceBackedSignals(actions))) {
+        return "action_required";
+      }
+      if (hasConditionalInformationalActionTitle(normalizedTitle) && attachmentFormSignals) {
         return "action_required";
       }
       return "informational";
     }
 
     if (informationalTitle && !actionableTitle) {
-      if (attachmentFormSignals) {
+      if (hasConditionalInformationalActionTitle(normalizedTitle) && attachmentFormSignals) {
         return "action_required";
       }
       return "informational";
@@ -64,14 +67,8 @@ public class NoticeActionabilityClassifier {
     return strongActionSignals ? "action_required" : "informational";
   }
 
-  private boolean hasAttachmentFormSignals(String normalizedTitle, String normalizedBody) {
-    if (!normalizedBody.contains("첨부파일:")) {
-      return false;
-    }
-    if (!containsAny(normalizedTitle, CONDITIONAL_INFORMATIONAL_ACTION_TITLES)) {
-      return false;
-    }
-    return containsAny(normalizedBody, ATTACHMENT_FORM_KEYWORDS);
+  private boolean hasConditionalInformationalActionTitle(String normalizedTitle) {
+    return containsAny(normalizedTitle, CONDITIONAL_INFORMATIONAL_ACTION_TITLES);
   }
 
   private boolean hasStrongActionSignals(List<ExtractedActionDto> actions, String normalizedBody) {
