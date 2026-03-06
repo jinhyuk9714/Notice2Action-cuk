@@ -380,6 +380,45 @@ describe('ActionDetailPanel', () => {
       expect(screen.queryByText('해당없음')).toBeNull();
     });
 
+    it('uses structured eligibility when raw eligibility is absent', () => {
+      render(
+        <ActionDetailPanel
+          detail={makeActionDetail({
+            eligibility: null,
+            structuredEligibility: {
+              universal: false,
+              statuses: [],
+              excludedStatuses: [],
+              years: [],
+              department: '컴퓨터공학',
+            },
+          })}
+          profile={FULL_PROFILE}
+        />,
+      );
+
+      expect(screen.getByText('관련')).toBeInTheDocument();
+    });
+  });
+
+  describe('additional dates', () => {
+    it('renders related dates when additionalDates exist', () => {
+      render(
+        <ActionDetailPanel
+          detail={makeActionDetail({
+            additionalDates: [
+              { isoAt: '2026-03-12T10:00:00+09:00', label: '3월 12일 설명회' },
+              { isoAt: '2026-03-14T18:00:00+09:00', label: '3월 14일 제출 전 확인' },
+            ],
+          })}
+          profile={EMPTY_PROFILE}
+        />,
+      );
+
+      expect(screen.getByText('관련 일정')).toBeInTheDocument();
+      expect(screen.getByText('3월 12일 설명회')).toBeInTheDocument();
+      expect(screen.getByText('3월 14일 제출 전 확인')).toBeInTheDocument();
+    });
   });
 
   // --- Calendar export ---

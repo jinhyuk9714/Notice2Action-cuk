@@ -24,7 +24,7 @@ const REMINDER_OPTIONS: readonly ReminderOption[] = [
 
 export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDetailPanelProps): ReactElement {
   const dday = computeDday(detail.dueAtIso);
-  const relevance = computeRelevance(detail.eligibility, profile);
+  const relevance = computeRelevance(detail.eligibility, profile, detail.structuredEligibility);
   const editor = useActionEditor({ detail, onActionUpdated });
   const reminder = useActionReminderToggle({ detail });
   const [statusUpdating, setStatusUpdating] = useState(false);
@@ -161,6 +161,18 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                 />
               </dd>
             </div>
+            {detail.additionalDates.length > 0 ? (
+              <div>
+                <dt>관련 일정</dt>
+                <dd>
+                  <ul className="additional-dates-list">
+                    {detail.additionalDates.map((date) => (
+                      <li key={`${date.isoAt}-${date.label}`}>{date.label}</li>
+                    ))}
+                  </ul>
+                </dd>
+              </div>
+            ) : null}
             <div>
               <dt>시스템</dt>
               <dd>

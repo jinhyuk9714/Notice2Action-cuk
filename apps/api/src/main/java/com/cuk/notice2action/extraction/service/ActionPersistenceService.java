@@ -5,6 +5,7 @@ import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionListResponse;
 import com.cuk.notice2action.extraction.api.dto.ActionSearchCriteria;
 import com.cuk.notice2action.extraction.api.dto.ActionUpdateRequest;
+import com.cuk.notice2action.extraction.api.dto.AdditionalDateDto;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.api.dto.FieldOverrideInfoDto;
@@ -12,6 +13,8 @@ import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionSummaryDto;
 import com.cuk.notice2action.extraction.api.dto.SourceInfoDto;
 import com.cuk.notice2action.extraction.domain.ActionStatus;
+import com.cuk.notice2action.extraction.service.extractor.StructuredEligibilityParser;
+import com.cuk.notice2action.extraction.service.model.StructuredEligibility;
 import com.cuk.notice2action.extraction.persistence.entity.EvidenceSnippetEntity;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
 import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
@@ -44,13 +47,16 @@ public class ActionPersistenceService {
   private final NoticeSourceRepository sourceRepository;
   private final ExtractedActionRepository actionRepository;
   private final ObjectMapper objectMapper;
+  private final StructuredEligibilityParser structuredEligibilityParser;
 
   public ActionPersistenceService(NoticeSourceRepository sourceRepository,
       ExtractedActionRepository actionRepository,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      StructuredEligibilityParser structuredEligibilityParser) {
     this.sourceRepository = sourceRepository;
     this.actionRepository = actionRepository;
     this.objectMapper = objectMapper;
+    this.structuredEligibilityParser = structuredEligibilityParser;
   }
 
   @Transactional
@@ -116,7 +122,10 @@ public class ActionPersistenceService {
       case "actionSummary" -> entity.setActionSummary(value);
       case "dueAtIso" -> entity.setDueAtIso(value != null ? OffsetDateTime.parse(value) : null);
       case "dueAtLabel" -> entity.setDueAtLabel(value);
-      case "eligibility" -> entity.setEligibility(value);
+      case "eligibility" -> {
+        entity.setEligibility(value);
+        entity.setStructuredEligibilityJson(toStructuredJson(structuredEligibilityParser.parse(value)));
+      }
       case "requiredItems" -> entity.setRequiredItemsJson(value != null ? value : "[]");
       case "systemHint" -> entity.setSystemHint(value);
       default -> { /* unreachable due to OVERRIDABLE_FIELDS check */ }
@@ -281,6 +290,7 @@ public class ActionPersistenceService {
         toIsoString(entity.getDueAtIso()),
         entity.getDueAtLabel(),
         entity.getEligibility(),
+        fromStructuredJson(entity.getStructuredEligibilityJson()),
         fromJson(entity.getRequiredItemsJson()),
         entity.getSystemHint(),
         entity.isInferred(),
@@ -289,6 +299,7 @@ public class ActionPersistenceService {
         sourceInfo,
         evidence,
         overrides,
+        fromAdditionalDatesJson(entity.getAdditionalDatesJson()),
         ActionStatus.defaultStatus(entity.getStatus())
     );
   }
@@ -302,6 +313,50 @@ public class ActionPersistenceService {
   }
 
   private List<String> fromJson(String json) {
+    try {
+      return objectMapper.readValue(json, new TypeReference<>() {});
+    } catch (Exception e) {
+      return List.of();
+    }
+  }
+
+  private String toStructuredJson(StructuredEligibility structured) {
+    if (structured == null) {
+      return null;
+    }
+    try {
+      return objectMapper.writeValueAsString(structured);
+    } catch (JsonProcessingException e) {
+      return null;
+    }
+  }
+
+  private StructuredEligibility fromStructuredJson(String json) {
+    if (json == null || json.isBlank()) {
+      return null;
+    }
+    try {
+      return objectMapper.readValue(json, StructuredEligibility.class);
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  private String toAdditionalDatesJson(List<AdditionalDateDto> dates) {
+    if (dates == null || dates.isEmpty()) {
+      return "[]";
+    }
+    try {
+      return objectMapper.writeValueAsString(dates);
+    } catch (JsonProcessingException e) {
+      return "[]";
+    }
+  }
+
+  private List<AdditionalDateDto> fromAdditionalDatesJson(String json) {
+    if (json == null || json.isBlank()) {
+      return List.of();
+    }
     try {
       return objectMapper.readValue(json, new TypeReference<>() {});
     } catch (Exception e) {
@@ -408,6 +463,8 @@ public class ActionPersistenceService {
         now
     );
     entity.setStatus(ActionStatus.PENDING);
+    entity.setStructuredEligibilityJson(toStructuredJson(extractedAction.structuredEligibility()));
+    entity.setAdditionalDatesJson(toAdditionalDatesJson(extractedAction.additionalDates()));
     return entity;
   }
 
@@ -435,7 +492,9 @@ public class ActionPersistenceService {
         entity.getActionSummary(),
         toIsoString(entity.getDueAtIso()),
         entity.getDueAtLabel(),
+        fromAdditionalDatesJson(entity.getAdditionalDatesJson()),
         entity.getEligibility(),
+        fromStructuredJson(entity.getStructuredEligibilityJson()),
         fromJson(entity.getRequiredItemsJson()),
         entity.getSystemHint(),
         source != null ? source.getSourceCategory() : null,
@@ -529,6 +588,8 @@ public class ActionPersistenceService {
     }
     rememberMachineValueIfAbsent(machineValues, "eligibility", entity.getEligibility());
     entity.setEligibility(eligibility);
+    entity.setStructuredEligibilityJson(
+        toStructuredJson(structuredEligibilityParser.parse(eligibility)));
   }
 
   private void applyRequiredItemsUpdate(ExtractedActionEntity entity, List<String> requiredItems,

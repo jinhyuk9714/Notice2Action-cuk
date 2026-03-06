@@ -223,4 +223,24 @@ class ActionUpdateTest {
     assertThat(overriddenFields).containsExactlyInAnyOrder("title", "actionSummary", "eligibility");
   }
 
+  @Test
+  void updateAction_recomputes_structured_eligibility_when_eligibility_changes() {
+    UUID id = persistAndGetId();
+
+    SavedActionDetailDto result = persistenceService.updateAction(id, new ActionUpdateRequest(
+        null,
+        null,
+        null,
+        null,
+        "컴퓨터정보공학부 3학년 재학생 대상",
+        null,
+        null,
+        null
+    ));
+
+    assertThat(result.structuredEligibility()).isNotNull();
+    assertThat(result.structuredEligibility().statuses()).contains("재학생");
+    assertThat(result.structuredEligibility().years()).contains(3);
+    assertThat(result.structuredEligibility().department()).isEqualTo("컴퓨터정보공학");
+  }
 }

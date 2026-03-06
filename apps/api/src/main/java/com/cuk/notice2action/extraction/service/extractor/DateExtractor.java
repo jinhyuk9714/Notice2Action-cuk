@@ -9,8 +9,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
@@ -158,6 +160,42 @@ public class DateExtractor {
   public String formatIso(DateComponents dc) {
     return String.format(Locale.ROOT, "%04d-%02d-%02dT%02d:%02d:00+09:00",
         dc.year(), dc.month(), dc.day(), dc.hour(), dc.minute());
+  }
+
+  public List<DateMatch> extractAll(String text, List<EvidenceSnippetDto> evidence) {
+    List<ScoredDateMatch> candidates = new ArrayList<>();
+
+    collectIsoRangeEndWithTime(text, candidates);
+    collectKoreanFullDates(text, candidates);
+    collectIsoDates(text, candidates);
+    collectKoreanMonthDay24H(text, candidates);
+    collectKoreanMonthDayTime(text, candidates);
+    collectShortSlashDot(text, candidates);
+    collectRangeEndKorean(text, candidates);
+    collectRangeEndShort(text, candidates);
+
+    if (candidates.isEmpty()) {
+      DateMatch single = extract(text, evidence);
+      return single != null ? List.of(single) : List.of();
+    }
+
+    candidates.sort((a, b) -> Double.compare(b.score(), a.score()));
+
+    Map<String, ScoredDateMatch> byDay = new LinkedHashMap<>();
+    for (ScoredDateMatch candidate : candidates) {
+      DateComponents dc = candidate.dateMatch().components();
+      String dayKey = String.format(Locale.ROOT, "%04d-%02d-%02d", dc.year(), dc.month(), dc.day());
+      byDay.putIfAbsent(dayKey, candidate);
+    }
+
+    ScoredDateMatch primary = byDay.values().iterator().next();
+    evidence.add(new EvidenceSnippetDto(
+        "dueAtLabel",
+        contextualDateSnippet(text, primary.dateMatch().label()),
+        primary.score()
+    ));
+
+    return byDay.values().stream().map(ScoredDateMatch::dateMatch).toList();
   }
 
   // --- Absolute date collectors ---

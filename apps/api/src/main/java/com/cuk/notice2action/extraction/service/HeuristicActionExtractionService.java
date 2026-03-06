@@ -2,6 +2,7 @@ package com.cuk.notice2action.extraction.service;
 
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionRequest;
 import com.cuk.notice2action.extraction.api.dto.ActionExtractionResponse;
+import com.cuk.notice2action.extraction.api.dto.AdditionalDateDto;
 import com.cuk.notice2action.extraction.api.dto.EvidenceSnippetDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.service.extractor.ActionSegmenter;
@@ -10,12 +11,14 @@ import com.cuk.notice2action.extraction.service.extractor.ActionVerbExtractor;
 import com.cuk.notice2action.extraction.service.extractor.DateExtractor;
 import com.cuk.notice2action.extraction.service.extractor.EligibilityExtractor;
 import com.cuk.notice2action.extraction.service.extractor.RequiredItemExtractor;
+import com.cuk.notice2action.extraction.service.extractor.StructuredEligibilityParser;
 import com.cuk.notice2action.extraction.service.extractor.SystemHintExtractor;
 import com.cuk.notice2action.extraction.service.extractor.TaskPhraseExtractor;
 import com.cuk.notice2action.extraction.service.extractor.TextNormalizer;
 import com.cuk.notice2action.extraction.service.extractor.TitleDeriver;
 import com.cuk.notice2action.extraction.service.model.ActionSegment;
 import com.cuk.notice2action.extraction.service.model.DateMatch;
+import com.cuk.notice2action.extraction.service.model.StructuredEligibility;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +41,7 @@ public class HeuristicActionExtractionService implements ActionExtractionService
   private final ActionSummaryBuilder actionSummaryBuilder;
   private final TitleDeriver titleDeriver;
   private final TaskPhraseExtractor taskPhraseExtractor;
+  private final StructuredEligibilityParser structuredEligibilityParser;
 
   public HeuristicActionExtractionService(
       TextNormalizer textNormalizer,
@@ -49,7 +53,8 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       ActionSegmenter actionSegmenter,
       ActionSummaryBuilder actionSummaryBuilder,
       TitleDeriver titleDeriver,
-      TaskPhraseExtractor taskPhraseExtractor
+      TaskPhraseExtractor taskPhraseExtractor,
+      StructuredEligibilityParser structuredEligibilityParser
   ) {
     this.textNormalizer = textNormalizer;
     this.dateExtractor = dateExtractor;
@@ -61,6 +66,7 @@ public class HeuristicActionExtractionService implements ActionExtractionService
     this.actionSummaryBuilder = actionSummaryBuilder;
     this.titleDeriver = titleDeriver;
     this.taskPhraseExtractor = taskPhraseExtractor;
+    this.structuredEligibilityParser = structuredEligibilityParser;
   }
 
   @Override
@@ -111,13 +117,20 @@ public class HeuristicActionExtractionService implements ActionExtractionService
   ) {
     List<EvidenceSnippetDto> evidence = new ArrayList<>();
 
-    DateMatch dateMatch = dateExtractor.extract(text, evidence);
+    List<DateMatch> allDates = dateExtractor.extractAll(text, evidence);
+    DateMatch dateMatch = allDates.isEmpty() ? null : allDates.getFirst();
     String dueAtLabel = dateMatch != null ? dateMatch.label() : null;
     String dueAtIso = dateMatch != null ? dateExtractor.formatIso(dateMatch.components()) : null;
+    List<AdditionalDateDto> additionalDates = allDates.size() > 1
+        ? allDates.subList(1, allDates.size()).stream()
+            .map(match -> new AdditionalDateDto(dateExtractor.formatIso(match.components()), match.label()))
+            .toList()
+        : List.of();
     String systemHint = systemHintExtractor.extract(text, evidence);
     List<String> requiredItems = requiredItemExtractor.extract(text, evidence);
     String actionVerb = overrideVerb != null ? overrideVerb : actionVerbExtractor.extract(text, evidence);
     String eligibility = eligibilityExtractor.extract(text, evidence);
+    StructuredEligibility structuredEligibility = structuredEligibilityParser.parse(eligibility);
     String extractedTaskPhrase = taskPhraseExtractor.extract(request.sourceTitle(), text, actionVerb, requiredItems);
     String taskPhrase = resolveTaskPhrase(overrideTaskPhrase, extractedTaskPhrase);
     String title = titleDeriver.derive(taskPhrase, request.sourceTitle(), text);
@@ -129,7 +142,8 @@ public class HeuristicActionExtractionService implements ActionExtractionService
         null, null,
         title, actionSummary,
         dueAtIso, dueAtLabel,
-        eligibility, requiredItems, systemHint,
+        additionalDates,
+        eligibility, structuredEligibility, requiredItems, systemHint,
         request.sourceCategory(),
         evidence, computeInferred(evidence), confidenceScore, null
     );
@@ -158,7 +172,9 @@ public class HeuristicActionExtractionService implements ActionExtractionService
           action.actionSummary(),
           action.dueAtIso(),
           action.dueAtLabel(),
+          action.additionalDates(),
           action.eligibility(),
+          action.structuredEligibility(),
           action.requiredItems(),
           action.systemHint(),
           action.sourceCategory(),
