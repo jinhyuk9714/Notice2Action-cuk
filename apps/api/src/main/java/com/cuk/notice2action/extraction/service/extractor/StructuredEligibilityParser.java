@@ -17,7 +17,7 @@ public class StructuredEligibilityParser {
   );
 
   private static final List<String> STATUS_KEYWORDS = List.of(
-      "졸업예정자", "대학원생", "재학생", "신입생", "복학생", "수료자", "휴학생"
+      "졸업예정자", "대학원생", "재학생", "신입생", "복학생", "외국인", "유학생", "수료자", "휴학생"
   );
 
   private static final Pattern EXCLUSION = Pattern.compile("제외|불가|불포함");

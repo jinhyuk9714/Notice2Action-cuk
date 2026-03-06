@@ -14,7 +14,7 @@ public class SystemHintExtractor {
       "종정넷", "LMS", "e-class", "e-Campus",
       "학생생활관", "국제교류원",
       "취업지원센터", "장학포털", "학과사무실", "통합정보시스템",
-      "도서관", "포털", "portal"
+      "도서관", "학사포털", "포털", "portal"
   );
 
   public String extract(String text, List<EvidenceSnippetDto> evidence) {

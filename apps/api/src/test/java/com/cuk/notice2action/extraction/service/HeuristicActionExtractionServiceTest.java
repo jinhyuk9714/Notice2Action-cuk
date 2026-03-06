@@ -571,6 +571,14 @@ class HeuristicActionExtractionServiceTest {
     }
 
     @Test
+    void detects_학사포털() {
+      ActionExtractionResponse response =
+          service.extract(request("학사포털에서 수강신청 변경 내역을 확인하세요"));
+
+      assertThat(response.actions().getFirst().systemHint()).isEqualTo("학사포털");
+    }
+
+    @Test
     void system_hint_evidence_includes_context() {
       ActionExtractionResponse response =
           service.extract(request("3월 12일까지 장학포털에서 장학금을 신청하세요"));
@@ -690,6 +698,16 @@ class HeuristicActionExtractionServiceTest {
 
       assertThat(conf1).isGreaterThan(conf2);
     }
+
+    @Test
+    void extracts_foreign_student_signal_and_structured_status() {
+      ActionExtractionResponse response =
+          service.extract(request("지원 대상은 외국인 유학생입니다. 3월 12일까지 신청하세요."));
+
+      ExtractedActionDto action = response.actions().getFirst();
+      assertThat(action.eligibility()).contains("외국인 유학생");
+      assertThat(action.structuredEligibility().statuses()).contains("외국인", "유학생");
+    }
   }
 
   // --- Action Verb Tests ---
@@ -707,6 +725,42 @@ class HeuristicActionExtractionServiceTest {
           .toList();
       assertThat(verbEvidence).isNotEmpty();
       assertThat(verbEvidence.getFirst().snippet()).contains("신청");
+    }
+
+    @Test
+    void extracts_업로드_verb_in_evidence() {
+      ActionExtractionResponse response =
+          service.extract(request("증빙서류를 업로드하세요"));
+
+      List<EvidenceSnippetDto> verbEvidence = response.actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName()))
+          .toList();
+      assertThat(verbEvidence).isNotEmpty();
+      assertThat(verbEvidence.getFirst().snippet()).contains("업로드");
+    }
+
+    @Test
+    void extracts_수령_verb_in_evidence() {
+      ActionExtractionResponse response =
+          service.extract(request("학생증은 행정실에서 수령하세요"));
+
+      List<EvidenceSnippetDto> verbEvidence = response.actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName()))
+          .toList();
+      assertThat(verbEvidence).isNotEmpty();
+      assertThat(verbEvidence.getFirst().snippet()).contains("수령");
+    }
+
+    @Test
+    void change_notice_does_not_treat_변경_안내_as_action_verb() {
+      ActionExtractionResponse response =
+          service.extract(request("강의변경 안내입니다. 자세한 내용은 붙임 문서를 참고하세요."));
+
+      List<EvidenceSnippetDto> verbEvidence = response.actions().getFirst().evidence().stream()
+          .filter(e -> "actionVerb".equals(e.fieldName()))
+          .toList();
+
+      assertThat(verbEvidence).isEmpty();
     }
 
     @Test
