@@ -107,6 +107,28 @@ describe('PersonalizedFeedView', () => {
     expect(onHide).toHaveBeenCalledWith('269011');
   });
 
+  it('renders card action buttons inside a dedicated action row', async () => {
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={EMPTY_PREFS}
+        initialNoticeId={null}
+        onNoticeSelect={() => {}}
+        onToggleSaved={() => {}}
+        onHide={() => {}}
+        onUnhide={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('[학사지원팀] 2026-1학기 수강과목 취소 기간 안내')).toBeInTheDocument();
+    });
+
+    const saveButton = screen.getAllByRole('button', { name: '저장' })[0];
+    expect(saveButton.parentElement).not.toBeNull();
+    expect(saveButton.parentElement?.className).toContain('card-actions-row');
+  });
+
   it('shows hidden notices in a recovery section and allows unhide', async () => {
     const onUnhide = vi.fn();
 

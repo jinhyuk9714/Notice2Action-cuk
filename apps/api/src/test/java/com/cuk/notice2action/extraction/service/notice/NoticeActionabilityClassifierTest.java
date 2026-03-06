@@ -51,14 +51,14 @@ class NoticeActionabilityClassifierTest {
   }
 
   @Test
-  void classifiesImageOnlyMinorApplicationNoticeAsActionRequiredFromTitle() {
+  void classifiesImageOnlyMinorApplicationNoticeAsInformationalWithoutEvidence() {
     String result = classifier.classify(
         "[2~4학년] 2026학년도 1학기 부전공(2차) 신청/변경 안내",
         "본문이 이미지로만 제공된 공지입니다.",
         List.of()
     );
 
-    assertThat(result).isEqualTo("action_required");
+    assertThat(result).isEqualTo("informational");
   }
 
   @Test

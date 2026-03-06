@@ -80,10 +80,10 @@ class NoticeQualityEvaluationSetTest {
     assertThat(evaluationSet.notices()).hasSize(30);
     assertThat(evaluationSet.notices().stream()
         .filter(notice -> "action_required".equals(notice.expectedActionability()))
-        .count()).isEqualTo(15);
+        .count()).isEqualTo(11);
     assertThat(evaluationSet.notices().stream()
         .filter(notice -> "informational".equals(notice.expectedActionability()))
-        .count()).isEqualTo(15);
+        .count()).isEqualTo(19);
   }
 
   @Test
@@ -130,7 +130,7 @@ class NoticeQualityEvaluationSetTest {
   @Test
   void representativeActionTitlesAndSummariesMatchEvaluationSubset() {
     List<String> representativeIds = List.of(
-        "268989", "269011", "268869", "268547", "268226",
+        "269011", "268869", "268547", "268226",
         "268242", "268391", "268212"
     );
 

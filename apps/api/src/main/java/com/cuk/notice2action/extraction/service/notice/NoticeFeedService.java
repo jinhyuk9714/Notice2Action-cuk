@@ -7,6 +7,7 @@ import com.cuk.notice2action.extraction.api.dto.NoticeDueHintDto;
 import com.cuk.notice2action.extraction.api.dto.NoticeFeedResponse;
 import com.cuk.notice2action.extraction.api.dto.PersonalizedNoticeDetailDto;
 import com.cuk.notice2action.extraction.api.dto.PersonalizedNoticeSummaryDto;
+import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
 import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
 import com.cuk.notice2action.extraction.persistence.repository.NoticeSourceRepository;
@@ -47,17 +48,20 @@ public class NoticeFeedService {
   private final ObjectMapper objectMapper;
   private final TaskPhraseExtractor taskPhraseExtractor;
   private final ActionSummaryBuilder actionSummaryBuilder;
+  private final NoticeActionabilityClassifier noticeActionabilityClassifier;
 
   public NoticeFeedService(
       NoticeSourceRepository noticeSourceRepository,
       ObjectMapper objectMapper,
       TaskPhraseExtractor taskPhraseExtractor,
-      ActionSummaryBuilder actionSummaryBuilder
+      ActionSummaryBuilder actionSummaryBuilder,
+      NoticeActionabilityClassifier noticeActionabilityClassifier
   ) {
     this.noticeSourceRepository = noticeSourceRepository;
     this.objectMapper = objectMapper;
     this.taskPhraseExtractor = taskPhraseExtractor;
     this.actionSummaryBuilder = actionSummaryBuilder;
+    this.noticeActionabilityClassifier = noticeActionabilityClassifier;
   }
 
   @Transactional(readOnly = true)
@@ -94,14 +98,14 @@ public class NoticeFeedService {
         scored.summary().publishedAt(),
         source.getSourceUrl(),
         scored.summary().importanceReasons(),
-        source.getActionability(),
+        scored.summary().actionability(),
         scored.summary().dueHint(),
         scored.summary().relevanceScore(),
         source.getRawText(),
         parseAttachments(source.getAttachmentsJson()).stream()
             .map(attachment -> new NoticeAttachmentDto(attachment.name(), attachment.url()))
             .toList(),
-        toActionBlocks(source)
+        toActionBlocks(source, scored.summary().actionability())
     );
   }
 
@@ -118,6 +122,8 @@ public class NoticeFeedService {
   }
 
   private ScoredNotice scoreNotice(NoticeSourceEntity source, NoticeProfile profile) {
+    String effectiveActionability = resolveActionability(source);
+    NoticeDueHintDto effectiveDueHint = resolveDueHint(source, effectiveActionability);
     List<String> reasons = new ArrayList<>();
     int score = 0;
 
@@ -129,13 +135,13 @@ public class NoticeFeedService {
     score += Math.min(keywordReasons.size(), 2) * 10;
     reasons.addAll(keywordReasons.stream().limit(2).toList());
 
-    if ("action_required".equals(source.getActionability())) {
+    if ("action_required".equals(effectiveActionability)) {
       score += 15;
       reasons.add("행동 필요 공지");
     }
 
-    if (source.getPrimaryDueAt() != null) {
-      long dueDays = ChronoUnit.DAYS.between(OffsetDateTime.now(APP_OFFSET), source.getPrimaryDueAt());
+    if (effectiveDueHint != null) {
+      long dueDays = ChronoUnit.DAYS.between(OffsetDateTime.now(APP_OFFSET), OffsetDateTime.parse(effectiveDueHint.dueAtIso()));
       if (dueDays <= 7) {
         score += 20;
         reasons.add("7일 이내 마감");
@@ -163,8 +169,8 @@ public class NoticeFeedService {
         toPublishedAtString(source.getPublishedAt()),
         source.getSourceUrl(),
         dedupedReasons,
-        source.getActionability(),
-        toDueHint(source),
+        effectiveActionability,
+        effectiveDueHint,
         score
     );
     return new ScoredNotice(source, summary);
@@ -303,8 +309,8 @@ public class NoticeFeedService {
     );
   }
 
-  private List<NoticeActionBlockDto> toActionBlocks(NoticeSourceEntity source) {
-    if (!"action_required".equals(source.getActionability())) {
+  private List<NoticeActionBlockDto> toActionBlocks(NoticeSourceEntity source, String actionability) {
+    if (!"action_required".equals(actionability)) {
       return List.of();
     }
     String sourceTitleTask = taskPhraseExtractor.extract(source.getTitle(), source.getRawText(), null, List.of());
@@ -580,7 +586,7 @@ public class NoticeFeedService {
     if (dueLineIndex + 1 < lines.size() && isTrailingConditionLine(lines.get(dueLineIndex + 1))) {
       expanded = expanded + " " + lines.get(dueLineIndex + 1);
     }
-    return normalizeInlineText(expanded);
+    return sanitizeDueDisplayLine(expanded);
   }
 
   private List<EvidenceSnippetDto> refineDetailEvidence(
@@ -599,9 +605,19 @@ public class NoticeFeedService {
     if (hasText(dueContextSnippet)) {
       candidates.add(new EvidenceSnippetDto("dueAtLabel", dueContextSnippet, 0.95));
     }
+    String systemContextSnippet = buildSystemContextSnippet(rawText, systemHint);
+    if (hasText(systemContextSnippet)) {
+      candidates.add(new EvidenceSnippetDto("systemHint", systemContextSnippet, 0.9));
+    }
     for (EvidenceSnippetDto evidence : mergedEvidence) {
+      if ("dueAtLabel".equals(evidence.fieldName()) && hasText(dueContextSnippet)) {
+        continue;
+      }
+      if ("systemHint".equals(evidence.fieldName()) && hasText(systemContextSnippet)) {
+        continue;
+      }
       String snippet = normalizeInlineText(evidence.snippet());
-      if (!isUsefulEvidence(snippet, sourceTitle, finalTitle, detailDueAtLabel, systemHint, requiredItems)) {
+      if (!isUsefulEvidence(evidence.fieldName(), snippet, sourceTitle, finalTitle, detailDueAtLabel, systemHint, requiredItems)) {
         continue;
       }
       candidates.add(new EvidenceSnippetDto(evidence.fieldName(), snippet, evidence.confidence()));
@@ -638,6 +654,20 @@ public class NoticeFeedService {
       return null;
     }
     List<String> lines = splitDetailLines(rawText);
+    for (int index = 0; index < lines.size(); index++) {
+      String line = lines.get(index);
+      if (!isExplicitDueLine(line) || isExplanatoryDueLine(line)) {
+        continue;
+      }
+      if (!lineMatchesDueInstant(line, dueAtIso) && !lineMatchesDueLabel(line, detailDueAtLabel)) {
+        continue;
+      }
+      String snippet = line;
+      if (index + 1 < lines.size() && isTrailingConditionLine(lines.get(index + 1))) {
+        snippet = snippet + " " + lines.get(index + 1);
+      }
+      return sanitizeDueDisplayLine(snippet);
+    }
     int dueLineIndex = findDueLineIndex(lines, dueAtIso, detailDueAtLabel, buildTaskTerms(group, null));
     if (dueLineIndex < 0) {
       return detailDueAtLabel;
@@ -650,7 +680,26 @@ public class NoticeFeedService {
     if (dueLineIndex + 1 < lines.size() && isTrailingConditionLine(lines.get(dueLineIndex + 1))) {
       snippet = snippet + " " + lines.get(dueLineIndex + 1);
     }
-    return normalizeInlineText(snippet);
+    return sanitizeDueDisplayLine(snippet);
+  }
+
+  private String buildSystemContextSnippet(String rawText, String systemHint) {
+    if (!hasText(rawText) || !hasText(systemHint)) {
+      return null;
+    }
+    List<String> lines = splitDetailLines(rawText);
+    List<String> terms = buildSystemSearchTerms(systemHint);
+    for (String line : lines) {
+      String normalizedLine = normalizeMatchValue(line);
+      boolean matches = terms.stream()
+          .map(this::normalizeMatchValue)
+          .filter(NoticeFeedService::hasText)
+          .anyMatch(normalizedLine::contains);
+      if (matches) {
+        return sanitizeDueDisplayLine(line);
+      }
+    }
+    return null;
   }
 
   private int findDueLineIndex(
@@ -660,18 +709,31 @@ public class NoticeFeedService {
       List<String> taskTerms
   ) {
     for (int index = 0; index < lines.size(); index++) {
-      if (lineMatchesDueInstant(lines.get(index), dueAtIso)) {
-        return index;
+      String line = lines.get(index);
+      if (isExplanatoryDueLine(line) || !isExplicitDueLine(line)) {
+        continue;
       }
-    }
-    for (int index = 0; index < lines.size(); index++) {
-      if (lineMatchesDueLabel(lines.get(index), dueAtLabel)) {
+      if (lineMatchesDueInstant(line, dueAtIso)
+          || lineMatchesDueLabel(line, dueAtLabel)
+          || (looksLikeDueLine(line) && matchesTaskWindow(lines, index, taskTerms))) {
         return index;
       }
     }
     for (int index = 0; index < lines.size(); index++) {
       String line = lines.get(index);
-      if (!looksLikeDueLine(line)) {
+      if (!isExplanatoryDueLine(line) && lineMatchesDueInstant(line, dueAtIso)) {
+        return index;
+      }
+    }
+    for (int index = 0; index < lines.size(); index++) {
+      String line = lines.get(index);
+      if (!isExplanatoryDueLine(line) && lineMatchesDueLabel(line, dueAtLabel)) {
+        return index;
+      }
+    }
+    for (int index = 0; index < lines.size(); index++) {
+      String line = lines.get(index);
+      if (isExplanatoryDueLine(line) || !looksLikeDueLine(line)) {
         continue;
       }
       if (matchesTaskWindow(lines, index, taskTerms)) {
@@ -757,6 +819,28 @@ public class NoticeFeedService {
         || normalized.contains("마감");
   }
 
+  private boolean isExplicitDueLine(String line) {
+    String normalized = normalizeInlineText(line);
+    return normalized.contains("신청기간")
+        || normalized.contains("변경기간")
+        || normalized.contains("제출기간")
+        || normalized.contains("수강신청 기간")
+        || normalized.contains("수강신청 변경기간")
+        || normalized.contains("마감")
+        || normalized.matches(".*기간\\s*[:：].*");
+  }
+
+  private boolean isExplanatoryDueLine(String line) {
+    String normalized = normalizeInlineText(line);
+    return normalized.contains("가능합니다")
+        || normalized.contains("불가능")
+        || normalized.contains("바랍니다")
+        || normalized.contains("안내합니다")
+        || normalized.contains("해당")
+        || normalized.contains("확인하시기")
+        || normalized.contains("확인 바랍니다");
+  }
+
   private boolean isTrailingConditionLine(String line) {
     String normalized = normalizeInlineText(line);
     return normalized.startsWith("(")
@@ -773,6 +857,7 @@ public class NoticeFeedService {
   }
 
   private boolean isUsefulEvidence(
+      String fieldName,
       String snippet,
       String sourceTitle,
       String finalTitle,
@@ -784,15 +869,37 @@ public class NoticeFeedService {
       return false;
     }
     String normalizedSnippet = normalizeMatchValue(snippet);
+    String normalizedSourceTitle = normalizeMatchValue(sourceTitle);
+    String normalizedBareSourceTitle = normalizeMatchValue(stripTitlePrefix(sourceTitle));
+    String normalizedFinalTitle = normalizeMatchValue(finalTitle);
     if (normalizedSnippet.equals(normalizeMatchValue(sourceTitle))
         || normalizedSnippet.equals(normalizeMatchValue(finalTitle))
         || normalizedSnippet.equals(normalizeMatchValue(detailDueAtLabel))) {
       return false;
     }
+    if (!"dueAtLabel".equals(fieldName)
+        && !normalizedSourceTitle.isEmpty()
+        && normalizedSnippet.contains(normalizedSourceTitle)) {
+      return false;
+    }
+    if (!"dueAtLabel".equals(fieldName)
+        && !normalizedBareSourceTitle.isEmpty()
+        && normalizedSnippet.contains(normalizedBareSourceTitle)) {
+      return false;
+    }
+    if (!"dueAtLabel".equals(fieldName)
+        && !normalizedFinalTitle.isEmpty()
+        && normalizedSnippet.contains(normalizedFinalTitle)) {
+      return false;
+    }
     if (snippet.contains("자세한 내용은")
         || snippet.contains("확인바랍니다")
         || snippet.contains("참고")
-        || snippet.contains("이수")) {
+        || snippet.contains("이수")
+        || snippet.contains("안내드리오니")
+        || snippet.contains("완료하시기 바랍니다")
+        || snippet.contains("문의처")
+        || isExplanatoryDueLine(snippet)) {
       return false;
     }
     if (!hasPreferredEvidenceLength(snippet)
@@ -831,6 +938,27 @@ public class NoticeFeedService {
     return value == null ? "" : value.replaceAll("\\s+", " ").trim();
   }
 
+  private String sanitizeDueDisplayLine(String value) {
+    return normalizeInlineText(value).replaceFirst("^[\\-•·▪■□▶◎]+\\s*", "").trim();
+  }
+
+  private String stripTitlePrefix(String value) {
+    return normalizeInlineText(value).replaceFirst("^\\[[^\\]]+\\]\\s*", "").trim();
+  }
+
+  private List<String> buildSystemSearchTerms(String systemHint) {
+    List<String> terms = new ArrayList<>();
+    terms.add(systemHint);
+    String normalized = systemHint.trim().toUpperCase(Locale.ROOT);
+    if ("TRINITY".equals(normalized)) {
+      terms.add("트리니티");
+    }
+    if ("사이버캠퍼스".equals(systemHint) || "CYBERCAMPUS".equals(normalized)) {
+      terms.add("사이버캠퍼스");
+    }
+    return terms;
+  }
+
   private String normalizeMatchValue(String value) {
     return normalizeInlineText(value)
         .replaceAll("[()\\[\\].,:~～\\-_/]", "")
@@ -858,6 +986,42 @@ public class NoticeFeedService {
       return null;
     }
     return new NoticeDueHintDto(source.getPrimaryDueAt().toString(), source.getPrimaryDueLabel());
+  }
+
+  private NoticeDueHintDto resolveDueHint(NoticeSourceEntity source, String actionability) {
+    if (!"action_required".equals(actionability)) {
+      return null;
+    }
+    return toDueHint(source);
+  }
+
+  private String resolveActionability(NoticeSourceEntity source) {
+    return noticeActionabilityClassifier.classify(
+        source.getTitle(),
+        source.getRawText(),
+        source.getActions().stream().map(this::toExtractedActionDto).toList()
+    );
+  }
+
+  private ExtractedActionDto toExtractedActionDto(ExtractedActionEntity action) {
+    return new ExtractedActionDto(
+        action.getId(),
+        action.getSource() != null ? action.getSource().getId() : null,
+        action.getTitle(),
+        action.getActionSummary(),
+        action.getDueAtIso() != null ? action.getDueAtIso().toString() : null,
+        action.getDueAtLabel(),
+        action.getEligibility(),
+        parseRequiredItems(action.getRequiredItemsJson()),
+        action.getSystemHint(),
+        action.getSource() != null ? action.getSource().getSourceCategory() : null,
+        action.getEvidenceSnippets().stream()
+            .map(evidence -> new EvidenceSnippetDto(evidence.getFieldName(), evidence.getSnippet(), evidence.getConfidence()))
+            .toList(),
+        action.isInferred(),
+        action.getConfidenceScore(),
+        action.getCreatedAt()
+    );
   }
 
   private String toPublishedAtString(LocalDate publishedAt) {

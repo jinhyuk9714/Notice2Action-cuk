@@ -52,22 +52,13 @@
       "publishedAt": "2026-02-27",
       "sourceUrl": "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268989&srCategoryId=21",
       "body": "본문이 이미지로만 제공된 공지입니다.",
-      "expectedActionability": "action_required",
+      "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
         "프로필 미설정",
-        "행동 필요 공지"
+        "이번 주 공지"
       ],
-      "expectedActions": [
-        {
-          "title": "부전공 신청 또는 변경",
-          "dueLabel": null,
-          "systemHint": null,
-          "evidence": [
-            "부전공(2차) 신청/변경 안내"
-          ]
-        }
-      ]
+      "expectedActions": []
     },
     {
       "id": "268838",
@@ -309,22 +300,12 @@
       "publishedAt": "2026-02-23",
       "sourceUrl": "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268680&srCategoryId=21",
       "body": "본문이 이미지로만 제공된 공지입니다.",
-      "expectedActionability": "action_required",
+      "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
-        "행동 필요 공지"
+        "프로필 미설정"
       ],
-      "expectedActions": [
-        {
-          "title": "취소-시간차 수강신청제 확인",
-          "dueLabel": null,
-          "systemHint": null,
-          "evidence": [
-            "취소-시간차 수강신청제 재안내"
-          ]
-        }
-      ]
+      "expectedActions": []
     },
     {
       "id": "268679",
@@ -345,22 +326,12 @@
       "publishedAt": "2026-02-20",
       "sourceUrl": "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268630&srCategoryId=21",
       "body": "본문이 이미지로만 제공된 공지입니다.",
-      "expectedActionability": "action_required",
+      "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
-        "행동 필요 공지"
+        "프로필 미설정"
       ],
-      "expectedActions": [
-        {
-          "title": "조기졸업 신청",
-          "dueLabel": null,
-          "systemHint": null,
-          "evidence": [
-            "조기졸업 신청 안내"
-          ]
-        }
-      ]
+      "expectedActions": []
     },
     {
       "id": "268629",
@@ -428,22 +399,12 @@
       "publishedAt": "2026-02-09",
       "sourceUrl": "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268396&srCategoryId=21",
       "body": "본문이 이미지로만 제공된 공지입니다.",
-      "expectedActionability": "action_required",
+      "expectedActionability": "informational",
       "expectedPrimaryDueLabel": null,
       "expectedImportanceReasons": [
-        "프로필 미설정",
-        "행동 필요 공지"
+        "프로필 미설정"
       ],
-      "expectedActions": [
-        {
-          "title": "융복합트랙 이수여부 확인",
-          "dueLabel": null,
-          "systemHint": null,
-          "evidence": [
-            "이수여부 확인 기간 알림"
-          ]
-        }
-      ]
+      "expectedActions": []
     },
     {
       "id": "268391",

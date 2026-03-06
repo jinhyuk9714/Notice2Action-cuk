@@ -62,6 +62,27 @@ describe('NoticeDetailContent', () => {
     expect(screen.getByText('행동 없음')).toBeInTheDocument();
   });
 
+  it('shows empty state for image-only informational notice without evidence', () => {
+    const detail = makeNoticeDetail({
+      title: '[2~4학년] 2026학년도 1학기 부전공(2차) 신청/변경 안내',
+      body: '본문이 이미지로만 제공된 공지입니다.',
+      actionability: 'informational',
+      actionBlocks: [],
+    });
+
+    render(
+      <NoticeDetailContent
+        detail={detail}
+        isSaved={false}
+        isHidden={false}
+        onToggleSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('행동 없음')).toBeInTheDocument();
+    expect(screen.getByText('근거 없음')).toBeInTheDocument();
+  });
+
   it('renders expanded due label and contextual evidence snippets', () => {
     const detail = makeNoticeDetail({
       actionBlocks: [

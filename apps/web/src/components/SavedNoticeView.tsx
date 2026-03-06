@@ -79,7 +79,7 @@ export function SavedNoticeView({
                 <h3>{detail.title}</h3>
               </button>
               {hiddenIds.includes(detail.id) ? <span className="badge">숨김됨</span> : null}
-              <div className="detail-actions-row">
+              <div className="card-actions-row">
                 <button className="secondary-btn" onClick={() => { onToggleSaved(detail.id); }}>저장 해제</button>
                 {hiddenIds.includes(detail.id) ? (
                   <button className="secondary-btn" onClick={() => { onUnhide(detail.id); }}>숨김 해제</button>

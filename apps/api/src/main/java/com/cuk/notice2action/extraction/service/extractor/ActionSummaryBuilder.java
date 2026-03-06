@@ -25,8 +25,9 @@ public class ActionSummaryBuilder {
 
     sb.append("할 일: ").append(resolvedTitle).append(".");
 
-    if (dueAtLabel != null) {
-      sb.append(" 마감: ").append(dueAtLabel).append(".");
+    String summaryDueLabel = simplifyDueLabelForSummary(dueAtLabel);
+    if (summaryDueLabel != null) {
+      sb.append(" 마감: ").append(summaryDueLabel).append(".");
     }
 
     if (systemHint != null) {
@@ -38,5 +39,19 @@ public class ActionSummaryBuilder {
     }
 
     return sb.toString().trim();
+  }
+
+  private String simplifyDueLabelForSummary(String dueAtLabel) {
+    if (dueAtLabel == null || dueAtLabel.isBlank()) {
+      return null;
+    }
+    int separatorIndex = dueAtLabel.indexOf(':');
+    if (separatorIndex > 0) {
+      String prefix = dueAtLabel.substring(0, separatorIndex).trim();
+      if (prefix.contains("기간") || prefix.contains("마감")) {
+        return dueAtLabel.substring(separatorIndex + 1).trim();
+      }
+    }
+    return dueAtLabel.trim();
   }
 }

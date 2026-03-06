@@ -38,7 +38,8 @@ class NoticeFeedServiceTest {
         noticeSourceRepository,
         new ObjectMapper(),
         new TaskPhraseExtractor(),
-        new ActionSummaryBuilder()
+        new ActionSummaryBuilder(),
+        new NoticeActionabilityClassifier()
     );
   }
 
@@ -316,6 +317,172 @@ class NoticeFeedServiceTest {
           .noneSatisfy(snippet -> assertThat(snippet).isEqualTo("~ 3/9"))
           .noneSatisfy(snippet -> assertThat(snippet).contains("자세한 내용은"))
           .noneSatisfy(snippet -> assertThat(snippet).isEqualTo("2026학년도 신입생 수강신청 안내"));
+    });
+  }
+
+  @Test
+  void prefersContextualDueAndSystemEvidenceForDropNoticeDetail() {
+    UUID noticeId = UUID.randomUUID();
+    ExtractedActionEntity action = new ExtractedActionEntity(
+        UUID.randomUUID(),
+        null,
+        "수강과목 취소 신청",
+        "할 일: 수강과목 취소 신청. 마감: 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00. 시스템: TRINITY.",
+        OffsetDateTime.parse("2026-03-25T17:00:00+09:00"),
+        "3. 25. (수) 17:00",
+        null,
+        "[]",
+        "TRINITY",
+        false,
+        0.88,
+        OffsetDateTime.now(ZoneOffset.ofHours(9))
+    );
+    action.addEvidence(new EvidenceSnippetEntity(
+        UUID.randomUUID(),
+        action,
+        "summary",
+        "2026-1학기 수강과목 취소 기간과 절차를 안내드리오니, 신청이 필요한 학생은 기간 내 신청을 완료하시기 바랍니다. 1. 수강과목 취소 신청기간 : 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00",
+        0.83,
+        OffsetDateTime.now(ZoneOffset.ofHours(9))
+    ));
+    action.addEvidence(new EvidenceSnippetEntity(
+        UUID.randomUUID(),
+        action,
+        "systemHint",
+        "으며, 취소 완료 후 복원 절대 불가함 2. 수강과목 취소 절차 가. [트리니티] - [수업/성적] - [수강신청]",
+        0.79,
+        OffsetDateTime.now(ZoneOffset.ofHours(9))
+    ));
+
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        noticeId,
+        "[학사지원팀] 2026-1학기 수강과목 취소 기간 안내",
+        """
+        2026-1학기 수강과목 취소 기간과 절차를 안내드리오니, 신청이 필요한 학생은 기간 내 신청을 완료하시기 바랍니다.
+        1. 수강과목 취소 신청기간 : 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00
+        ※ 신청기간에만 접수 받으며, 취소 완료 후 복원 절대 불가함
+        2. 수강과목 취소 절차
+        가. [트리니티] - [수업/성적] - [수강신청] - [수강취소신청]
+        나. 수강신청 내역 확인 후, 우측의 “취소신청” 버튼 클릭
+        """,
+        LocalDate.of(2026, 3, 3),
+        "https://example.com/notices/269011",
+        List.of(),
+        "action_required",
+        OffsetDateTime.parse("2026-03-25T17:00:00+09:00"),
+        List.of(action)
+    );
+
+    when(noticeSourceRepository.findDetailById(noticeId)).thenReturn(java.util.Optional.of(notice));
+
+    PersonalizedNoticeDetailDto detail = service.getDetail(noticeId, new NoticeProfile(null, null, null, List.of()));
+
+    assertThat(detail.actionBlocks()).singleElement().satisfies(block -> {
+      assertThat(block.evidence()).extracting(evidence -> evidence.snippet())
+          .contains("1. 수강과목 취소 신청기간 : 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00")
+          .contains("가. [트리니티] - [수업/성적] - [수강신청] - [수강취소신청]")
+          .noneSatisfy(snippet -> assertThat(snippet).startsWith("으며,"))
+          .noneSatisfy(snippet -> assertThat(snippet).contains("신청이 필요한 학생은 기간 내 신청을 완료하시기 바랍니다."));
+    });
+  }
+
+  @Test
+  void prefersExplicitDueLineOverExplanatorySentenceForIdesignDetail() {
+    UUID noticeId = UUID.randomUUID();
+    ExtractedActionEntity action = new ExtractedActionEntity(
+        UUID.randomUUID(),
+        null,
+        "I-DESIGN 수강신청",
+        "할 일: I-DESIGN 수강신청. 마감: ~ 3/9.",
+        OffsetDateTime.parse("2026-03-08T15:00:00+09:00"),
+        "~ 3/9",
+        null,
+        "[]",
+        null,
+        false,
+        0.86,
+        OffsetDateTime.now(ZoneOffset.ofHours(9))
+    );
+    action.addEvidence(new EvidenceSnippetEntity(
+        UUID.randomUUID(),
+        action,
+        "eligibility",
+        "2026학년도 1학기 <I-DESIGN> 수강신청 관련 안내 <I-DESIGN> 교과목 학과별 수강 가",
+        0.7,
+        OffsetDateTime.now(ZoneOffset.ofHours(9))
+    ));
+
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        noticeId,
+        "[학부대학] 2026학년도 1학기 <I-DESIGN> 수강신청 관련 안내",
+        """
+        2026학년도 1학기 <I-DESIGN> 수강신청 관련 안내
+        ◎ 수강신청 변경기간[3/3(화) ~ 3/9(월)]에는 본인 학과가 아닌 다른 분반에 수강신청 가능합니다.
+        (단, 자유전공학부/인문사회계열/자연공학계열 분반은 수강신청 변경기간에도 본인 계열 분반만 수강 가능)
+        ◎ 수강신청 기간
+        - 재수강 분반 수강신청: 2/3(화)~2/5(목)
+        - 신입생 분반 수강신청: 2/25(수)~2/26(목)
+        - 수강신청 변경기간: 3/3(화)~3/9(월), 09:00 ~ 17:00
+        ◎ 문의처: 학부대학운영팀 02-2164-4647, 4992
+        """,
+        LocalDate.of(2026, 2, 28),
+        "https://example.com/notices/268226",
+        List.of(),
+        "action_required",
+        OffsetDateTime.parse("2026-03-08T15:00:00+09:00"),
+        List.of(action)
+    );
+
+    when(noticeSourceRepository.findDetailById(noticeId)).thenReturn(java.util.Optional.of(notice));
+
+    PersonalizedNoticeDetailDto detail = service.getDetail(noticeId, new NoticeProfile("컴퓨터정보공학부", 1, null, List.of()));
+
+    assertThat(detail.actionBlocks()).singleElement().satisfies(block -> {
+      assertThat(block.title()).isEqualTo("I-DESIGN 수강신청");
+      assertThat(block.dueAtLabel()).isEqualTo("수강신청 변경기간: 3/3(화)~3/9(월), 09:00 ~ 17:00");
+      assertThat(block.summary()).contains("마감: 3/3(화)~3/9(월), 09:00 ~ 17:00.");
+      assertThat(block.evidence()).extracting(evidence -> evidence.snippet())
+          .contains("수강신청 변경기간: 3/3(화)~3/9(월), 09:00 ~ 17:00")
+          .noneSatisfy(snippet -> assertThat(snippet).contains("수강신청 가능합니다"))
+          .noneSatisfy(snippet -> assertThat(snippet).contains("교과목 학과별 수강 가"));
+    });
+  }
+
+  @Test
+  void downgradesImageOnlyNoticeWithoutEvidenceToInformationalOnRead() {
+    UUID noticeId = UUID.randomUUID();
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        noticeId,
+        "[2~4학년] 2026학년도 1학기 부전공(2차) 신청/변경 안내",
+        "본문이 이미지로만 제공된 공지입니다.",
+        LocalDate.of(2026, 2, 27),
+        "https://example.com/notices/268989",
+        List.of(),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action(
+            "부전공 신청 또는 변경",
+            "할 일: 부전공 신청 또는 변경.",
+            null,
+            null,
+            "[]",
+            null,
+            null,
+            0.78
+        ))
+    );
+    when(noticeSourceRepository.findDetailById(noticeId)).thenReturn(java.util.Optional.of(notice));
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(notice));
+
+    PersonalizedNoticeDetailDto detail = service.getDetail(noticeId, new NoticeProfile(null, 3, null, List.of()));
+    NoticeFeedResponse feed = service.getFeed(new NoticeProfile(null, 3, null, List.of()), 0, 20);
+
+    assertThat(detail.actionability()).isEqualTo("informational");
+    assertThat(detail.actionBlocks()).isEmpty();
+    assertThat(feed.notices()).singleElement().satisfies(summary -> {
+      assertThat(summary.actionability()).isEqualTo("informational");
+      assertThat(summary.dueHint()).isNull();
+      assertThat(summary.importanceReasons()).doesNotContain("행동 필요 공지");
     });
   }
 }

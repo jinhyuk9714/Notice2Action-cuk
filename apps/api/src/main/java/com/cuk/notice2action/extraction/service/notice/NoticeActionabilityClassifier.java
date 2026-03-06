@@ -45,6 +45,13 @@ public class NoticeActionabilityClassifier {
     boolean attachmentFormSignals = hasAttachmentFormSignals(normalizedTitle, normalizedBody);
     boolean strongActionSignals = hasStrongActionSignals(actions, normalizedBody);
 
+    if (imageOnlyBody) {
+      if (attachmentFormSignals || hasEvidenceBackedSignals(actions)) {
+        return "action_required";
+      }
+      return "informational";
+    }
+
     if (informationalTitle && !actionableTitle) {
       if (attachmentFormSignals) {
         return "action_required";
@@ -53,9 +60,6 @@ public class NoticeActionabilityClassifier {
     }
     if (actionableTitle) {
       return "action_required";
-    }
-    if (imageOnlyBody) {
-      return "informational";
     }
     return strongActionSignals ? "action_required" : "informational";
   }
@@ -83,6 +87,21 @@ public class NoticeActionabilityClassifier {
       }
       String summary = normalize(action.actionSummary());
       if (containsAny(summary, STRONG_SUMMARY_KEYWORDS) && containsAny(normalizedBody, ACTION_BODY_KEYWORDS)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean hasEvidenceBackedSignals(List<ExtractedActionDto> actions) {
+    if (actions == null || actions.isEmpty()) {
+      return false;
+    }
+    for (ExtractedActionDto action : actions) {
+      if (action.dueAtIso() != null || action.dueAtLabel() != null || action.systemHint() != null || !action.requiredItems().isEmpty()) {
+        return true;
+      }
+      if (action.evidence() != null && action.evidence().stream().anyMatch(evidence -> evidence.snippet() != null && !evidence.snippet().isBlank())) {
         return true;
       }
     }

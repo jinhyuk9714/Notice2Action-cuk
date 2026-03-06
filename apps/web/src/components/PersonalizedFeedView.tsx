@@ -108,7 +108,7 @@ export function PersonalizedFeedView({
                 </div>
                 <p>{notice.dueHint?.label ?? '마감 정보 없음'}</p>
                 <p>{notice.actionability === 'action_required' ? '행동 필요' : '정보성 공지'}</p>
-                <div className="detail-actions-row">
+                <div className="card-actions-row">
                   <button className="secondary-btn" onClick={() => { onToggleSaved(notice.id); }}>{saved ? '저장됨' : '저장'}</button>
                   <button className="secondary-btn" onClick={() => { onHide(notice.id); }}>{'숨김'}</button>
                 </div>
@@ -130,7 +130,7 @@ export function PersonalizedFeedView({
                     <span className="badge">숨김됨</span>
                     {notice.importanceReasons.map((reason) => <span key={`${notice.id}-${reason}`} className="badge">{reason}</span>)}
                   </div>
-                  <div className="detail-actions-row">
+                  <div className="card-actions-row">
                     <button className="secondary-btn" onClick={() => { onUnhide(notice.id); }}>숨김 해제</button>
                   </div>
                 </article>
