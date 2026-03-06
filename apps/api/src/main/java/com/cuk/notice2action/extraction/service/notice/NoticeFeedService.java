@@ -640,10 +640,15 @@ public class NoticeFeedService {
       return compactDueAtLabel;
     }
     String expanded = lines.get(dueLineIndex);
+    if (dueLineIndex > 0
+        && !isExplicitDueLine(expanded)
+        && isDueHeadingLine(lines.get(dueLineIndex - 1))) {
+      expanded = lines.get(dueLineIndex - 1) + " " + expanded;
+    }
     if (dueLineIndex + 1 < lines.size() && isTrailingConditionLine(lines.get(dueLineIndex + 1))) {
       expanded = expanded + " " + lines.get(dueLineIndex + 1);
     }
-    return sanitizeDueDisplayLine(expanded);
+    return normalizeDetailDueLabel(expanded);
   }
 
   private List<EvidenceSnippetDto> refineDetailEvidence(
@@ -1024,6 +1029,33 @@ public class NoticeFeedService {
 
   private String sanitizeDueDisplayLine(String value) {
     return normalizeInlineText(value).replaceFirst("^[\\-•·▪■□▶◎]+\\s*", "").trim();
+  }
+
+  private String normalizeDetailDueLabel(String value) {
+    String normalized = sanitizeDueDisplayLine(value)
+        .replaceFirst("^\\d+\\.\\s*", "")
+        .trim();
+    int headingSeparatorIndex = findDueHeadingSeparatorIndex(normalized);
+    if (headingSeparatorIndex < 0) {
+      return normalized;
+    }
+    String prefix = normalized.substring(0, headingSeparatorIndex).trim();
+    String suffix = normalized.substring(headingSeparatorIndex + 1).trim();
+    return prefix + ": " + suffix;
+  }
+
+  private int findDueHeadingSeparatorIndex(String value) {
+    for (int index = 0; index < value.length(); index++) {
+      char ch = value.charAt(index);
+      if (ch != ':' && ch != '：') {
+        continue;
+      }
+      String prefix = value.substring(0, index).trim();
+      if (prefix.contains("기간") || prefix.contains("마감")) {
+        return index;
+      }
+    }
+    return -1;
   }
 
   private String stripTitlePrefix(String value) {

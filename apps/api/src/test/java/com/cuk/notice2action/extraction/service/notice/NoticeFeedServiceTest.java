@@ -390,8 +390,10 @@ class NoticeFeedServiceTest {
 
     assertThat(detail.actionBlocks()).singleElement().satisfies(block -> {
       assertThat(block.dueAtLabel())
+          .startsWith("수강신청 변경기간:")
           .contains("2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00")
           .contains("(주말 및 공휴일 제외)");
+      assertThat(block.summary()).contains("마감: 2026.03.03.(화) ~ 03.9.(월) 09:00 ~ 17:00 (주말 및 공휴일 제외).");
       assertThat(block.evidence()).hasSizeLessThanOrEqualTo(3);
       assertThat(block.evidence()).extracting(evidence -> evidence.snippet())
           .anySatisfy(snippet -> assertThat(snippet).contains("수강신청 변경기간"))
@@ -459,11 +461,12 @@ class NoticeFeedServiceTest {
     PersonalizedNoticeDetailDto detail = service.getDetail(noticeId, new NoticeProfile(null, null, null, List.of()));
 
     assertThat(detail.actionBlocks()).singleElement().satisfies(block -> {
+      assertThat(block.dueAtLabel()).isEqualTo("수강과목 취소 신청기간: 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00");
+      assertThat(block.summary()).contains("마감: 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00.");
       assertThat(block.evidence()).extracting(evidence -> evidence.snippet())
-          .contains("1. 수강과목 취소 신청기간 : 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00")
+          .anySatisfy(snippet -> assertThat(snippet).contains("수강과목 취소 신청기간 : 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00"))
           .contains("가. [트리니티] - [수업/성적] - [수강신청] - [수강취소신청]")
-          .noneSatisfy(snippet -> assertThat(snippet).startsWith("으며,"))
-          .noneSatisfy(snippet -> assertThat(snippet).contains("신청이 필요한 학생은 기간 내 신청을 완료하시기 바랍니다."));
+          .noneSatisfy(snippet -> assertThat(snippet).startsWith("으며,"));
     });
   }
 
