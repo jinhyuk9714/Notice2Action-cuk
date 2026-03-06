@@ -145,6 +145,63 @@ class NoticeFeedServiceTest {
     assertThat(response.notices().get(1).relevanceScore()).isLessThan(response.notices().get(0).relevanceScore());
   }
 
+
+  @Test
+  void treatsCombinedFreshmanTransferAudienceAsMatchForFreshmanProfile() {
+    NoticeSourceEntity combinedAudience = NoticeFixtures.noticeSource(
+        "2026학년도 신·편입생(등록완료자) 학번조회 안내",
+        "신·편입생 대상 학번조회 및 회원가입 안내입니다.",
+        LocalDate.of(2026, 2, 24),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action("학번 조회", "신·편입생", 0.9))
+    );
+    NoticeSourceEntity generic = NoticeFixtures.noticeSource(
+        "도서관 이용 안내",
+        "전체 학생 대상 도서관 이용 시간 안내입니다.",
+        LocalDate.of(2026, 2, 28),
+        "informational",
+        null,
+        List.of()
+    );
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(generic, combinedAudience));
+
+    NoticeFeedResponse response = service.getFeed(new NoticeProfile("컴퓨터정보공학부", 1, "신입생", List.of()), 0, 20);
+
+    assertThat(response.notices().get(0).title()).isEqualTo("2026학년도 신·편입생(등록완료자) 학번조회 안내");
+    assertThat(response.notices().get(0).importanceReasons()).contains("신입생 공지");
+    assertThat(response.notices().get(0).importanceReasons()).doesNotContain("다른 대상 공지");
+  }
+
+  @Test
+  void treatsGraduationCandidateAudienceAsMatchForGraduatingProfile() {
+    NoticeSourceEntity graduationAudience = NoticeFixtures.noticeSource(
+        "[학사지원팀] 2025학년도 후기(2026년 8월) 졸업대상자 예비 졸업사정 일정 안내",
+        "졸업대상자 예비 졸업사정 일정을 확인하시기 바랍니다.",
+        LocalDate.of(2026, 2, 20),
+        "informational",
+        null,
+        List.of()
+    );
+    NoticeSourceEntity generic = NoticeFixtures.noticeSource(
+        "수강과목 취소 기간 안내",
+        "수강과목 취소 안내입니다.",
+        LocalDate.of(2026, 3, 3),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(4),
+        List.of(NoticeFixtures.action("수강과목 취소 신청", null, 0.8))
+    );
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(generic, graduationAudience));
+
+    NoticeFeedResponse response = service.getFeed(new NoticeProfile(null, 4, "졸업예정자", List.of()), 0, 20);
+
+    assertThat(response.notices().get(0).title()).isEqualTo("[학사지원팀] 2025학년도 후기(2026년 8월) 졸업대상자 예비 졸업사정 일정 안내");
+    assertThat(response.notices().get(0).importanceReasons()).contains("졸업예정자 공지");
+    assertThat(response.notices().get(0).importanceReasons()).doesNotContain("다른 대상 공지");
+  }
+
   @Test
   void keepsOtherAudienceNoticeBelowMatchedNoticeEvenWhenBodyMentionsDepartment() {
     NoticeSourceEntity excluded = NoticeFixtures.noticeSource(

@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -41,6 +42,7 @@ public class NoticeFeedService {
 
   private static final ZoneOffset APP_OFFSET = ZoneOffset.ofHours(9);
   private static final List<String> STUDENT_STATUSES = List.of("재학생", "복학생", "휴학생", "졸업예정자", "신입생", "대학원생", "편입생");
+  private static final Map<String, List<String>> STATUS_ALIASES = createStatusAliases();
   private static final List<String> EXCLUSION_KEYWORDS = List.of("제외", "불가", "불포함", "해당없음", "해당 없음");
   private static final Pattern DUPLICATE_SUFFIX = Pattern.compile("\\s*\\((?:\\d+/\\d+)\\)$");
   private static final List<String> ACTION_FAMILY_SUFFIXES = List.of("수강신청", "참여 신청", "수요조사 응답", "신청 또는 변경", "신청", "제출", "조회", "응답");
@@ -189,7 +191,7 @@ public class NoticeFeedService {
 
     if (hasText(profile.status())) {
       if (signals.includedStatuses().contains(profile.status())
-          || containsIncludedTerm(profileSearchText, profile.status())) {
+          || containsStatusSignal(profileSearchText, profile.status())) {
         reasons.add(profile.status() + " 공지");
         statusMatched = true;
       } else if (containsAnyOtherStatus(explicitAudienceText, profile.status())) {
@@ -265,8 +267,22 @@ public class NoticeFeedService {
     List<String> deduped = new ArrayList<>(new LinkedHashSet<>(reasons));
     boolean hasExclusion = deduped.contains("다른 대상 공지");
 
-    List<String> ordered = deduped.stream()
-        .filter(reason -> !"다른 대상 공지".equals(reason))
+    List<String> collapsedProfileReasons = new ArrayList<>();
+    boolean keptProfileReason = false;
+    for (String reason : deduped) {
+      if ("다른 대상 공지".equals(reason)) {
+        continue;
+      }
+      if (isPositiveProfileReason(reason)) {
+        if (keptProfileReason) {
+          continue;
+        }
+        keptProfileReason = true;
+      }
+      collapsedProfileReasons.add(reason);
+    }
+
+    List<String> ordered = collapsedProfileReasons.stream()
         .sorted(Comparator.comparingInt(this::reasonPriority))
         .toList();
 
@@ -282,6 +298,13 @@ public class NoticeFeedService {
       selected.add("다른 대상 공지");
     }
     return selected;
+  }
+
+  private boolean isPositiveProfileReason(String reason) {
+    return reason.endsWith("공지")
+        && !"다른 대상 공지".equals(reason)
+        && !"최근 등록".equals(reason)
+        && !"이번 주 등록".equals(reason);
   }
 
   private int reasonPriority(String reason) {
@@ -306,6 +329,39 @@ public class NoticeFeedService {
     return 10;
   }
 
+  private static Map<String, List<String>> createStatusAliases() {
+    Map<String, List<String>> aliases = new HashMap<>();
+    aliases.put("신입생", List.of("신입생", "신·편입생"));
+    aliases.put("편입생", List.of("편입생", "신·편입생"));
+    aliases.put("졸업예정자", List.of("졸업예정자", "졸업대상자"));
+    return Map.copyOf(aliases);
+  }
+
+  private boolean containsStatusSignal(String searchable, String status) {
+    for (String term : STATUS_ALIASES.getOrDefault(status, List.of(status))) {
+      if (containsIncludedTerm(searchable, term)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void addCanonicalStatuses(Set<String> statuses, String rawStatusText) {
+    if (!hasText(rawStatusText)) {
+      return;
+    }
+    boolean matched = false;
+    for (String canonical : STUDENT_STATUSES) {
+      if (containsStatusSignal(rawStatusText, canonical)) {
+        statuses.add(canonical);
+        matched = true;
+      }
+    }
+    if (!matched) {
+      statuses.add(rawStatusText.trim());
+    }
+  }
+
   private boolean containsIncludedTerm(String searchable, String term) {
     if (!searchable.contains(term)) {
       return false;
@@ -321,7 +377,7 @@ public class NoticeFeedService {
   private boolean containsAnyOtherStatus(String searchable, String currentStatus) {
     return STUDENT_STATUSES.stream()
         .filter(status -> !status.equals(currentStatus))
-        .anyMatch(status -> containsIncludedTerm(searchable, status));
+        .anyMatch(status -> containsStatusSignal(searchable, status));
   }
 
   private YearMatch matchYear(String searchable, int year) {
@@ -363,8 +419,8 @@ public class NoticeFeedService {
     for (ExtractedActionEntity action : source.getActions()) {
       StructuredEligibility structured = parseStructuredEligibility(action.getStructuredEligibilityJson());
       if (structured != null) {
-        includedStatuses.addAll(structured.statuses());
-        excludedStatuses.addAll(structured.excludedStatuses());
+        structured.statuses().forEach(status -> addCanonicalStatuses(includedStatuses, status));
+        structured.excludedStatuses().forEach(status -> addCanonicalStatuses(excludedStatuses, status));
         if (!structured.years().isEmpty()) {
           years.addAll(structured.years());
           hasExplicitYears = true;
@@ -380,7 +436,7 @@ public class NoticeFeedService {
         }
         eligibilityText.append(action.getEligibility());
         for (String status : STUDENT_STATUSES) {
-          if (containsIncludedTerm(action.getEligibility(), status)) {
+          if (containsStatusSignal(action.getEligibility(), status)) {
             includedStatuses.add(status);
           }
         }
