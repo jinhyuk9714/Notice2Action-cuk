@@ -15,6 +15,7 @@ const BASE_SUMMARY: SavedActionSummary = {
   sourceTitle: '학사공지',
   confidenceScore: 0.85,
   createdAt: '2026-03-01T00:00:00Z',
+  status: 'pending',
 };
 
 const UNKNOWN_RELEVANCE: RelevanceResult = { level: 'unknown', reason: null };

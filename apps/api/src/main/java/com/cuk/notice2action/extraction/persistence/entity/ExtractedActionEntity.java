@@ -58,6 +58,9 @@ public class ExtractedActionEntity {
   @Column(name = "machine_values_json", nullable = false, columnDefinition = "TEXT")
   private String machineValuesJson = "{}";
 
+  @Column(name = "status", nullable = false)
+  private String status = "pending";
+
   @OneToMany(mappedBy = "action", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<EvidenceSnippetEntity> evidenceSnippets = new ArrayList<>();
 
@@ -176,5 +179,13 @@ public class ExtractedActionEntity {
 
   public void setMachineValuesJson(String machineValuesJson) {
     this.machineValuesJson = machineValuesJson;
+  }
+
+  public String getStatus() {
+    return status;
+  }
+
+  public void setStatus(String status) {
+    this.status = status;
   }
 }

@@ -5,6 +5,7 @@ export type InboxFilters = Readonly<{
   dateRange?: string;
   customFrom?: string;
   customTo?: string;
+  status?: string;
 }>;
 
 export type Route =
@@ -39,6 +40,9 @@ function parseInboxFilters(queryString: string): InboxFilters {
   const customTo = params.get('customTo');
   if (customTo !== null && customTo.length > 0) filters.customTo = customTo;
 
+  const status = params.get('status');
+  if (status === 'pending' || status === 'completed') filters.status = status;
+
   return filters;
 }
 
@@ -50,6 +54,7 @@ function buildFilterQueryString(filters: InboxFilters): string {
   if (filters.dateRange !== undefined && filters.dateRange.length > 0) params.set('dateRange', filters.dateRange);
   if (filters.customFrom !== undefined && filters.customFrom.length > 0) params.set('customFrom', filters.customFrom);
   if (filters.customTo !== undefined && filters.customTo.length > 0) params.set('customTo', filters.customTo);
+  if (filters.status !== undefined && filters.status.length > 0) params.set('status', filters.status);
   return params.toString();
 }
 

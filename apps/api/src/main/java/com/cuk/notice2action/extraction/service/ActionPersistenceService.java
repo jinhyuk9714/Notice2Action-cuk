@@ -11,6 +11,7 @@ import com.cuk.notice2action.extraction.api.dto.FieldOverrideInfoDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionSummaryDto;
 import com.cuk.notice2action.extraction.api.dto.SourceInfoDto;
+import com.cuk.notice2action.extraction.domain.ActionStatus;
 import com.cuk.notice2action.extraction.persistence.entity.EvidenceSnippetEntity;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
 import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
@@ -102,6 +103,7 @@ public class ActionPersistenceService {
 
     applyReverts(entity, request.revertFields(), machineValues);
     applyUpdates(entity, request, machineValues);
+    applyStatusUpdate(entity, request.status());
 
     entity.setMachineValuesJson(serializeMachineValues(machineValues));
     actionRepository.save(entity);
@@ -220,7 +222,8 @@ public class ActionPersistenceService {
         source != null ? source.getSourceCategory() : null,
         source != null ? source.getTitle() : null,
         entity.getConfidenceScore(),
-        entity.getCreatedAt()
+        entity.getCreatedAt(),
+        ActionStatus.defaultStatus(entity.getStatus())
     );
   }
 
@@ -285,7 +288,8 @@ public class ActionPersistenceService {
         entity.getCreatedAt(),
         sourceInfo,
         evidence,
-        overrides
+        overrides,
+        ActionStatus.defaultStatus(entity.getStatus())
     );
   }
 
@@ -389,7 +393,7 @@ public class ActionPersistenceService {
 
   private ExtractedActionEntity toExtractedActionEntity(ExtractedActionDto extractedAction,
       NoticeSourceEntity source, OffsetDateTime now) {
-    return new ExtractedActionEntity(
+    ExtractedActionEntity entity = new ExtractedActionEntity(
         UUID.randomUUID(),
         source,
         extractedAction.title(),
@@ -403,6 +407,8 @@ public class ActionPersistenceService {
         extractedAction.confidenceScore(),
         now
     );
+    entity.setStatus(ActionStatus.PENDING);
+    return entity;
   }
 
   private void addEvidence(ExtractedActionEntity actionEntity, List<EvidenceSnippetDto> evidences,
@@ -468,6 +474,13 @@ public class ActionPersistenceService {
     applyEligibilityUpdate(entity, request.eligibility(), machineValues);
     applyRequiredItemsUpdate(entity, request.requiredItems(), machineValues);
     applySystemHintUpdate(entity, request.systemHint(), machineValues);
+  }
+
+  private void applyStatusUpdate(ExtractedActionEntity entity, String status) {
+    String normalized = ActionStatus.normalizeNullable(status, "status");
+    if (normalized != null) {
+      entity.setStatus(normalized);
+    }
   }
 
   private void applyTitleUpdate(ExtractedActionEntity entity, String title,
@@ -547,7 +560,8 @@ public class ActionPersistenceService {
     return (criteria.q() != null && !criteria.q().isBlank())
         || criteria.category() != null
         || criteria.dueDateFrom() != null
-        || criteria.dueDateTo() != null;
+        || criteria.dueDateTo() != null
+        || criteria.status() != null;
   }
 
   private Specification<ExtractedActionEntity> buildSearchSpec(ActionSearchCriteria criteria) {
@@ -563,6 +577,9 @@ public class ActionPersistenceService {
     }
     if (criteria.dueDateTo() != null) {
       spec = spec.and(ActionSpecifications.dueAtTo(criteria.dueDateTo()));
+    }
+    if (criteria.status() != null) {
+      spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), criteria.status()));
     }
     return spec;
   }

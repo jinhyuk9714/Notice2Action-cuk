@@ -4,6 +4,7 @@ import com.cuk.notice2action.extraction.api.dto.SavedActionSummaryDto;
 import com.cuk.notice2action.extraction.api.dto.SourceDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SourceListResponse;
 import com.cuk.notice2action.extraction.api.dto.SourceSummaryDto;
+import com.cuk.notice2action.extraction.domain.ActionStatus;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
 import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
 import com.cuk.notice2action.extraction.persistence.repository.ExtractedActionRepository;
@@ -106,7 +107,8 @@ public class SourceHistoryService {
         source != null ? source.getSourceCategory() : null,
         source != null ? source.getTitle() : null,
         entity.getConfidenceScore(),
-        entity.getCreatedAt()
+        entity.getCreatedAt(),
+        ActionStatus.defaultStatus(entity.getStatus())
     );
   }
 }

@@ -105,6 +105,30 @@ class ActionUpdateTest {
         .hasMessageContaining("dueAtIso");
   }
 
+  @Test
+  void updateAction_updates_status_when_valid() {
+    UUID id = persistAndGetId();
+
+    SavedActionDetailDto result = persistenceService.updateAction(
+        id,
+        new ActionUpdateRequest(null, null, null, null, null, null, null, null, "completed")
+    );
+
+    assertThat(result.status()).isEqualTo("completed");
+  }
+
+  @Test
+  void updateAction_rejects_invalid_status() {
+    UUID id = persistAndGetId();
+
+    assertThatThrownBy(() -> persistenceService.updateAction(
+        id,
+        new ActionUpdateRequest(null, null, null, null, null, null, null, null, "done")
+    ))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("status");
+  }
+
   // --- Override tracking tests ---
 
   @Test
@@ -198,4 +222,5 @@ class ActionUpdateTest {
         .collect(Collectors.toSet());
     assertThat(overriddenFields).containsExactlyInAnyOrder("title", "actionSummary", "eligibility");
   }
+
 }

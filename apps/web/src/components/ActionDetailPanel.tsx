@@ -1,4 +1,5 @@
-import { type ReactElement } from 'react';
+import { type ReactElement, useState } from 'react';
+import { updateAction } from '../lib/api';
 import { computeDday } from '../lib/dday';
 import { categoryLabel, evidenceFieldLabel, inferredLabel } from '../lib/labels';
 import type { UserProfile } from '../lib/profile';
@@ -26,6 +27,18 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
   const relevance = computeRelevance(detail.eligibility, profile);
   const editor = useActionEditor({ detail, onActionUpdated });
   const reminder = useActionReminderToggle({ detail });
+  const [statusUpdating, setStatusUpdating] = useState(false);
+
+  const toggleStatus = async (): Promise<void> => {
+    const next = detail.status === 'completed' ? 'pending' : 'completed';
+    setStatusUpdating(true);
+    try {
+      const updated = await updateAction(detail.id, { status: next });
+      onActionUpdated?.(updated);
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
 
   return (
     <article className="card detail-panel">
@@ -191,7 +204,17 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
             </div>
           </dl>
 
-          <button className="edit-toggle-btn" onClick={editor.startEditing}>편집</button>
+          <div className="action-btn-row">
+            <button className="edit-toggle-btn" onClick={editor.startEditing}>편집</button>
+            <button
+              className={`status-toggle-btn${detail.status === 'completed' ? ' status-completed' : ''}`}
+              onClick={() => { void toggleStatus(); }}
+              disabled={statusUpdating}
+              aria-pressed={detail.status === 'completed'}
+            >
+              {detail.status === 'completed' ? '진행중으로 표시' : '완료로 표시'}
+            </button>
+          </div>
         </>
       )}
 

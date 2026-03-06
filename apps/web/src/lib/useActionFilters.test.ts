@@ -21,13 +21,14 @@ describe('useActionFilters', () => {
   it('initializes from initialFilters', () => {
     const { result } = renderHook(() =>
       useActionFilters({
-        initialFilters: { sort: 'recent', q: '장학', category: 'NOTICE' },
+        initialFilters: { sort: 'recent', q: '장학', category: 'NOTICE', status: 'completed' },
         selectedId: null,
       }),
     );
     expect(result.current.sort).toBe('recent');
     expect(result.current.searchInput).toBe('장학');
     expect(result.current.categoryFilter).toBe('NOTICE');
+    expect(result.current.statusFilter).toBe('completed');
   });
 
   it('defaults sort to due', () => {
@@ -85,6 +86,13 @@ describe('useActionFilters', () => {
     expect(result.current.calendarUrl).toContain('sort=due');
   });
 
+  it('includes status filter in calendar url', () => {
+    const { result } = renderHook(() =>
+      useActionFilters({ initialFilters: { status: 'completed' }, selectedId: null }),
+    );
+    expect(result.current.calendarUrl).toContain('status=completed');
+  });
+
   it('calls replaceFilters on render', async () => {
     renderHook(() =>
       useActionFilters({ initialFilters: {}, selectedId: null }),
@@ -111,6 +119,17 @@ describe('useActionFilters', () => {
     expect(result.current.hasActiveSearch).toBe(true);
   });
 
+  it('updates status filter and includes it in search params', () => {
+    const { result } = renderHook(() =>
+      useActionFilters({ initialFilters: {}, selectedId: null }),
+    );
+    act(() => { result.current.setStatusFilter('completed'); });
+    expect(result.current.statusFilter).toBe('completed');
+    expect(result.current.currentSearch).toEqual(
+      expect.objectContaining({ status: 'completed' }),
+    );
+  });
+
   it('updates date range preset', () => {
     const { result } = renderHook(() =>
       useActionFilters({ initialFilters: {}, selectedId: null }),
@@ -129,5 +148,20 @@ describe('useActionFilters', () => {
     );
     expect(result.current.dateRange.from).toBe('2026-03-01');
     expect(result.current.dateRange.to).toBe('2026-03-31');
+  });
+
+  it('syncs status filter through replaceFilters', async () => {
+    const { result } = renderHook(() =>
+      useActionFilters({ initialFilters: {}, selectedId: 'act-1' }),
+    );
+
+    act(() => { result.current.setStatusFilter('pending'); });
+
+    await waitFor(() => {
+      expect(replaceFilters).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: 'pending' }),
+        'act-1',
+      );
+    });
   });
 });

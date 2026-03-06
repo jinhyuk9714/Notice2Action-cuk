@@ -202,6 +202,29 @@ describe('ActionDetailPanel', () => {
     });
   });
 
+  describe('status toggle', () => {
+    it('toggles pending action to completed', async () => {
+      const updated = makeActionDetail({ status: 'completed' });
+      mockUpdateAction.mockResolvedValue(updated);
+      const onUpdated = vi.fn();
+
+      render(
+        <ActionDetailPanel
+          detail={makeActionDetail({ status: 'pending' })}
+          profile={EMPTY_PROFILE}
+          onActionUpdated={onUpdated}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: '완료로 표시' }));
+
+      await waitFor(() => {
+        expect(mockUpdateAction).toHaveBeenCalledWith('act-1', { status: 'completed' });
+        expect(onUpdated).toHaveBeenCalledWith(updated);
+      });
+    });
+  });
+
   // --- Revert workflow ---
 
   describe('revert', () => {
@@ -356,6 +379,7 @@ describe('ActionDetailPanel', () => {
       expect(screen.queryByText('관련')).toBeNull();
       expect(screen.queryByText('해당없음')).toBeNull();
     });
+
   });
 
   // --- Calendar export ---

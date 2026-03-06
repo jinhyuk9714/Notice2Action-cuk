@@ -18,7 +18,8 @@ public record SavedActionDetailDto(
     OffsetDateTime createdAt,
     SourceInfoDto source,
     List<EvidenceSnippetDto> evidence,
-    List<FieldOverrideInfoDto> overrides
+    List<FieldOverrideInfoDto> overrides,
+    String status
 ) {
   public SavedActionDetailDto {
     requiredItems = requiredItems == null ? List.of() : List.copyOf(requiredItems);

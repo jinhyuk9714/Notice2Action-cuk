@@ -33,6 +33,7 @@ export function makeActionSummary(overrides: Partial<SavedActionSummary> = {}): 
     sourceTitle: '장학 안내',
     confidenceScore: 0.85,
     createdAt: '2026-03-01T10:00:00',
+    status: 'pending',
     ...overrides,
   };
 }
@@ -55,6 +56,7 @@ export function makeActionDetail(overrides: Partial<SavedActionDetail> = {}): Sa
     source: { id: 'src-1', title: '장학 안내', sourceCategory: 'NOTICE', createdAt: '2026-03-01T10:00:00' },
     evidence: [{ fieldName: 'dueAtIso', snippet: '3월 15일까지', confidence: 0.9 }],
     overrides: [],
+    status: 'pending',
     ...overrides,
   };
 }

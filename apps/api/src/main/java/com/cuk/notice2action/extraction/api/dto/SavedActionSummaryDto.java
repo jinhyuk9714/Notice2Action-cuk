@@ -14,5 +14,6 @@ public record SavedActionSummaryDto(
     SourceCategory sourceCategory,
     String sourceTitle,
     double confidenceScore,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    String status
 ) {}

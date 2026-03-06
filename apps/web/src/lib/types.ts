@@ -12,6 +12,9 @@ export const EvidenceSnippetSchema = z.object({
 });
 export type EvidenceSnippet = z.infer<typeof EvidenceSnippetSchema>;
 
+export const ActionStatusSchema = z.enum(['pending', 'completed']);
+export type ActionStatus = z.infer<typeof ActionStatusSchema>;
+
 export const ExtractedActionSchema = z.object({
   id: z.string().nullable(),
   sourceId: z.string().nullable(),
@@ -55,6 +58,7 @@ export type ActionUpdatePayload = Readonly<{
   requiredItems?: readonly string[];
   systemHint?: string;
   revertFields?: readonly string[];
+  status?: ActionStatus;
 }>;
 
 // --- Inbox types ---
@@ -78,6 +82,7 @@ export const SavedActionSummarySchema = z.object({
   sourceTitle: z.string().nullable(),
   confidenceScore: z.number(),
   createdAt: z.string(),
+  status: ActionStatusSchema.default('pending'),
 });
 export type SavedActionSummary = z.infer<typeof SavedActionSummarySchema>;
 
@@ -115,6 +120,7 @@ export const SavedActionDetailSchema = z.object({
   source: SourceInfoSchema.nullable(),
   evidence: z.array(EvidenceSnippetSchema),
   overrides: z.array(FieldOverrideInfoSchema).default([]),
+  status: ActionStatusSchema.default('pending'),
 });
 export type SavedActionDetail = z.infer<typeof SavedActionDetailSchema>;
 

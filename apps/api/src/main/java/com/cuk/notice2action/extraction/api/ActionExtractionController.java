@@ -18,6 +18,7 @@ import com.cuk.notice2action.extraction.service.ScreenshotTextExtractor;
 import com.cuk.notice2action.extraction.service.UrlContentFetcher;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
 import com.cuk.notice2action.extraction.persistence.repository.ExtractedActionRepository;
+import com.cuk.notice2action.extraction.domain.ActionStatus;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -167,11 +168,19 @@ public class ActionExtractionController {
       @RequestParam(name = "q", required = false) String q,
       @RequestParam(name = "category", required = false) SourceCategory category,
       @RequestParam(name = "dueDateFrom", required = false) String dueDateFrom,
-      @RequestParam(name = "dueDateTo", required = false) String dueDateTo
+      @RequestParam(name = "dueDateTo", required = false) String dueDateTo,
+      @RequestParam(name = "status", required = false) String status
   ) {
     OffsetDateTime from = parseQueryDate(dueDateFrom, "dueDateFrom", false);
     OffsetDateTime to = parseQueryDate(dueDateTo, "dueDateTo", true);
-    ActionSearchCriteria criteria = new ActionSearchCriteria(q, category, from, to, sort);
+    ActionSearchCriteria criteria = new ActionSearchCriteria(
+        q,
+        category,
+        from,
+        to,
+        sort,
+        ActionStatus.normalizeNullable(status, "status")
+    );
     return actionPersistenceService.listActions(criteria, page, size);
   }
 
@@ -230,11 +239,19 @@ public class ActionExtractionController {
       @RequestParam(name = "q", required = false) String q,
       @RequestParam(name = "category", required = false) SourceCategory category,
       @RequestParam(name = "dueDateFrom", required = false) String dueDateFrom,
-      @RequestParam(name = "dueDateTo", required = false) String dueDateTo
+      @RequestParam(name = "dueDateTo", required = false) String dueDateTo,
+      @RequestParam(name = "status", required = false) String status
   ) {
     OffsetDateTime from = parseQueryDate(dueDateFrom, "dueDateFrom", false);
     OffsetDateTime to = parseQueryDate(dueDateTo, "dueDateTo", true);
-    ActionSearchCriteria criteria = new ActionSearchCriteria(q, category, from, to, sort);
+    ActionSearchCriteria criteria = new ActionSearchCriteria(
+        q,
+        category,
+        from,
+        to,
+        sort,
+        ActionStatus.normalizeNullable(status, "status")
+    );
     List<ExtractedActionEntity> actions = actionPersistenceService.findActionsForCalendar(criteria);
     String ics = iCalendarService.generateCalendar(actions);
     return ResponseEntity.ok()
