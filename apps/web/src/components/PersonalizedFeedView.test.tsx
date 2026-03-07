@@ -48,9 +48,37 @@ describe('PersonalizedFeedView', () => {
     });
 
     expect(screen.getAllByText('행동 필요')).not.toHaveLength(0);
+    expect(screen.getAllByText('학사')).not.toHaveLength(0);
     expect(screen.queryByText('프로필 미설정')).not.toBeInTheDocument();
     expect(screen.getByText('3. 25. (수) 17:00')).toBeInTheDocument();
     expect(screen.getAllByText('행동 필요')).not.toHaveLength(0);
+  });
+
+  it('hides board badge when board label is null', async () => {
+    mockFetchNoticeFeed.mockResolvedValue(makeNoticeFeedResponse([
+      {
+        ...QUALITY_ACTION_NOTICE,
+        boardLabel: null,
+      },
+    ]));
+
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={EMPTY_PREFS}
+        initialNoticeId={null}
+        onNoticeSelect={() => {}}
+        onToggleSaved={() => {}}
+        onHide={() => {}}
+        onUnhide={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('[학사지원팀] 2026-1학기 수강과목 취소 기간 안내')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('학사')).not.toBeInTheDocument();
   });
 
   it('renders at most three reasons per card', async () => {

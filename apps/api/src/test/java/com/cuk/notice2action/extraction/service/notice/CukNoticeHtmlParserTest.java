@@ -26,14 +26,16 @@ class CukNoticeHtmlParserTest {
 
     List<CukNoticeListItem> items = parser.parseList(
         html,
-        URI.create("https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=list&srCategoryId=21")
+        URI.create("https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=list&srCategoryId=&srSearchKey=&srSearchVal=")
     );
 
     assertThat(items).hasSize(2);
     assertThat(items.get(0).externalNoticeId()).isEqualTo("269152");
     assertThat(items.get(0).title()).isEqualTo("2026학년도 1학기 학부 수강신청 안내");
+    assertThat(items.get(0).boardLabel()).isEqualTo("학사");
     assertThat(items.get(0).detailUrl())
         .isEqualTo("https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=269152&article.offset=0&articleLimit=10");
+    assertThat(items.get(1).boardLabel()).isEqualTo("장학");
   }
 
   @Test

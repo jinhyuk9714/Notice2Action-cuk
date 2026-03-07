@@ -41,7 +41,16 @@ public class JsoupCukNoticeClient implements CukNoticeClient {
     List<CukNoticeDetail> details = new ArrayList<>();
     for (CukNoticeListItem item : uniqueItems.values()) {
       String html = fetchHtml(item.detailUrl());
-      details.add(parser.parseDetail(html, URI.create(item.detailUrl())));
+      CukNoticeDetail parsed = parser.parseDetail(html, URI.create(item.detailUrl()));
+      details.add(new CukNoticeDetail(
+          parsed.externalNoticeId(),
+          parsed.title(),
+          parsed.publishedAt(),
+          parsed.body(),
+          parsed.attachments(),
+          parsed.detailUrl(),
+          item.boardLabel()
+      ));
     }
     return details;
   }

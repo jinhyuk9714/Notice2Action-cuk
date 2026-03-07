@@ -8,6 +8,7 @@ public record PersonalizedNoticeSummaryDto(
     String title,
     String publishedAt,
     String sourceUrl,
+    String boardLabel,
     List<String> importanceReasons,
     String actionability,
     NoticeDueHintDto dueHint,

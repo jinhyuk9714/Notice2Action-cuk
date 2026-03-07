@@ -43,6 +43,7 @@ class NoticeFeedControllerTest {
                 "학생증 신청 안내",
                 "2026-02-27T00:00:00+09:00",
                 "https://example.com/notice/268986",
+                "장학",
                 List.of("신입생 공지", "학생증 관련"),
                 "action_required",
                 new NoticeDueHintDto("2026-03-05T23:59:59+09:00", "3월 5일까지"),
@@ -62,6 +63,7 @@ class NoticeFeedControllerTest {
             .param("keyword", "학생증"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.notices[0].title").value("학생증 신청 안내"))
+        .andExpect(jsonPath("$.notices[0].boardLabel").value("장학"))
         .andExpect(jsonPath("$.notices[0].importanceReasons[0]").value("신입생 공지"))
         .andExpect(jsonPath("$.notices[0].actionability").value("action_required"));
   }
@@ -75,6 +77,7 @@ class NoticeFeedControllerTest {
             "학생증 신청 안내",
             "2026-02-27T00:00:00+09:00",
             "https://example.com/notice/268986",
+            "장학",
             List.of("행동 필요", "7일 안에 마감"),
             "action_required",
             new NoticeDueHintDto("2026-03-05T23:59:59+09:00", "3월 5일까지"),
@@ -86,6 +89,7 @@ class NoticeFeedControllerTest {
 
     mockMvc.perform(get("/api/v1/notices/{id}", id))
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.boardLabel").value("장학"))
         .andExpect(jsonPath("$.body").value("정제된 원문"))
         .andExpect(jsonPath("$.attachments[0].name").value("학생증 발급 신청서.hwp"))
         .andExpect(jsonPath("$.actionBlocks[0].title").value("학생증 신청"));

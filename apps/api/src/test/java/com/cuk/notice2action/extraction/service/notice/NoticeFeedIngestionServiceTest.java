@@ -48,7 +48,7 @@ class NoticeFeedIngestionServiceTest {
         actionPersistenceService,
         new NoticeFeedProperties(
             true,
-            "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=list&srCategoryId=21",
+            "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=list&srCategoryId=&srSearchKey=&srSearchVal=",
             3600000,
             2,
             true
@@ -66,7 +66,8 @@ class NoticeFeedIngestionServiceTest {
         LocalDate.of(2026, 2, 27),
         "본문",
         List.of(),
-        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268986"
+        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268986",
+        "장학"
     );
     when(cukNoticeClient.fetchLatestNotices(2)).thenReturn(List.of(detail));
     when(noticeSourceRepository.findByExternalNoticeId("268986")).thenReturn(Optional.empty());
@@ -77,7 +78,9 @@ class NoticeFeedIngestionServiceTest {
 
     service.refreshCollectedNotices();
 
-    verify(noticeSourceRepository).save(any(NoticeSourceEntity.class));
+    verify(noticeSourceRepository).save(org.mockito.ArgumentMatchers.argThat(source ->
+        "장학".equals(source.getNoticeBoardLabel())
+    ));
     verify(actionPersistenceService).replaceSourceActions(any(NoticeSourceEntity.class), any(ActionExtractionResponse.class));
   }
 
@@ -89,7 +92,8 @@ class NoticeFeedIngestionServiceTest {
         LocalDate.of(2026, 2, 27),
         "본문",
         List.of(),
-        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268986"
+        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268986",
+        "장학"
     );
     NoticeSourceEntity existing = new NoticeSourceEntity(UUID.randomUUID(), "학생증 신청 안내", SourceCategory.NOTICE, "본문", detail.detailUrl(), java.time.OffsetDateTime.now());
     existing.setExternalNoticeId("268986");
@@ -112,7 +116,8 @@ class NoticeFeedIngestionServiceTest {
         LocalDate.of(2026, 3, 3),
         "수강과목 취소 신청기간 : 2026. 3. 24.(화) 09:00 ~ 3. 25.(수) 17:00",
         List.of(),
-        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=269011"
+        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=269011",
+        "학사"
     );
     when(cukNoticeClient.fetchLatestNotices(2)).thenReturn(List.of(detail));
     when(noticeSourceRepository.findByExternalNoticeId("269011")).thenReturn(Optional.empty());
@@ -140,7 +145,8 @@ class NoticeFeedIngestionServiceTest {
         LocalDate.of(2026, 2, 23),
         "2026학년도 학점이월제도 안내\n확인방법 : [트리니티] - [학사정보] - [수업/성적] - [수강신청_학생(성심)]",
         List.of(),
-        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268679"
+        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268679",
+        "학사"
     );
     when(cukNoticeClient.fetchLatestNotices(2)).thenReturn(List.of(detail));
     when(noticeSourceRepository.findByExternalNoticeId("268679")).thenReturn(Optional.empty());
@@ -155,6 +161,41 @@ class NoticeFeedIngestionServiceTest {
         source.getPrimaryDueAt() == null
             && source.getPrimaryDueLabel() == null
             && "informational".equals(source.getActionability())
+    ));
+  }
+
+  @Test
+  void updatesExistingNoticeBoardLabelWhenNoticeIsReingested() {
+    CukNoticeDetail detail = new CukNoticeDetail(
+        "268986",
+        "학생증 신청 안내",
+        LocalDate.of(2026, 2, 27),
+        "수정된 본문",
+        List.of(),
+        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268986",
+        "장학"
+    );
+    NoticeSourceEntity existing = new NoticeSourceEntity(
+        UUID.randomUUID(),
+        "학생증 신청 안내",
+        SourceCategory.NOTICE,
+        "기존 본문",
+        detail.detailUrl(),
+        OffsetDateTime.now()
+    );
+    existing.setExternalNoticeId("268986");
+    existing.setNoticeBoardLabel(null);
+    existing.setContentHash("stale-hash");
+
+    when(cukNoticeClient.fetchLatestNotices(2)).thenReturn(List.of(detail));
+    when(noticeSourceRepository.findByExternalNoticeId("268986")).thenReturn(Optional.of(existing));
+    when(actionExtractionService.extract(any(ActionExtractionRequest.class)))
+        .thenReturn(new ActionExtractionResponse(List.of()));
+
+    service.refreshCollectedNotices();
+
+    verify(noticeSourceRepository).save(org.mockito.ArgumentMatchers.argThat(source ->
+        "장학".equals(source.getNoticeBoardLabel())
     ));
   }
 }

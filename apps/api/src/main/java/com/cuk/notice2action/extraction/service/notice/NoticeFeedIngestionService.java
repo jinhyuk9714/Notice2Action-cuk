@@ -96,6 +96,7 @@ public class NoticeFeedIngestionService {
     source.setExternalNoticeId(detail.externalNoticeId());
     source.setAutoCollected(true);
     source.setAttachmentsJson(NoticeFeedService.toAttachmentsJson(detail.attachments()));
+    source.setNoticeBoardLabel(detail.boardLabel());
     source.setContentHash(contentHash);
 
     ActionExtractionResponse extraction = actionExtractionService.extract(new ActionExtractionRequest(

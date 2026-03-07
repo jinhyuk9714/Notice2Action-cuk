@@ -6,6 +6,7 @@ import { makeNoticeDetail } from '../test-helpers';
 describe('NoticeDetailContent', () => {
   it('renders representative action block first', () => {
     const detail = makeNoticeDetail({
+      boardLabel: '학사',
       actionBlocks: [
         {
           title: 'Self-making Project Portfolio 참여 신청',
@@ -40,6 +41,7 @@ describe('NoticeDetailContent', () => {
     );
 
     const actionCards = screen.getAllByRole('article');
+    expect(screen.getByText('학사')).toBeInTheDocument();
     expect(within(actionCards[0]!).getByText('Self-making Project Portfolio 참여 신청')).toBeInTheDocument();
     expect(within(actionCards[1]!).getByText('결과물을 대외공모전 제출')).toBeInTheDocument();
   });

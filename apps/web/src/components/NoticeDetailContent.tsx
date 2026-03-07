@@ -178,6 +178,7 @@ export function NoticeDetailContent({
       </div>
 
       <div className="chip-row">
+        {detail.boardLabel !== null ? <span className="badge">{detail.boardLabel}</span> : null}
         {detail.actionability === 'action_required' ? <span className="badge badge-danger">행동 필요</span> : <span className="badge">정보성 공지</span>}
         {isHidden ? <span className="badge">숨김됨</span> : null}
         {detail.dueHint !== null ? <span className="badge">{detail.dueHint.label}</span> : null}

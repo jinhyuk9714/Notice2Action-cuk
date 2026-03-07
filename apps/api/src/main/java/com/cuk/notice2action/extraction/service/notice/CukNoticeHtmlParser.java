@@ -27,10 +27,11 @@ public class CukNoticeHtmlParser {
       String externalNoticeId = anchor.attr("data-article-no").trim();
       String title = normalizeWhitespace(anchor.text());
       String detailUrl = anchor.absUrl("href");
+      String boardLabel = extractBoardLabel(anchor);
       if (externalNoticeId.isEmpty() || title.isEmpty() || detailUrl.isEmpty() || !seenIds.add(externalNoticeId)) {
         continue;
       }
-      items.add(new CukNoticeListItem(externalNoticeId, title, detailUrl));
+      items.add(new CukNoticeListItem(externalNoticeId, title, detailUrl, boardLabel));
     }
 
     return items;
@@ -63,7 +64,7 @@ public class CukNoticeHtmlParser {
       throw new IllegalArgumentException("공지 본문이 비어 있습니다.");
     }
 
-    return new CukNoticeDetail(externalNoticeId, title, publishedAt, body, attachments, detailUri.toString());
+    return new CukNoticeDetail(externalNoticeId, title, publishedAt, body, attachments, detailUri.toString(), null);
   }
 
   private static String extractArticleNo(String query) {
@@ -77,6 +78,19 @@ public class CukNoticeHtmlParser {
       }
     }
     return "";
+  }
+
+  private static String extractBoardLabel(Element anchor) {
+    Element row = anchor.closest("tr");
+    if (row == null) {
+      return null;
+    }
+    Element boardElement = row.selectFirst("span.b-con.b-cate");
+    if (boardElement == null) {
+      return null;
+    }
+    String boardLabel = normalizeWhitespace(boardElement.text());
+    return boardLabel.isEmpty() ? null : boardLabel;
   }
 
   private static LocalDate parsePublishedAt(Elements hitBoxes) {

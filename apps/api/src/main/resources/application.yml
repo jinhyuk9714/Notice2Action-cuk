@@ -38,7 +38,7 @@ app:
     timezone: Asia/Seoul
   notice-feed:
     enabled: true
-    list-url: https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=list&srCategoryId=21
+    list-url: https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=list&srCategoryId=&srSearchKey=&srSearchVal=
     fixed-delay: 3600000
     max-pages-per-run: 3
     bootstrap-on-startup: true

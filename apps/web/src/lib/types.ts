@@ -201,6 +201,7 @@ export const PersonalizedNoticeSummarySchema = z.object({
   title: z.string(),
   publishedAt: z.string(),
   sourceUrl: z.string().nullable(),
+  boardLabel: z.string().nullable(),
   importanceReasons: z.array(z.string()),
   actionability: z.enum(['action_required', 'informational']),
   dueHint: NoticeDueHintSchema.nullable(),

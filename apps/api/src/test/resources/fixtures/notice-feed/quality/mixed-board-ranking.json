@@ -1,0 +1,37 @@
+{
+  "profiles": [
+    {
+      "name": "cs_junior_overall_feed",
+      "department": "컴퓨터정보공학부",
+      "year": 3,
+      "status": "재학생",
+      "keywords": [],
+      "expectations": [
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["행동 필요"],
+          "expectedMustAppearAbove": ["900001", "900002"]
+        },
+        {
+          "noticeId": "268989",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["3학년 공지"],
+          "expectedMustAppearAbove": ["900001", "900002"]
+        },
+        {
+          "noticeId": "900001",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "900002",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    }
+  ]
+}

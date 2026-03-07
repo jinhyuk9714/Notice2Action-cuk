@@ -105,6 +105,7 @@ export function PersonalizedFeedView({
                   <h3>{notice.title}</h3>
                 </button>
                 <div className="chip-row">
+                  {notice.boardLabel !== null ? <span className="badge">{notice.boardLabel}</span> : null}
                   {visibleReasons.map((reason) => <span key={reason} className="badge">{reason}</span>)}
                 </div>
                 <p>{notice.dueHint?.label ?? '마감 정보 없음'}</p>
@@ -131,6 +132,7 @@ export function PersonalizedFeedView({
                   </button>
                   <div className="chip-row">
                     <span className="badge">숨김됨</span>
+                    {notice.boardLabel !== null ? <span className="badge">{notice.boardLabel}</span> : null}
                     {visibleReasons.map((reason) => <span key={`${notice.id}-${reason}`} className="badge">{reason}</span>)}
                   </div>
                   <div className="card-actions-row">

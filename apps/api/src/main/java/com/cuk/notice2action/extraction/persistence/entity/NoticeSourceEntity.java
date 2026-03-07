@@ -59,6 +59,9 @@ public class NoticeSourceEntity {
   @Column(name = "attachments_json", nullable = false, columnDefinition = "TEXT")
   private String attachmentsJson = "[]";
 
+  @Column(name = "notice_board_label", length = 80)
+  private String noticeBoardLabel;
+
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;
 
@@ -167,6 +170,14 @@ public class NoticeSourceEntity {
 
   public void setAttachmentsJson(String attachmentsJson) {
     this.attachmentsJson = attachmentsJson;
+  }
+
+  public String getNoticeBoardLabel() {
+    return noticeBoardLabel;
+  }
+
+  public void setNoticeBoardLabel(String noticeBoardLabel) {
+    this.noticeBoardLabel = noticeBoardLabel;
   }
 
   public String getContentHash() {

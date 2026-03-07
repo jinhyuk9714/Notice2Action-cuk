@@ -286,6 +286,7 @@ const VALID_NOTICE_SUMMARY = {
   title: '학생증 신청 안내',
   publishedAt: '2026-02-27T00:00:00+09:00',
   sourceUrl: 'https://example.com/notices/1',
+  boardLabel: '장학',
   importanceReasons: ['신입생 공지', '학생증 관련'],
   actionability: 'action_required',
   dueHint: { dueAtIso: '2026-03-05T23:59:59+09:00', label: '3월 5일까지' },
@@ -405,6 +406,7 @@ describe('parseNoticeFeedResponse', () => {
     });
 
     expect(result.notices[0].title).toBe('학생증 신청 안내');
+    expect(result.notices[0].boardLabel).toBe('장학');
     expect(result.notices[0].dueHint?.label).toBe('3월 5일까지');
   });
 
@@ -424,6 +426,7 @@ describe('parseNoticeFeedResponse', () => {
 describe('parsePersonalizedNoticeDetail', () => {
   it('parses valid personalized notice detail', () => {
     const result = parsePersonalizedNoticeDetail(VALID_NOTICE_DETAIL);
+    expect(result.boardLabel).toBe('장학');
     expect(result.attachments).toHaveLength(1);
     expect(result.actionBlocks).toHaveLength(1);
   });
