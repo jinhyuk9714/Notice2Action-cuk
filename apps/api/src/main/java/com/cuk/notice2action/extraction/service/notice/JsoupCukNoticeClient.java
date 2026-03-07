@@ -9,12 +9,15 @@ import java.util.List;
 import java.util.Map;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class JsoupCukNoticeClient implements CukNoticeClient {
 
+  private static final Logger log = LoggerFactory.getLogger(JsoupCukNoticeClient.class);
   private static final int TIMEOUT_MS = 10_000;
   private static final int MAX_BODY_SIZE_BYTES = 2 * 1024 * 1024;
   private static final int PAGE_SIZE = 10;
@@ -43,17 +46,21 @@ public class JsoupCukNoticeClient implements CukNoticeClient {
 
     List<CukNoticeDetail> details = new ArrayList<>();
     for (CukNoticeListItem item : uniqueItems.values()) {
-      String html = fetchHtml(item.detailUrl());
-      CukNoticeDetail parsed = parser.parseDetail(html, URI.create(item.detailUrl()));
-      details.add(new CukNoticeDetail(
-          parsed.externalNoticeId(),
-          parsed.title(),
-          parsed.publishedAt(),
-          parsed.body(),
-          parsed.attachments(),
-          parsed.detailUrl(),
-          item.boardLabel()
-      ));
+      try {
+        String html = fetchHtml(item.detailUrl());
+        CukNoticeDetail parsed = parser.parseDetail(html, URI.create(item.detailUrl()));
+        details.add(new CukNoticeDetail(
+            parsed.externalNoticeId(),
+            parsed.title(),
+            parsed.publishedAt(),
+            parsed.body(),
+            parsed.attachments(),
+            parsed.detailUrl(),
+            item.boardLabel()
+        ));
+      } catch (IllegalArgumentException exception) {
+        log.warn("Skipping malformed notice detail: articleNo={}, url={}", item.externalNoticeId(), item.detailUrl(), exception);
+      }
     }
     return details;
   }

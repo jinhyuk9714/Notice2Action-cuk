@@ -60,6 +60,72 @@ class JsoupCukNoticeClientTest {
     }
   }
 
+  @Test
+  void skipsMalformedDetailPagesAndContinuesCollectingOtherNotices() throws Exception {
+    HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+    server.createContext("/ko/campuslife/notice.do", exchange -> {
+      String query = exchange.getRequestURI().getRawQuery();
+      if (query != null && query.contains("mode=list")) {
+        respond(exchange, """
+            <html><body>
+              <table>
+                <tr>
+                  <td>
+                    <a class="b-title" data-article-no="bad-1" href="?mode=view&amp;articleNo=bad-1&amp;article.offset=0&amp;articleLimit=10">깨진 공지</a>
+                    <span class="b-con b-cate">일반</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <a class="b-title" data-article-no="good-1" href="?mode=view&amp;articleNo=good-1&amp;article.offset=0&amp;articleLimit=10">정상 공지</a>
+                    <span class="b-con b-cate">학사</span>
+                  </td>
+                </tr>
+              </table>
+            </body></html>
+            """);
+        return;
+      }
+      if (query != null && query.contains("articleNo=bad-1")) {
+        respond(exchange, """
+            <html><body>
+              <input type="hidden" name="articleNo" value="bad-1" />
+              <div class="b-top-box">
+                <div class="b-title-box"><div class="b-title">깨진 공지</div></div>
+              </div>
+              <div class="b-etc-box">
+                <div class="b-hit-box"><span class="title">등록일</span><span>2026.03.07</span></div>
+              </div>
+              <div class="b-content-box"><div class="fr-view"></div></div>
+            </body></html>
+            """);
+        return;
+      }
+      respond(exchange, detailPageHtml().replace("123456", "good-1").replace("테스트 공지", "정상 공지"));
+    });
+    server.start();
+
+    try {
+      int port = server.getAddress().getPort();
+      NoticeFeedProperties properties = new NoticeFeedProperties(
+          true,
+          "http://127.0.0.1:" + port + "/ko/campuslife/notice.do?mode=list&srCategoryId=&srSearchKey=&srSearchVal=",
+          3600000,
+          1,
+          true
+      );
+      JsoupCukNoticeClient client = new JsoupCukNoticeClient(properties);
+
+      List<CukNoticeDetail> notices = client.fetchLatestNotices(1);
+
+      assertThat(notices).hasSize(1);
+      assertThat(notices.getFirst().externalNoticeId()).isEqualTo("good-1");
+      assertThat(notices.getFirst().boardLabel()).isEqualTo("학사");
+    } finally {
+      server.stop(0);
+    }
+  }
+
   private static void respond(HttpExchange exchange, String html) throws IOException {
     byte[] body = html.getBytes(StandardCharsets.UTF_8);
     exchange.getResponseHeaders().add("Content-Type", "text/html; charset=utf-8");
