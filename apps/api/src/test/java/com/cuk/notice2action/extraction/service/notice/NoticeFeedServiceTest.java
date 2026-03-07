@@ -75,6 +75,97 @@ class NoticeFeedServiceTest {
   }
 
   @Test
+  void exposesAvailableBoardsByFrequencyThenLabel() {
+    NoticeSourceEntity academicA = NoticeFixtures.noticeSource(
+        "수강신청 안내",
+        "학사 안내입니다.",
+        LocalDate.of(2026, 3, 1),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action("수강신청", null, 0.8))
+    );
+    academicA.setNoticeBoardLabel("학사");
+    NoticeSourceEntity academicB = NoticeFixtures.noticeSource(
+        "수강취소 안내",
+        "학사 안내입니다.",
+        LocalDate.of(2026, 3, 2),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action("수강취소", null, 0.8))
+    );
+    academicB.setNoticeBoardLabel("학사");
+    NoticeSourceEntity scholarship = NoticeFixtures.noticeSource(
+        "장학 안내",
+        "장학 안내입니다.",
+        LocalDate.of(2026, 3, 3),
+        "informational",
+        null,
+        List.of()
+    );
+    scholarship.setNoticeBoardLabel("장학");
+    NoticeSourceEntity general = NoticeFixtures.noticeSource(
+        "일반 안내",
+        "일반 안내입니다.",
+        LocalDate.of(2026, 3, 4),
+        "informational",
+        null,
+        List.of()
+    );
+    general.setNoticeBoardLabel("일반");
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(general, academicA, scholarship, academicB));
+
+    NoticeFeedResponse response = service.getFeed(new NoticeProfile(null, null, null, List.of()), 0, 20);
+
+    assertThat(response.availableBoards()).containsExactly("학사", "일반", "장학");
+  }
+
+  @Test
+  void filtersByBoardAfterRankingAndPreservesAvailableBoards() {
+    NoticeSourceEntity academicMatched = NoticeFixtures.noticeSource(
+        "수강과목 취소 안내",
+        "학사 공지입니다.",
+        LocalDate.of(2026, 3, 1),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(3),
+        List.of(NoticeFixtures.action("수강과목 취소 신청", null, 0.9))
+    );
+    academicMatched.setNoticeBoardLabel("학사");
+    NoticeSourceEntity scholarshipMatched = NoticeFixtures.noticeSource(
+        "3학년 장학 신청 안내",
+        "3학년 대상 장학 안내입니다.",
+        LocalDate.of(2026, 3, 2),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action("장학 신청", "3학년", 0.88))
+    );
+    scholarshipMatched.setNoticeBoardLabel("장학");
+    NoticeSourceEntity generalInfo = NoticeFixtures.noticeSource(
+        "축제 안내",
+        "전체 학생 안내입니다.",
+        LocalDate.of(2026, 3, 5),
+        "informational",
+        null,
+        List.of()
+    );
+    generalInfo.setNoticeBoardLabel("일반");
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(generalInfo, scholarshipMatched, academicMatched));
+
+    NoticeProfile profile = new NoticeProfile(null, 3, null, List.of());
+    NoticeFeedResponse unfiltered = service.getFeed(profile, 0, 20);
+    NoticeFeedResponse filtered = service.getFeed(profile, 0, 20, "학사");
+
+    assertThat(unfiltered.notices()).extracting(summary -> summary.title())
+        .contains("수강과목 취소 안내", "3학년 장학 신청 안내", "축제 안내");
+    assertThat(filtered.notices()).extracting(summary -> summary.boardLabel())
+        .containsOnly("학사");
+    assertThat(filtered.availableBoards()).isEqualTo(unfiltered.availableBoards());
+    assertThat(filtered.notices()).extracting(summary -> summary.title())
+        .containsExactly("수강과목 취소 안내");
+  }
+
+  @Test
   void omitsProfileReasonWhenProfileIsUnconfigured() {
     NoticeSourceEntity notice = NoticeFixtures.noticeSource(
         "수강신청 일정 안내",

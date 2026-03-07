@@ -66,8 +66,11 @@ export default function App(): ReactElement {
 
   const handleHideNotice = useCallback((id: string) => {
     persistPreferences((current) => toggleNoticeHidden(current, id));
-    if ((route.view === 'feed' || route.view === 'saved') && route.noticeId === id) {
-      navigate({ view: route.view, noticeId: null });
+    if (route.view === 'feed' && route.noticeId === id) {
+      navigate({ view: 'feed', noticeId: null, board: route.board });
+    }
+    if (route.view === 'saved' && route.noticeId === id) {
+      navigate({ view: 'saved', noticeId: null });
     }
   }, [navigate, persistPreferences, route]);
 
@@ -153,7 +156,7 @@ export default function App(): ReactElement {
           </p>
 
           <nav className="tab-nav">
-            <button className={route.view === 'feed' ? 'tab tab-active' : 'tab'} onClick={() => { navigate({ view: 'feed', noticeId: null }); }}>
+            <button className={route.view === 'feed' ? 'tab tab-active' : 'tab'} onClick={() => { navigate({ view: 'feed', noticeId: null, board: route.view === 'feed' ? route.board : null }); }}>
               중요 공지
             </button>
             <button className={route.view === 'saved' ? 'tab tab-active' : 'tab'} onClick={() => { navigate({ view: 'saved', noticeId: null }); }}>
@@ -170,7 +173,9 @@ export default function App(): ReactElement {
             profile={profile}
             preferences={noticePreferences}
             initialNoticeId={route.noticeId}
-            onNoticeSelect={(id) => { navigate({ view: 'feed', noticeId: id }); }}
+            initialBoard={route.board}
+            onNoticeSelect={(id) => { navigate({ view: 'feed', noticeId: id, board: route.board }); }}
+            onBoardSelect={(board) => { navigate({ view: 'feed', noticeId: null, board }); }}
             onToggleSaved={handleToggleSaved}
             onHide={handleHideNotice}
             onUnhide={handleUnhideNotice}

@@ -9,12 +9,26 @@ export type InboxFilters = Readonly<{
 }>;
 
 export type Route =
-  | Readonly<{ view: 'feed'; noticeId: string | null }>
+  | Readonly<{ view: 'feed'; noticeId: string | null; board: string | null }>
   | Readonly<{ view: 'saved'; noticeId: string | null }>
   | Readonly<{ view: 'profile' }>
   | Readonly<{ view: 'extract' }>
   | Readonly<{ view: 'inbox'; actionId: string | null; filters: InboxFilters }>
   | Readonly<{ view: 'sources'; sourceId: string | null }>;
+
+function parseFeedBoard(queryString: string): string | null {
+  if (queryString.length === 0) return null;
+  const params = new URLSearchParams(queryString);
+  const board = params.get('board');
+  return board !== null && board.length > 0 ? board : null;
+}
+
+function buildFeedQueryString(board: string | null): string {
+  if (board === null || board.length === 0) return '';
+  const params = new URLSearchParams();
+  params.set('board', board);
+  return params.toString();
+}
 
 function parseInboxFilters(queryString: string): InboxFilters {
   if (queryString.length === 0) return {};
@@ -67,12 +81,12 @@ export function parseHash(hash: string): Route {
 
   const segments = pathPart.split('/').filter((s) => s.length > 0);
 
-  if (segments.length === 0) return { view: 'feed', noticeId: null };
+  if (segments.length === 0) return { view: 'feed', noticeId: null, board: parseFeedBoard(queryPart) };
 
   const view = segments[0];
 
   if (view === 'feed') {
-    return { view: 'feed', noticeId: segments[1] ?? null };
+    return { view: 'feed', noticeId: segments[1] ?? null, board: parseFeedBoard(queryPart) };
   }
   if (view === 'saved') {
     return { view: 'saved', noticeId: segments[1] ?? null };
@@ -91,12 +105,14 @@ export function parseHash(hash: string): Route {
     return { view: 'extract' };
   }
 
-  return { view: 'feed', noticeId: null };
+  return { view: 'feed', noticeId: null, board: parseFeedBoard(queryPart) };
 }
 
 export function buildHash(route: Route): string {
   if (route.view === 'feed') {
-    return route.noticeId !== null ? `#/feed/${route.noticeId}` : '#/feed';
+    const base = route.noticeId !== null ? `#/feed/${route.noticeId}` : '#/feed';
+    const qs = buildFeedQueryString(route.board);
+    return qs.length > 0 ? `${base}?${qs}` : base;
   }
   if (route.view === 'saved') {
     return route.noticeId !== null ? `#/saved/${route.noticeId}` : '#/saved';

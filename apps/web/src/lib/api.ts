@@ -190,11 +190,15 @@ export async function fetchNoticeFeed(
   profile: UserProfile,
   page: number = 0,
   size: number = 20,
+  board: string | null = null,
 ): Promise<NoticeFeedResponse> {
   const params = new URLSearchParams();
   params.set('page', String(page));
   params.set('size', String(size));
   appendProfileParams(params, profile);
+  if (board !== null && board.length > 0) {
+    params.set('board', board);
+  }
 
   const response = await fetch(`/api/v1/notices/feed?${params.toString()}`);
   if (!response.ok) {

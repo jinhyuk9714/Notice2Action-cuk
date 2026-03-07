@@ -398,6 +398,7 @@ describe('parseNoticeFeedResponse', () => {
   it('parses valid personalized notice feed', () => {
     const result = parseNoticeFeedResponse({
       notices: [VALID_NOTICE_SUMMARY],
+      availableBoards: ['장학', '학사'],
       currentPage: 0,
       pageSize: 20,
       totalElements: 1,
@@ -408,12 +409,14 @@ describe('parseNoticeFeedResponse', () => {
     expect(result.notices[0].title).toBe('학생증 신청 안내');
     expect(result.notices[0].boardLabel).toBe('장학');
     expect(result.notices[0].dueHint?.label).toBe('3월 5일까지');
+    expect(result.availableBoards).toEqual(['장학', '학사']);
   });
 
   it('throws when importanceReasons is missing', () => {
     const { importanceReasons: _, ...broken } = VALID_NOTICE_SUMMARY;
     expect(() => parseNoticeFeedResponse({
       notices: [broken],
+      availableBoards: ['장학'],
       currentPage: 0,
       pageSize: 20,
       totalElements: 1,

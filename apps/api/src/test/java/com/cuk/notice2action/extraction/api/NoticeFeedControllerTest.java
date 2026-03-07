@@ -36,7 +36,7 @@ class NoticeFeedControllerTest {
 
   @Test
   void returnsPersonalizedNoticeFeed() throws Exception {
-    when(noticeFeedService.getFeed(eq(new NoticeProfile("컴퓨터공학과", 1, "신입생", List.of("학생증"))), eq(0), eq(20)))
+    when(noticeFeedService.getFeed(eq(new NoticeProfile("컴퓨터공학과", 1, "신입생", List.of("학생증"))), eq(0), eq(20), eq("장학")))
         .thenReturn(new NoticeFeedResponse(
             List.of(new PersonalizedNoticeSummaryDto(
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
@@ -53,17 +53,20 @@ class NoticeFeedControllerTest {
             20,
             1,
             1,
-            false
+            false,
+            List.of("장학", "학사")
         ));
 
     mockMvc.perform(get("/api/v1/notices/feed")
             .param("department", "컴퓨터공학과")
             .param("year", "1")
             .param("status", "신입생")
+            .param("board", "장학")
             .param("keyword", "학생증"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.notices[0].title").value("학생증 신청 안내"))
         .andExpect(jsonPath("$.notices[0].boardLabel").value("장학"))
+        .andExpect(jsonPath("$.availableBoards[0]").value("장학"))
         .andExpect(jsonPath("$.notices[0].importanceReasons[0]").value("신입생 공지"))
         .andExpect(jsonPath("$.notices[0].actionability").value("action_required"));
   }

@@ -19,6 +19,7 @@ import { fetchNoticeDetail, fetchNoticeFeed } from '../lib/api';
 const mockFetchNoticeFeed = vi.mocked(fetchNoticeFeed);
 const mockFetchNoticeDetail = vi.mocked(fetchNoticeDetail);
 const EMPTY_PREFS: NoticePreferences = { savedIds: [], hiddenIds: [] };
+const noop = () => {};
 
 describe('PersonalizedFeedView', () => {
   beforeEach(() => {
@@ -36,10 +37,12 @@ describe('PersonalizedFeedView', () => {
         profile={EMPTY_PROFILE}
         preferences={EMPTY_PREFS}
         initialNoticeId={null}
-        onNoticeSelect={() => {}}
-        onToggleSaved={() => {}}
-        onHide={() => {}}
-        onUnhide={() => {}}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
       />,
     );
 
@@ -52,6 +55,8 @@ describe('PersonalizedFeedView', () => {
     expect(screen.queryByText('프로필 미설정')).not.toBeInTheDocument();
     expect(screen.getByText('3. 25. (수) 17:00')).toBeInTheDocument();
     expect(screen.getAllByText('행동 필요')).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: '전체' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '학사' })).toBeInTheDocument();
   });
 
   it('hides board badge when board label is null', async () => {
@@ -67,10 +72,12 @@ describe('PersonalizedFeedView', () => {
         profile={EMPTY_PROFILE}
         preferences={EMPTY_PREFS}
         initialNoticeId={null}
-        onNoticeSelect={() => {}}
-        onToggleSaved={() => {}}
-        onHide={() => {}}
-        onUnhide={() => {}}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
       />,
     );
 
@@ -94,10 +101,12 @@ describe('PersonalizedFeedView', () => {
         profile={EMPTY_PROFILE}
         preferences={EMPTY_PREFS}
         initialNoticeId={null}
-        onNoticeSelect={() => {}}
-        onToggleSaved={() => {}}
-        onHide={() => {}}
-        onUnhide={() => {}}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
       />,
     );
 
@@ -124,10 +133,12 @@ describe('PersonalizedFeedView', () => {
         profile={EMPTY_PROFILE}
         preferences={EMPTY_PREFS}
         initialNoticeId={null}
-        onNoticeSelect={() => {}}
-        onToggleSaved={() => {}}
-        onHide={() => {}}
-        onUnhide={() => {}}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
       />,
     );
 
@@ -155,10 +166,12 @@ describe('PersonalizedFeedView', () => {
         profile={EMPTY_PROFILE}
         preferences={EMPTY_PREFS}
         initialNoticeId={null}
-        onNoticeSelect={() => {}}
-        onToggleSaved={() => {}}
-        onHide={() => {}}
-        onUnhide={() => {}}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
       />,
     );
 
@@ -183,10 +196,12 @@ describe('PersonalizedFeedView', () => {
         profile={EMPTY_PROFILE}
         preferences={EMPTY_PREFS}
         initialNoticeId={null}
-        onNoticeSelect={() => {}}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
         onToggleSaved={onToggleSaved}
         onHide={onHide}
-        onUnhide={() => {}}
+        onUnhide={noop}
       />,
     );
 
@@ -207,10 +222,12 @@ describe('PersonalizedFeedView', () => {
         profile={EMPTY_PROFILE}
         preferences={EMPTY_PREFS}
         initialNoticeId={null}
-        onNoticeSelect={() => {}}
-        onToggleSaved={() => {}}
-        onHide={() => {}}
-        onUnhide={() => {}}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
       />,
     );
 
@@ -231,9 +248,11 @@ describe('PersonalizedFeedView', () => {
         profile={EMPTY_PROFILE}
         preferences={{ savedIds: [], hiddenIds: ['269011'] }}
         initialNoticeId={null}
-        onNoticeSelect={() => {}}
-        onToggleSaved={() => {}}
-        onHide={() => {}}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
         onUnhide={onUnhide}
       />,
     );
@@ -247,5 +266,44 @@ describe('PersonalizedFeedView', () => {
     fireEvent.click(screen.getByRole('button', { name: '숨김 해제' }));
 
     expect(onUnhide).toHaveBeenCalledWith('269011');
+  });
+
+  it('filters notices by selected board chip and scopes hidden notices to the same board', async () => {
+    const onBoardSelect = vi.fn();
+    mockFetchNoticeFeed
+      .mockResolvedValueOnce(makeNoticeFeedResponse([
+        { ...QUALITY_ACTION_NOTICE, id: 'notice-academic', boardLabel: '학사' },
+        { ...QUALITY_INFORMATIONAL_NOTICE, id: 'notice-scholarship', boardLabel: '장학' },
+      ]))
+      .mockResolvedValueOnce(makeNoticeFeedResponse([
+        { ...QUALITY_ACTION_NOTICE, id: 'notice-academic', boardLabel: '학사' },
+      ]));
+
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={{ savedIds: [], hiddenIds: ['notice-academic', 'notice-scholarship'] }}
+        initialNoticeId={null}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={onBoardSelect}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '장학' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '학사' }));
+
+    await waitFor(() => {
+      expect(mockFetchNoticeFeed).toHaveBeenLastCalledWith(EMPTY_PROFILE, 0, 20, '학사');
+    });
+
+    expect(screen.getByText('숨긴 공지 1개')).toBeInTheDocument();
+    expect(onBoardSelect).toHaveBeenCalledWith('학사');
   });
 });

@@ -9,7 +9,9 @@ type PersonalizedFeedViewProps = Readonly<{
   profile: UserProfile;
   preferences: NoticePreferences;
   initialNoticeId: string | null;
+  initialBoard: string | null;
   onNoticeSelect: (id: string | null) => void;
+  onBoardSelect: (board: string | null) => void;
   onToggleSaved: (id: string) => void;
   onHide: (id: string) => void;
   onUnhide: (id: string) => void;
@@ -19,14 +21,18 @@ export function PersonalizedFeedView({
   profile,
   preferences,
   initialNoticeId,
+  initialBoard,
   onNoticeSelect,
+  onBoardSelect,
   onToggleSaved,
   onHide,
   onUnhide,
 }: PersonalizedFeedViewProps): ReactElement {
   const [notices, setNotices] = useState<readonly PersonalizedNoticeSummary[]>([]);
+  const [availableBoards, setAvailableBoards] = useState<readonly string[]>([]);
   const [detail, setDetail] = useState<PersonalizedNoticeDetail | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initialNoticeId);
+  const [selectedBoard, setSelectedBoard] = useState<string | null>(initialBoard);
   const [loading, setLoading] = useState<boolean>(true);
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +46,10 @@ export function PersonalizedFeedView({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void fetchNoticeFeed(profile).then((response) => {
+    void fetchNoticeFeed(profile, 0, 20, selectedBoard).then((response) => {
       if (cancelled) return;
       setNotices(response.notices);
+      setAvailableBoards(response.availableBoards);
     }).catch((caught) => {
       if (cancelled) return;
       setError(caught instanceof Error ? caught.message : '공지 피드를 불러오지 못했습니다.');
@@ -50,11 +57,15 @@ export function PersonalizedFeedView({
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [profileKey]);
+  }, [profileKey, selectedBoard]);
 
   useEffect(() => {
     setSelectedId(initialNoticeId);
   }, [initialNoticeId]);
+
+  useEffect(() => {
+    setSelectedBoard(initialBoard);
+  }, [initialBoard]);
 
   useEffect(() => {
     if (selectedId === null) {
@@ -81,6 +92,13 @@ export function PersonalizedFeedView({
     onNoticeSelect(id);
   }
 
+  function selectBoard(board: string | null): void {
+    setSelectedBoard(board);
+    setSelectedId(null);
+    setDetail(null);
+    onBoardSelect(board);
+  }
+
   return (
     <section className="layout">
       <div className="panel">
@@ -89,6 +107,28 @@ export function PersonalizedFeedView({
             <p className="eyebrow">개인화 피드</p>
             <h2>내게 중요한 공지</h2>
           </div>
+        </div>
+
+        <div className="chip-row board-filter-row" aria-label="게시판 필터">
+          <button
+            type="button"
+            className={`chip board-filter-chip${selectedBoard === null ? ' board-filter-chip-active' : ''}`}
+            aria-pressed={selectedBoard === null}
+            onClick={() => { selectBoard(null); }}
+          >
+            전체
+          </button>
+          {availableBoards.map((board) => (
+            <button
+              key={board}
+              type="button"
+              className={`chip board-filter-chip${selectedBoard === board ? ' board-filter-chip-active' : ''}`}
+              aria-pressed={selectedBoard === board}
+              onClick={() => { selectBoard(board); }}
+            >
+              {board}
+            </button>
+          ))}
         </div>
 
         {error !== null ? <div className="error-banner">{error}</div> : null}

@@ -78,6 +78,30 @@
   letter-spacing: var(--tracking-wide);
 }
 
+.board-filter-row {
+  margin-top: 0;
+  margin-bottom: var(--space-4);
+}
+
+.board-filter-chip {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  font: inherit;
+  transition: background var(--ease-default), color var(--ease-default), border-color var(--ease-default);
+}
+
+.board-filter-chip:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.board-filter-chip-active {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: white;
+}
+
 /* Tab navigation */
 
 .tab-nav {

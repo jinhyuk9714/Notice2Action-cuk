@@ -51,7 +51,7 @@ describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseReminderCheck.mockImplementation(() => {});
-    setRoute({ view: 'feed', noticeId: null });
+    setRoute({ view: 'feed', noticeId: null, board: null });
   });
 
   it('renders personalized feed by default', () => {

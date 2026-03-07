@@ -211,6 +211,7 @@ export type PersonalizedNoticeSummary = z.infer<typeof PersonalizedNoticeSummary
 
 export const NoticeFeedResponseSchema = PaginationSchema.extend({
   notices: z.array(PersonalizedNoticeSummarySchema),
+  availableBoards: z.array(z.string()),
 });
 export type NoticeFeedResponse = z.infer<typeof NoticeFeedResponseSchema>;
 

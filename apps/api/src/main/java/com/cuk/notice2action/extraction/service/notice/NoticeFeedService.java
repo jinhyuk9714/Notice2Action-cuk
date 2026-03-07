@@ -69,6 +69,11 @@ public class NoticeFeedService {
 
   @Transactional(readOnly = true)
   public NoticeFeedResponse getFeed(NoticeProfile profile, int page, int size) {
+    return getFeed(profile, page, size, null);
+  }
+
+  @Transactional(readOnly = true)
+  public NoticeFeedResponse getFeed(NoticeProfile profile, int page, int size, String board) {
     List<ScoredNotice> scored = noticeSourceRepository.findAllAutoCollectedNotices().stream()
         .map(source -> scoreNotice(source, normalizeProfile(profile)))
         .sorted(Comparator
@@ -77,16 +82,27 @@ public class NoticeFeedService {
             .thenComparing(notice -> notice.summary().id().toString(), Comparator.reverseOrder()))
         .toList();
 
+    List<String> availableBoards = collectAvailableBoards(scored);
+    List<ScoredNotice> filtered = filterByBoard(scored, board);
+
     int safePage = Math.max(page, 0);
     int safeSize = Math.max(size, 1);
-    int fromIndex = Math.min(safePage * safeSize, scored.size());
-    int toIndex = Math.min(fromIndex + safeSize, scored.size());
-    List<PersonalizedNoticeSummaryDto> pageItems = scored.subList(fromIndex, toIndex).stream()
+    int fromIndex = Math.min(safePage * safeSize, filtered.size());
+    int toIndex = Math.min(fromIndex + safeSize, filtered.size());
+    List<PersonalizedNoticeSummaryDto> pageItems = filtered.subList(fromIndex, toIndex).stream()
         .map(ScoredNotice::summary)
         .toList();
-    int totalPages = scored.isEmpty() ? 1 : (int) Math.ceil((double) scored.size() / safeSize);
+    int totalPages = filtered.isEmpty() ? 1 : (int) Math.ceil((double) filtered.size() / safeSize);
 
-    return new NoticeFeedResponse(pageItems, safePage, safeSize, scored.size(), totalPages, toIndex < scored.size());
+    return new NoticeFeedResponse(
+        pageItems,
+        safePage,
+        safeSize,
+        filtered.size(),
+        totalPages,
+        toIndex < filtered.size(),
+        availableBoards
+    );
   }
 
   @Transactional(readOnly = true)
@@ -115,6 +131,29 @@ public class NoticeFeedService {
 
   static String toAttachmentsJsonForTest(List<CukNoticeAttachment> attachments) {
     return toAttachmentsJson(attachments);
+  }
+
+  private List<ScoredNotice> filterByBoard(List<ScoredNotice> scored, String board) {
+    if (!hasText(board)) {
+      return scored;
+    }
+    return scored.stream()
+        .filter(notice -> board.equals(notice.summary().boardLabel()))
+        .toList();
+  }
+
+  private List<String> collectAvailableBoards(List<ScoredNotice> scored) {
+    Map<String, Long> counts = scored.stream()
+        .map(notice -> notice.summary().boardLabel())
+        .filter(NoticeFeedService::hasText)
+        .collect(Collectors.groupingBy(label -> label, Collectors.counting()));
+
+    return counts.entrySet().stream()
+        .sorted(Comparator
+            .<Map.Entry<String, Long>>comparingLong(Map.Entry::getValue).reversed()
+            .thenComparing(Map.Entry::getKey))
+        .map(Map.Entry::getKey)
+        .toList();
   }
 
   static String toAttachmentsJson(List<CukNoticeAttachment> attachments) {

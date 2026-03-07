@@ -192,6 +192,11 @@ export function makeNoticeFeedResponse(
   notices: PersonalizedNoticeSummary[] = [makeNoticeSummary()],
   hasNext = false,
 ): NoticeFeedResponse {
+  const availableBoards = Array.from(new Set(
+    notices
+      .map((notice) => notice.boardLabel)
+      .filter((label): label is string => label !== null),
+  ));
   return {
     notices,
     currentPage: 0,
@@ -199,5 +204,6 @@ export function makeNoticeFeedResponse(
     totalElements: notices.length,
     totalPages: 1,
     hasNext,
+    availableBoards,
   };
 }

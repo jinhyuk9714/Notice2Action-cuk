@@ -3,12 +3,14 @@ import { buildHash, parseHash } from './router';
 
 describe('parseHash', () => {
   it('returns feed for empty hash', () => {
-    expect(parseHash('')).toEqual({ view: 'feed', noticeId: null });
+    expect(parseHash('')).toEqual({ view: 'feed', noticeId: null, board: null });
   });
 
   it('parses feed and saved routes', () => {
-    expect(parseHash('#/feed')).toEqual({ view: 'feed', noticeId: null });
-    expect(parseHash('#/feed/notice-1')).toEqual({ view: 'feed', noticeId: 'notice-1' });
+    expect(parseHash('#/feed')).toEqual({ view: 'feed', noticeId: null, board: null });
+    expect(parseHash('#/feed?board=학사')).toEqual({ view: 'feed', noticeId: null, board: '학사' });
+    expect(parseHash('#/feed/notice-1')).toEqual({ view: 'feed', noticeId: 'notice-1', board: null });
+    expect(parseHash('#/feed/notice-1?board=장학')).toEqual({ view: 'feed', noticeId: 'notice-1', board: '장학' });
     expect(parseHash('#/saved')).toEqual({ view: 'saved', noticeId: null });
     expect(parseHash('#/saved/notice-2')).toEqual({ view: 'saved', noticeId: 'notice-2' });
   });
@@ -25,14 +27,16 @@ describe('parseHash', () => {
   });
 
   it('falls back to feed for unknown paths', () => {
-    expect(parseHash('#/unknown')).toEqual({ view: 'feed', noticeId: null });
+    expect(parseHash('#/unknown')).toEqual({ view: 'feed', noticeId: null, board: null });
   });
 });
 
 describe('buildHash', () => {
   it('builds main routes', () => {
-    expect(buildHash({ view: 'feed', noticeId: null })).toBe('#/feed');
-    expect(buildHash({ view: 'feed', noticeId: 'notice-1' })).toBe('#/feed/notice-1');
+    expect(buildHash({ view: 'feed', noticeId: null, board: null })).toBe('#/feed');
+    expect(buildHash({ view: 'feed', noticeId: null, board: '학사' })).toBe('#/feed?board=%ED%95%99%EC%82%AC');
+    expect(buildHash({ view: 'feed', noticeId: 'notice-1', board: null })).toBe('#/feed/notice-1');
+    expect(buildHash({ view: 'feed', noticeId: 'notice-1', board: '장학' })).toBe('#/feed/notice-1?board=%EC%9E%A5%ED%95%99');
     expect(buildHash({ view: 'saved', noticeId: null })).toBe('#/saved');
     expect(buildHash({ view: 'saved', noticeId: 'notice-2' })).toBe('#/saved/notice-2');
     expect(buildHash({ view: 'profile' })).toBe('#/profile');
@@ -40,8 +44,10 @@ describe('buildHash', () => {
 
   it('roundtrips main and debug routes', () => {
     const routes = [
-      { view: 'feed' as const, noticeId: null },
-      { view: 'feed' as const, noticeId: 'notice-1' },
+      { view: 'feed' as const, noticeId: null, board: null },
+      { view: 'feed' as const, noticeId: null, board: '학사' },
+      { view: 'feed' as const, noticeId: 'notice-1', board: null },
+      { view: 'feed' as const, noticeId: 'notice-1', board: '장학' },
       { view: 'saved' as const, noticeId: null },
       { view: 'saved' as const, noticeId: 'notice-2' },
       { view: 'profile' as const },

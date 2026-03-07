@@ -29,9 +29,15 @@ public class NoticeFeedController {
       @RequestParam(name = "department", required = false) String department,
       @RequestParam(name = "year", required = false) Integer year,
       @RequestParam(name = "status", required = false) String status,
+      @RequestParam(name = "board", required = false) String board,
       @RequestParam(name = "keyword", required = false) List<String> keywords
   ) {
-    return noticeFeedService.getFeed(new NoticeProfile(department, year, status, normalizeKeywords(keywords)), page, size);
+    return noticeFeedService.getFeed(
+        new NoticeProfile(department, year, status, normalizeKeywords(keywords)),
+        page,
+        size,
+        normalizeBoard(board)
+    );
   }
 
   @GetMapping("/{id}")
@@ -50,5 +56,13 @@ public class NoticeFeedController {
       return List.of();
     }
     return keywords.stream().filter(value -> value != null && !value.isBlank()).map(String::trim).toList();
+  }
+
+  private String normalizeBoard(String board) {
+    if (board == null) {
+      return null;
+    }
+    String trimmed = board.trim();
+    return trimmed.isEmpty() ? null : trimmed;
   }
 }

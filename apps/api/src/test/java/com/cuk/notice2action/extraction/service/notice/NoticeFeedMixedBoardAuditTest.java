@@ -135,6 +135,53 @@ class NoticeFeedMixedBoardAuditTest {
     assertThat(byId.get("900002").importanceReasons()).contains("다른 대상 공지");
   }
 
+  @Test
+  void filtersMixedBoardFeedByRequestedBoardWithoutChangingPolicy() {
+    NoticeSourceEntity academic = NoticeFixtures.noticeSource(
+        UUID.nameUUIDFromBytes("269011".getBytes()),
+        "[학사지원팀] 2026-1학기 수강과목 취소 기간 안내",
+        "수강과목 취소 기간 안내",
+        LocalDate.of(2026, 3, 3),
+        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=269011",
+        List.of(),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(7),
+        List.of(NoticeFixtures.action("수강과목 취소 신청", null, 0.9))
+    );
+    academic.setExternalNoticeId("269011");
+    academic.setNoticeBoardLabel("학사");
+
+    NoticeSourceEntity scholarship = NoticeFixtures.noticeSource(
+        UUID.nameUUIDFromBytes("268989".getBytes()),
+        "[장학팀] 2026학년도 1학기 3학년 장학 신청 안내",
+        "3학년 대상 장학 신청 안내",
+        LocalDate.of(2026, 3, 2),
+        "https://www.catholic.ac.kr/ko/campuslife/notice.do?mode=view&articleNo=268989",
+        List.of(),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action("장학 신청", "3학년", 0.88))
+    );
+    scholarship.setExternalNoticeId("268989");
+    scholarship.setNoticeBoardLabel("장학");
+
+    when(repository.findAllAutoCollectedNotices()).thenReturn(List.of(academic, scholarship));
+
+    MixedBoardProfile profile = profiles.profiles().getFirst();
+    NoticeFeedResponse feed = service.getFeed(
+        new NoticeProfile(profile.department(), profile.year(), profile.status(), profile.keywords()),
+        0,
+        20,
+        "학사"
+    );
+
+    assertThat(feed.availableBoards()).containsExactly("장학", "학사");
+    assertThat(feed.notices()).extracting(summary -> summary.boardLabel()).containsOnly("학사");
+    assertThat(feed.notices()).singleElement().satisfies(summary ->
+        assertThat(summary.importanceReasons()).doesNotContain("다른 대상 공지")
+    );
+  }
+
   @JsonIgnoreProperties(ignoreUnknown = true)
   private record MixedBoardProfiles(List<MixedBoardProfile> profiles) {}
 
