@@ -18,6 +18,9 @@ public class JsoupCukNoticeClient implements CukNoticeClient {
   private static final int TIMEOUT_MS = 10_000;
   private static final int MAX_BODY_SIZE_BYTES = 2 * 1024 * 1024;
   private static final int PAGE_SIZE = 10;
+  private static final String BROWSER_USER_AGENT =
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+          + "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
   private final NoticeFeedProperties properties;
   private final CukNoticeHtmlParser parser = new CukNoticeHtmlParser();
@@ -61,7 +64,11 @@ public class JsoupCukNoticeClient implements CukNoticeClient {
           .timeout(TIMEOUT_MS)
           .maxBodySize(MAX_BODY_SIZE_BYTES)
           .followRedirects(true)
-          .userAgent("Notice2Action/1.0")
+          .userAgent(BROWSER_USER_AGENT)
+          .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+          .header("Accept-Language", "ko-KR,ko;q=0.9,en;q=0.8")
+          .header("Accept-Encoding", "gzip, deflate, br")
+          .referrer("https://www.catholic.ac.kr/")
           .get();
       return document.outerHtml();
     } catch (IOException e) {
