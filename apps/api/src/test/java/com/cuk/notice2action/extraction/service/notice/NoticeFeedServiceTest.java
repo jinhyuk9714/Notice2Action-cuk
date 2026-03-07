@@ -169,20 +169,20 @@ class NoticeFeedServiceTest {
   void boostsPreferredBoardWithinSameTier() {
     NoticeSourceEntity preferredBoardNotice = NoticeFixtures.noticeSource(
         "취업 특강 신청 안내",
-        "재학생 대상 신청 공지입니다.",
+        "취업 특강 신청 공지입니다.",
         LocalDate.of(2026, 3, 2),
         "action_required",
         null,
-        List.of(NoticeFixtures.action("취업 특강 신청", "재학생", 0.87))
+        List.of(NoticeFixtures.action("취업 특강 신청", null, 0.87))
     );
     preferredBoardNotice.setNoticeBoardLabel("취창업");
     NoticeSourceEntity nonPreferredBoardNotice = NoticeFixtures.noticeSource(
-        "재학생 대상 일반 신청 안내",
-        "재학생 대상 신청 공지입니다.",
+        "일반 신청 안내",
+        "일반 신청 공지입니다.",
         LocalDate.of(2026, 3, 2),
         "action_required",
         null,
-        List.of(NoticeFixtures.action("일반 신청", "재학생", 0.87))
+        List.of(NoticeFixtures.action("일반 신청", null, 0.87))
     );
     nonPreferredBoardNotice.setNoticeBoardLabel("일반");
 
@@ -195,7 +195,7 @@ class NoticeFeedServiceTest {
     );
 
     assertThat(response.notices()).extracting(summary -> summary.title())
-        .containsExactly("취업 특강 신청 안내", "재학생 대상 일반 신청 안내");
+        .containsExactly("취업 특강 신청 안내", "일반 신청 안내");
     assertThat(response.notices().get(0).importanceReasons()).contains("선호 게시판");
   }
 

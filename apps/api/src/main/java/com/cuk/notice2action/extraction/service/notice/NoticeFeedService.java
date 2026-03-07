@@ -44,6 +44,9 @@ public class NoticeFeedService {
   private static final List<String> STUDENT_STATUSES = List.of("재학생", "복학생", "휴학생", "졸업예정자", "신입생", "대학원생", "편입생");
   private static final Map<String, List<String>> STATUS_ALIASES = createStatusAliases();
   private static final List<String> EXCLUSION_KEYWORDS = List.of("제외", "불가", "불포함", "해당없음", "해당 없음");
+  private static final int EXPLICIT_PROFILE_MATCH_SCORE = 60;
+  private static final int EXPLICIT_YEAR_ONLY_MATCH_SCORE = 35;
+  private static final int AUXILIARY_PROFILE_MATCH_SCORE = 10;
   private static final Pattern DUPLICATE_SUFFIX = Pattern.compile("\\s*\\((?:\\d+/\\d+)\\)$");
   private static final List<String> ACTION_FAMILY_SUFFIXES = List.of("수강신청", "참여 신청", "수요조사 응답", "신청 또는 변경", "신청", "제출", "조회", "응답");
 
@@ -228,52 +231,80 @@ public class NoticeFeedService {
       return new ProfileRelevance(0, List.of());
     }
     ProfileSignals signals = collectProfileSignals(source);
-    String profileSearchText = signals.titleText() + "\n" + signals.actionEligibilityText();
     String explicitAudienceText = signals.titleText();
-    String bodyAudienceText = profileSearchText + "\n" + signals.rawBodyText();
-    String departmentSearchText = bodyAudienceText;
+    String eligibilityAudienceText = signals.actionEligibilityText();
+    String bodyAudienceText = signals.rawBodyText();
     List<String> reasons = new ArrayList<>();
-    boolean statusMatched = false;
+    boolean hasExplicitMatch = false;
+    boolean hasAuxiliaryMatch = false;
+    boolean statusExplicitMatched = false;
+    boolean statusAuxiliaryMatched = false;
     boolean statusExcluded = false;
-    boolean yearMatched = false;
+    boolean yearExplicitMatched = false;
+    boolean yearAuxiliaryMatched = false;
     boolean yearExcluded = false;
-    boolean departmentMatched = false;
+    boolean departmentExplicitMatched = false;
+    boolean departmentAuxiliaryMatched = false;
 
     if (hasText(profile.status())) {
-      if (signals.includedStatuses().contains(profile.status())
-          || containsStatusSignal(profileSearchText, profile.status())
+      if (containsStatusSignal(explicitAudienceText, profile.status())) {
+        reasons.add(profile.status() + " 공지");
+        statusExplicitMatched = true;
+        hasExplicitMatch = true;
+      } else if (signals.includedStatuses().contains(profile.status())
+          || containsStatusSignal(eligibilityAudienceText, profile.status())
           || containsStatusSignal(bodyAudienceText, profile.status())) {
         reasons.add(profile.status() + " 공지");
-        statusMatched = true;
+        statusAuxiliaryMatched = true;
+        hasAuxiliaryMatch = true;
       } else if (containsAnyOtherStatus(explicitAudienceText, profile.status())) {
         statusExcluded = true;
       }
     }
 
     if (profile.year() != null) {
-      YearMatch yearMatch = matchYear(profileSearchText, profile.year());
-      YearMatch bodyYearMatch = matchYear(bodyAudienceText, profile.year());
       YearMatch explicitYearMatch = matchYear(explicitAudienceText, profile.year());
-      if (signals.years().contains(profile.year()) || yearMatch.relevant() || bodyYearMatch.relevant()) {
+      YearMatch eligibilityYearMatch = matchYear(eligibilityAudienceText, profile.year());
+      YearMatch bodyYearMatch = matchYear(bodyAudienceText, profile.year());
+      if (explicitYearMatch.relevant()) {
         reasons.add(profile.year() + "학년 공지");
-        yearMatched = true;
+        yearExplicitMatched = true;
+        hasExplicitMatch = true;
+      } else if (signals.years().contains(profile.year()) || eligibilityYearMatch.relevant() || bodyYearMatch.relevant()) {
+        reasons.add(profile.year() + "학년 공지");
+        yearAuxiliaryMatched = true;
+        hasAuxiliaryMatch = true;
       } else if (explicitYearMatch.explicitlyExcluded()) {
         yearExcluded = true;
       }
     }
 
-    if (hasText(profile.department())
-        && (signals.departments().contains(normalizeDepartment(profile.department()))
-        || containsDepartment(departmentSearchText, profile.department()))) {
-      reasons.add(profile.department() + " 공지");
-      departmentMatched = true;
+    if (hasText(profile.department())) {
+      if (containsDepartment(explicitAudienceText, profile.department())) {
+        reasons.add(profile.department() + " 공지");
+        departmentExplicitMatched = true;
+        hasExplicitMatch = true;
+      } else if (signals.departments().contains(normalizeDepartment(profile.department()))
+          || containsDepartment(eligibilityAudienceText, profile.department())
+          || containsDepartment(bodyAudienceText, profile.department())) {
+        reasons.add(profile.department() + " 공지");
+        departmentAuxiliaryMatched = true;
+        hasAuxiliaryMatch = true;
+      }
     }
 
-    if ((statusExcluded && !statusMatched) || (yearExcluded && !yearMatched)) {
+    if ((statusExcluded && !statusExplicitMatched) || (yearExcluded && !yearExplicitMatched)) {
       return new ProfileRelevance(-40, List.of("다른 대상 공지"));
     }
-    if (statusMatched || yearMatched || departmentMatched) {
-      return new ProfileRelevance(60, new ArrayList<>(new LinkedHashSet<>(reasons)));
+    if (hasExplicitMatch) {
+      int explicitScore =
+          (statusExplicitMatched || departmentExplicitMatched)
+              ? EXPLICIT_PROFILE_MATCH_SCORE
+              : EXPLICIT_YEAR_ONLY_MATCH_SCORE;
+      return new ProfileRelevance(explicitScore, new ArrayList<>(new LinkedHashSet<>(reasons)));
+    }
+    if (hasAuxiliaryMatch || statusAuxiliaryMatched || yearAuxiliaryMatched || departmentAuxiliaryMatched) {
+      return new ProfileRelevance(AUXILIARY_PROFILE_MATCH_SCORE, new ArrayList<>(new LinkedHashSet<>(reasons)));
     }
     return new ProfileRelevance(0, List.of());
   }
@@ -358,7 +389,7 @@ public class NoticeFeedService {
     if (!matched) {
       return new PreferredBoardSignals(List.of(), 0);
     }
-    return new PreferredBoardSignals(List.of("선호 게시판"), 18);
+    return new PreferredBoardSignals(List.of("선호 게시판"), 22);
   }
 
   private int keywordStrength(

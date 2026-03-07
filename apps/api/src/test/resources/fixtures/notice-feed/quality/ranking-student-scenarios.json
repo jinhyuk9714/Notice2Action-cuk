@@ -1,0 +1,192 @@
+{
+  "profiles": [
+    {
+      "name": "cs_freshman_new_student_scenarios",
+      "department": "컴퓨터정보공학부",
+      "year": 1,
+      "status": "신입생",
+      "keywords": ["학생증", "학번", "I-DESIGN"],
+      "preferredBoards": ["학사", "일반"],
+      "expectations": [
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "선호 게시판"],
+          "expectedMustAppearAbove": ["269011", "268629", "269089"]
+        },
+        {
+          "noticeId": "268226",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "선호 게시판", "I-DESIGN 관련"],
+          "expectedMustAppearAbove": ["269011", "268629", "269089"]
+        },
+        {
+          "noticeId": "268768",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "선호 게시판", "학번 관련"],
+          "expectedMustAppearAbove": ["269011", "268629", "269089"]
+        },
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["선호 게시판", "행동 필요"],
+          "expectedMustAppearAbove": ["268629", "269089"]
+        },
+        {
+          "noticeId": "268629",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "cs_junior_enrolled_student_scenarios",
+      "department": "컴퓨터정보공학부",
+      "year": 3,
+      "status": "재학생",
+      "keywords": ["수강신청", "취업"],
+      "preferredBoards": ["학사", "취창업"],
+      "expectations": [
+        {
+          "noticeId": "268869",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["선호 게시판", "취업 관련", "행동 필요"],
+          "expectedMustAppearAbove": ["268391", "268242", "269089", "268547"]
+        },
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["선호 게시판", "수강신청 관련", "행동 필요"],
+          "expectedMustAppearAbove": ["268391", "268242", "269089", "268547"]
+        },
+        {
+          "noticeId": "268391",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["선호 게시판", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268242",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["수강신청 관련", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "senior_graduation_candidate_student_scenarios",
+      "department": null,
+      "year": 4,
+      "status": "졸업예정자",
+      "keywords": ["졸업", "예비 졸업사정", "트랙"],
+      "preferredBoards": ["학사", "장학"],
+      "expectations": [
+        {
+          "noticeId": "268629",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["졸업예정자 공지", "선호 게시판", "예비 졸업사정 관련"],
+          "expectedMustAppearAbove": ["268630", "269011", "268547", "269089"]
+        },
+        {
+          "noticeId": "268396",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["졸업예정자 공지", "선호 게시판", "트랙 관련"],
+          "expectedMustAppearAbove": ["268630", "269011", "268547", "269089"]
+        },
+        {
+          "noticeId": "268630",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["졸업 관련", "선호 게시판"],
+          "expectedMustAppearAbove": ["268547", "269089"]
+        },
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "cs_sophomore_scholarship_student_scenarios",
+      "department": "컴퓨터정보공학부",
+      "year": 2,
+      "status": "재학생",
+      "keywords": ["장학금", "국가장학금"],
+      "preferredBoards": ["학사", "장학"],
+      "expectations": [
+        {
+          "noticeId": "269110",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["선호 게시판", "국가장학금 관련", "행동 필요"],
+          "expectedMustAppearAbove": ["269011", "269089"]
+        },
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["선호 게시판", "행동 필요"],
+          "expectedMustAppearAbove": ["269089"]
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "junior_minor_interest_student_scenarios",
+      "department": null,
+      "year": 3,
+      "status": "재학생",
+      "keywords": ["부전공", "복수전공"],
+      "preferredBoards": ["학사"],
+      "expectations": [
+        {
+          "noticeId": "268989",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["3학년 공지", "선호 게시판", "부전공 관련"],
+          "expectedMustAppearAbove": ["269011", "269089"]
+        },
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["선호 게시판", "행동 필요"],
+          "expectedMustAppearAbove": ["269089"]
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    }
+  ]
+}
