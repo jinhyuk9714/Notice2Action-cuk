@@ -17,8 +17,29 @@
     grid-template-columns: 1fr;
   }
 
-  .detail-panel {
-    position: static;
+  .notice-feed-layout {
+    min-height: auto;
+  }
+
+  .notice-feed-layout > .layout-pane {
+    display: block;
+  }
+
+  .notice-feed-layout .panel-scroll-shell {
+    height: auto;
+    overflow: visible;
+  }
+
+  .notice-feed-layout .panel-scroll-header,
+  .notice-feed-layout .panel-scroll-body {
+    padding: 0;
+    border: 0;
+    overflow: visible;
+  }
+
+  .detail-panel-header {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 

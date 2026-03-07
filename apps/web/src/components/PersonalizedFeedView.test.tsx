@@ -240,6 +240,32 @@ describe('PersonalizedFeedView', () => {
     expect(saveButton.parentElement?.className).toContain('card-actions-row');
   });
 
+  it('renders split panel structure for independent desktop scrolling', async () => {
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={EMPTY_PREFS}
+        initialNoticeId={null}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('[학사지원팀] 2026-1학기 수강과목 취소 기간 안내')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('feed-panel-shell')).toBeInTheDocument();
+    expect(screen.getByTestId('feed-panel-header')).toContainElement(screen.getByRole('button', { name: '전체' }));
+    expect(screen.getByTestId('feed-panel-body')).toContainElement(
+      screen.getByText('[학사지원팀] 2026-1학기 수강과목 취소 기간 안내'),
+    );
+  });
+
   it('shows hidden notices in a recovery section and allows unhide', async () => {
     const onUnhide = vi.fn();
 

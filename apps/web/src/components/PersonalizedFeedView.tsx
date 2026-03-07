@@ -100,93 +100,97 @@ export function PersonalizedFeedView({
   }
 
   return (
-    <section className="layout">
-      <div className="panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">개인화 피드</p>
-            <h2>내게 중요한 공지</h2>
-          </div>
-        </div>
+    <section className="layout notice-feed-layout">
+      <div className="layout-pane">
+        <div className="panel panel-scroll-shell feed-panel-shell" data-testid="feed-panel-shell">
+          <div className="panel-header panel-scroll-header feed-panel-header" data-testid="feed-panel-header">
+            <div>
+              <p className="eyebrow">개인화 피드</p>
+              <h2>내게 중요한 공지</h2>
+            </div>
 
-        <div className="chip-row board-filter-row" aria-label="게시판 필터">
-          <button
-            type="button"
-            className={`chip board-filter-chip${selectedBoard === null ? ' board-filter-chip-active' : ''}`}
-            aria-pressed={selectedBoard === null}
-            onClick={() => { selectBoard(null); }}
-          >
-            전체
-          </button>
-          {availableBoards.map((board) => (
-            <button
-              key={board}
-              type="button"
-              className={`chip board-filter-chip${selectedBoard === board ? ' board-filter-chip-active' : ''}`}
-              aria-pressed={selectedBoard === board}
-              onClick={() => { selectBoard(board); }}
-            >
-              {board}
-            </button>
-          ))}
-        </div>
-
-        {error !== null ? <div className="error-banner">{error}</div> : null}
-        {loading ? <p>공지 불러오는 중...</p> : null}
-        {!loading && visibleNotices.length === 0 ? <p>중요 공지가 없습니다.</p> : null}
-
-        <div className="card-list">
-          {visibleNotices.map((notice) => {
-            const saved = preferences.savedIds.includes(notice.id);
-            const visibleReasons = notice.importanceReasons.slice(0, 3);
-            return (
-              <article key={notice.id} className="action-card">
-                <button className="summary-card-link" aria-label={`${notice.title} 상세 보기`} onClick={() => { selectNotice(notice.id); }}>
-                  <h3>{notice.title}</h3>
+            <div className="chip-row board-filter-row" aria-label="게시판 필터">
+              <button
+                type="button"
+                className={`chip board-filter-chip${selectedBoard === null ? ' board-filter-chip-active' : ''}`}
+                aria-pressed={selectedBoard === null}
+                onClick={() => { selectBoard(null); }}
+              >
+                전체
+              </button>
+              {availableBoards.map((board) => (
+                <button
+                  key={board}
+                  type="button"
+                  className={`chip board-filter-chip${selectedBoard === board ? ' board-filter-chip-active' : ''}`}
+                  aria-pressed={selectedBoard === board}
+                  onClick={() => { selectBoard(board); }}
+                >
+                  {board}
                 </button>
-                <div className="chip-row">
-                  {notice.boardLabel !== null ? <span className="badge">{notice.boardLabel}</span> : null}
-                  {visibleReasons.map((reason) => <span key={reason} className="badge">{reason}</span>)}
-                </div>
-                <p>{notice.dueHint?.label ?? '마감 정보 없음'}</p>
-                <p>{notice.actionability === 'action_required' ? '행동 필요' : '정보성 공지'}</p>
-                <div className="card-actions-row">
-                  <button className="secondary-btn" onClick={() => { onToggleSaved(notice.id); }}>{saved ? '저장됨' : '저장'}</button>
-                  <button className="secondary-btn" onClick={() => { onHide(notice.id); }}>{'숨김'}</button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+              ))}
+            </div>
+          </div>
 
-        {hiddenNotices.length > 0 ? (
-          <div className="detail-section">
-            <h3>숨긴 공지 {hiddenNotices.length}개</h3>
+          <div className="panel-scroll-body feed-panel-body" data-testid="feed-panel-body">
+            {error !== null ? <div className="error-banner">{error}</div> : null}
+            {loading ? <p>공지 불러오는 중...</p> : null}
+            {!loading && visibleNotices.length === 0 ? <p>중요 공지가 없습니다.</p> : null}
+
             <div className="card-list">
-              {hiddenNotices.map((notice) => {
+              {visibleNotices.map((notice) => {
+                const saved = preferences.savedIds.includes(notice.id);
                 const visibleReasons = notice.importanceReasons.slice(0, 3);
                 return (
-                  <article key={`hidden-${notice.id}`} className="action-card">
-                  <button className="summary-card-link" aria-label={`${notice.title} 상세 보기`} onClick={() => { selectNotice(notice.id); }}>
-                    <h3>{notice.title}</h3>
-                  </button>
-                  <div className="chip-row">
-                    <span className="badge">숨김됨</span>
-                    {notice.boardLabel !== null ? <span className="badge">{notice.boardLabel}</span> : null}
-                    {visibleReasons.map((reason) => <span key={`${notice.id}-${reason}`} className="badge">{reason}</span>)}
-                  </div>
-                  <div className="card-actions-row">
-                    <button className="secondary-btn" onClick={() => { onUnhide(notice.id); }}>숨김 해제</button>
-                  </div>
+                  <article key={notice.id} className="action-card">
+                    <button className="summary-card-link" aria-label={`${notice.title} 상세 보기`} onClick={() => { selectNotice(notice.id); }}>
+                      <h3>{notice.title}</h3>
+                    </button>
+                    <div className="chip-row">
+                      {notice.boardLabel !== null ? <span className="badge">{notice.boardLabel}</span> : null}
+                      {visibleReasons.map((reason) => <span key={reason} className="badge">{reason}</span>)}
+                    </div>
+                    <p>{notice.dueHint?.label ?? '마감 정보 없음'}</p>
+                    <p>{notice.actionability === 'action_required' ? '행동 필요' : '정보성 공지'}</p>
+                    <div className="card-actions-row">
+                      <button className="secondary-btn" onClick={() => { onToggleSaved(notice.id); }}>{saved ? '저장됨' : '저장'}</button>
+                      <button className="secondary-btn" onClick={() => { onHide(notice.id); }}>{'숨김'}</button>
+                    </div>
                   </article>
                 );
               })}
             </div>
+
+            {hiddenNotices.length > 0 ? (
+              <div className="detail-section">
+                <h3>숨긴 공지 {hiddenNotices.length}개</h3>
+                <div className="card-list">
+                  {hiddenNotices.map((notice) => {
+                    const visibleReasons = notice.importanceReasons.slice(0, 3);
+                    return (
+                      <article key={`hidden-${notice.id}`} className="action-card">
+                        <button className="summary-card-link" aria-label={`${notice.title} 상세 보기`} onClick={() => { selectNotice(notice.id); }}>
+                          <h3>{notice.title}</h3>
+                        </button>
+                        <div className="chip-row">
+                          <span className="badge">숨김됨</span>
+                          {notice.boardLabel !== null ? <span className="badge">{notice.boardLabel}</span> : null}
+                          {visibleReasons.map((reason) => <span key={`${notice.id}-${reason}`} className="badge">{reason}</span>)}
+                        </div>
+                        <div className="card-actions-row">
+                          <button className="secondary-btn" onClick={() => { onUnhide(notice.id); }}>숨김 해제</button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
 
-      <div>
+      <div className="layout-pane">
         {detailLoading ? <p>상세 불러오는 중...</p> : null}
         {detail !== null ? (
           <NoticeDetailContent
@@ -198,7 +202,17 @@ export function PersonalizedFeedView({
             onUnhide={onUnhide}
           />
         ) : (
-          <div className="panel"><p>공지를 선택하면 상세가 표시됩니다.</p></div>
+          <section className="panel panel-scroll-shell detail-panel detail-panel-empty">
+            <div className="panel-header panel-scroll-header detail-panel-header">
+              <div>
+                <p className="eyebrow">공지 상세</p>
+                <h2>상세 보기</h2>
+              </div>
+            </div>
+            <div className="panel-scroll-body detail-panel-body">
+              <p>공지를 선택하면 상세가 표시됩니다.</p>
+            </div>
+          </section>
         )}
       </div>
     </section>

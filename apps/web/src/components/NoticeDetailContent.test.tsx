@@ -123,6 +123,23 @@ describe('NoticeDetailContent', () => {
     expect(screen.queryByRole('heading', { name: '근거 snippet' })).not.toBeInTheDocument();
   });
 
+  it('renders split detail shell structure for independent desktop scrolling', () => {
+    const detail = makeNoticeDetail();
+
+    render(
+      <NoticeDetailContent
+        detail={detail}
+        isSaved={false}
+        isHidden={false}
+        onToggleSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('detail-panel-shell')).toBeInTheDocument();
+    expect(screen.getByTestId('detail-panel-header')).toContainElement(screen.getByText(detail.title));
+    expect(screen.getByTestId('detail-panel-body')).toContainElement(screen.getByText('왜 중요한지'));
+  });
+
   it('collapses long body by default and expands on demand', () => {
     const longBody = Array.from({ length: 24 }, (_, index) => `줄 ${index + 1}`).join('\n');
     const detail = makeNoticeDetail({ body: longBody });

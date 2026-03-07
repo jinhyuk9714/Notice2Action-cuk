@@ -1,8 +1,18 @@
 /* ===== Detail Panel ===== */
 
 .detail-panel {
-  position: sticky;
-  top: var(--space-5);
+  min-height: 0;
+}
+
+.detail-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.detail-panel-body {
+  min-height: 0;
 }
 
 /* Meta grid */

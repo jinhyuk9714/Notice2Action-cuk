@@ -4,6 +4,9 @@
   width: min(1200px, calc(100% - var(--space-7)));
   margin: 0 auto;
   padding: var(--space-8) 0 80px;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 .hero {
