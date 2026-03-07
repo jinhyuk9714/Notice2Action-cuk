@@ -9,6 +9,58 @@
   flex-direction: column;
 }
 
+.feed-workspace-shell {
+  min-height: 0;
+}
+
+@media (min-width: 961px) {
+  .page-shell-feed {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    padding-top: var(--space-5);
+    padding-bottom: var(--space-6);
+  }
+
+  .page-shell-feed .hero {
+    flex: none;
+    margin-bottom: var(--space-3);
+  }
+
+  .page-shell-feed .feed-workspace-shell {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .page-shell-feed .hero-feed-compact .hero-top {
+    justify-content: flex-end;
+    margin-bottom: var(--space-1);
+  }
+
+  .page-shell-feed .hero-feed-compact .eyebrow {
+    display: none;
+  }
+
+  .page-shell-feed .hero-feed-compact h1 {
+    margin: 0 0 var(--space-2);
+    font-size: clamp(1.85rem, 2.2vw, 2.5rem);
+    line-height: 1.04;
+  }
+
+  .page-shell-feed .hero-feed-compact .hero-copy {
+    display: none;
+  }
+
+  .page-shell-feed .hero-feed-compact .tab-nav {
+    margin-top: var(--space-3);
+  }
+
+  .page-shell-feed .hero-feed-compact .tab {
+    padding: var(--space-2) 22px;
+  }
+}
+
 .hero {
   margin-bottom: var(--space-7);
 }

@@ -1,6 +1,7 @@
 /* ===== Detail Panel ===== */
 
 .detail-panel {
+  height: 100%;
   min-height: 0;
 }
 

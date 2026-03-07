@@ -46,6 +46,7 @@ export default function App(): ReactElement {
   }, [toastMessage]);
 
   const actionCountLabel = useMemo(() => `${actions.length}개 액션`, [actions.length]);
+  const isFeedView = route.view === 'feed';
 
   const handleProfileChange = useCallback((nextProfile: UserProfile) => {
     setProfile(nextProfile);
@@ -143,8 +144,8 @@ export default function App(): ReactElement {
   return (
     <>
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
-      <main className="page-shell" id="main-content">
-        <section className="hero">
+      <main className={`page-shell${isFeedView ? ' page-shell-feed' : ''}`} id="main-content">
+        <section className={`hero${isFeedView ? ' hero-feed-compact' : ''}`}>
           <div className="hero-top">
             <p className="eyebrow">Notice2Action CUK</p>
             <ThemeToggle />
@@ -169,17 +170,19 @@ export default function App(): ReactElement {
         </section>
 
         {route.view === 'feed' ? (
-          <PersonalizedFeedView
-            profile={profile}
-            preferences={noticePreferences}
-            initialNoticeId={route.noticeId}
-            initialBoard={route.board}
-            onNoticeSelect={(id) => { navigate({ view: 'feed', noticeId: id, board: route.board }); }}
-            onBoardSelect={(board) => { navigate({ view: 'feed', noticeId: null, board }); }}
-            onToggleSaved={handleToggleSaved}
-            onHide={handleHideNotice}
-            onUnhide={handleUnhideNotice}
-          />
+          <section className="feed-workspace-shell" data-testid="feed-workspace-shell">
+            <PersonalizedFeedView
+              profile={profile}
+              preferences={noticePreferences}
+              initialNoticeId={route.noticeId}
+              initialBoard={route.board}
+              onNoticeSelect={(id) => { navigate({ view: 'feed', noticeId: id, board: route.board }); }}
+              onBoardSelect={(board) => { navigate({ view: 'feed', noticeId: null, board }); }}
+              onToggleSaved={handleToggleSaved}
+              onHide={handleHideNotice}
+              onUnhide={handleUnhideNotice}
+            />
+          </section>
         ) : null}
 
         {route.view === 'saved' ? (

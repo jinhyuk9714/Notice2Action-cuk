@@ -12,6 +12,18 @@
 /* Tablet portrait */
 
 @media (max-width: 960px) {
+  .page-shell-feed {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .page-shell-feed .feed-workspace-shell {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
+
   .layout,
   .inbox-layout {
     grid-template-columns: 1fr;

@@ -57,6 +57,9 @@ describe('App', () => {
   it('renders personalized feed by default', () => {
     render(<App />);
     expect(screen.getByTestId('feed-view')).toBeInTheDocument();
+    expect(screen.getByTestId('feed-workspace-shell')).toBeInTheDocument();
+    expect(document.querySelector('.page-shell-feed')).not.toBeNull();
+    expect(document.querySelector('.hero-feed-compact')).not.toBeNull();
     expect(screen.getByText('중요 공지')).toBeInTheDocument();
   });
 
@@ -76,5 +79,12 @@ describe('App', () => {
 
     expect(screen.getByTestId('debug-extract-view')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '액션 추출' })).toBeNull();
+  });
+
+  it('does not use compact hero outside feed view', () => {
+    setRoute({ view: 'saved', noticeId: null });
+    render(<App />);
+
+    expect(document.querySelector('.hero-feed-compact')).toBeNull();
   });
 });
