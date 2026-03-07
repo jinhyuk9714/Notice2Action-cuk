@@ -238,6 +238,32 @@ class NoticeFeedServiceTest {
     assertThat(response.notices().get(1).importanceReasons()).doesNotContain("컴퓨터정보공학부 공지");
   }
 
+
+  @Test
+  void usesBodyAudienceSignalWhenTitleIsImplicit() {
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        "[학부대학] 2026학년도 1학기 <I-DESIGN> 수강신청 관련 안내",
+        "1학년 신입생 최초 수강신청 기간 안내와 컴퓨터정보공학부 분반 수강신청 안내입니다.",
+        LocalDate.of(2026, 2, 20),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(4),
+        List.of(NoticeFixtures.action("I-DESIGN 수강신청", "컴퓨터정보공학부", 0.92))
+    );
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(notice));
+
+    NoticeFeedResponse response = service.getFeed(
+        new NoticeProfile("컴퓨터정보공학부", 1, "신입생", List.of()),
+        0,
+        20
+    );
+
+    assertThat(response.notices()).singleElement().satisfies(summary -> {
+      assertThat(summary.importanceReasons()).contains("신입생 공지");
+      assertThat(summary.importanceReasons()).contains("행동 필요");
+    });
+  }
+
   @Test
   void usesFreshnessOnlyAsFallbackReason() {
     NoticeSourceEntity informational = NoticeFixtures.noticeSource(

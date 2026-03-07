@@ -181,7 +181,8 @@ public class NoticeFeedService {
     ProfileSignals signals = collectProfileSignals(source);
     String profileSearchText = signals.titleText() + "\n" + signals.actionEligibilityText();
     String explicitAudienceText = signals.titleText();
-    String departmentSearchText = profileSearchText + "\n" + signals.rawBodyText();
+    String bodyAudienceText = profileSearchText + "\n" + signals.rawBodyText();
+    String departmentSearchText = bodyAudienceText;
     List<String> reasons = new ArrayList<>();
     boolean statusMatched = false;
     boolean statusExcluded = false;
@@ -191,7 +192,8 @@ public class NoticeFeedService {
 
     if (hasText(profile.status())) {
       if (signals.includedStatuses().contains(profile.status())
-          || containsStatusSignal(profileSearchText, profile.status())) {
+          || containsStatusSignal(profileSearchText, profile.status())
+          || containsStatusSignal(bodyAudienceText, profile.status())) {
         reasons.add(profile.status() + " 공지");
         statusMatched = true;
       } else if (containsAnyOtherStatus(explicitAudienceText, profile.status())) {
@@ -201,8 +203,9 @@ public class NoticeFeedService {
 
     if (profile.year() != null) {
       YearMatch yearMatch = matchYear(profileSearchText, profile.year());
+      YearMatch bodyYearMatch = matchYear(bodyAudienceText, profile.year());
       YearMatch explicitYearMatch = matchYear(explicitAudienceText, profile.year());
-      if (signals.years().contains(profile.year()) || yearMatch.relevant()) {
+      if (signals.years().contains(profile.year()) || yearMatch.relevant() || bodyYearMatch.relevant()) {
         reasons.add(profile.year() + "학년 공지");
         yearMatched = true;
       } else if (explicitYearMatch.explicitlyExcluded()) {

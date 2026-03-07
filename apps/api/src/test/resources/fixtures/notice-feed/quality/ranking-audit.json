@@ -1,0 +1,139 @@
+{
+  "profiles": [
+    {
+      "name": "cs_junior_enrolled_real",
+      "department": "컴퓨터정보공학부",
+      "year": 3,
+      "status": "재학생",
+      "keywords": [],
+      "expectations": [
+        {
+          "noticeId": "268226",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["컴퓨터정보공학부 공지", "행동 필요", "7일 안에 마감"],
+          "expectedMustAppearAbove": ["269011", "268989", "268242", "268212", "269089", "268547"]
+        },
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268989",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["3학년 공지"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268242",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268212",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "cs_freshman_new_real",
+      "department": "컴퓨터정보공학부",
+      "year": 1,
+      "status": "신입생",
+      "keywords": [],
+      "expectations": [
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "행동 필요", "7일 안에 마감"],
+          "expectedMustAppearAbove": ["269011", "268629", "269089"]
+        },
+        {
+          "noticeId": "268226",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "행동 필요", "7일 안에 마감"],
+          "expectedMustAppearAbove": ["269011", "268629", "269089"]
+        },
+        {
+          "noticeId": "268768",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "행동 필요"],
+          "expectedMustAppearAbove": ["269011", "268629", "269089"]
+        },
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["행동 필요"],
+          "expectedMustAppearAbove": ["268629", "269089"]
+        },
+        {
+          "noticeId": "268629",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "senior_graduation_candidate_real",
+      "department": null,
+      "year": 4,
+      "status": "졸업예정자",
+      "keywords": [],
+      "expectations": [
+        {
+          "noticeId": "268629",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["졸업예정자 공지"],
+          "expectedMustAppearAbove": ["269011", "268547", "269089"]
+        },
+        {
+          "noticeId": "268396",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["졸업예정자 공지"],
+          "expectedMustAppearAbove": ["269011", "268547", "269089"]
+        },
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["행동 필요"],
+          "expectedMustAppearAbove": ["268547", "269089"]
+        },
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    }
+  ]
+}
