@@ -240,6 +240,57 @@ class NoticeFeedServiceTest {
 
 
   @Test
+  void matchesKeywordFromActionTitleWhenBodyAndTitleDoNotContainIt() {
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        "교과목 운영 변경 안내",
+        "프로젝트 진행 절차를 확인하시기 바랍니다.",
+        LocalDate.of(2026, 2, 20),
+        "action_required",
+        OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(4),
+        List.of(NoticeFixtures.action("학생증 신청", null, 0.92))
+    );
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(notice));
+
+    NoticeFeedResponse response = service.getFeed(
+        new NoticeProfile(null, null, null, List.of("학생증")),
+        0,
+        20
+    );
+
+    assertThat(response.notices()).singleElement().satisfies(summary ->
+        assertThat(summary.importanceReasons()).contains("학생증 관련")
+    );
+  }
+
+  @Test
+  void matchesKeywordFromAttachmentNamesWhenBodyAndTitleDoNotContainIt() {
+    NoticeSourceEntity notice = NoticeFixtures.noticeSource(
+        UUID.randomUUID(),
+        "교과목 운영 변경 안내",
+        "프로젝트 진행 절차를 확인하시기 바랍니다.",
+        LocalDate.of(2026, 2, 20),
+        "https://example.com/notices/attachment-keyword",
+        List.of(new CukNoticeAttachment("학생증 발급 신청서.hwp", "https://example.com/files/1")),
+        "informational",
+        null,
+        List.of()
+    );
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(notice));
+
+    NoticeFeedResponse response = service.getFeed(
+        new NoticeProfile(null, null, null, List.of("학생증")),
+        0,
+        20
+    );
+
+    assertThat(response.notices()).singleElement().satisfies(summary ->
+        assertThat(summary.importanceReasons()).contains("학생증 관련")
+    );
+  }
+
+  @Test
   void usesBodyAudienceSignalWhenTitleIsImplicit() {
     NoticeSourceEntity notice = NoticeFixtures.noticeSource(
         "[학부대학] 2026학년도 1학기 <I-DESIGN> 수강신청 관련 안내",

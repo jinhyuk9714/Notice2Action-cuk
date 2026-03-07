@@ -134,9 +134,9 @@ public class NoticeFeedService {
     score += relevance.scoreDelta();
     reasons.addAll(relevance.reasons());
 
-    Set<String> keywordReasons = keywordReasons(source, profile.keywords());
-    score += Math.min(keywordReasons.size(), 2) * 10;
-    reasons.addAll(keywordReasons.stream().limit(2).toList());
+    KeywordSignals keywordSignals = keywordSignals(source, profile.keywords(), relevance.reasons());
+    score += keywordSignals.scoreDelta();
+    reasons.addAll(keywordSignals.reasons());
 
     if ("action_required".equals(effectiveActionability)) {
       score += 15;
@@ -229,27 +229,104 @@ public class NoticeFeedService {
     return new ProfileRelevance(0, List.of());
   }
 
-  private Set<String> keywordReasons(NoticeSourceEntity source, List<String> keywords) {
-    Set<String> reasons = new LinkedHashSet<>();
-    List<String> matchedKeywords = new ArrayList<>();
+  private KeywordSignals keywordSignals(
+      NoticeSourceEntity source,
+      List<String> keywords,
+      List<String> profileReasons
+  ) {
     if (keywords == null || keywords.isEmpty()) {
-      return reasons;
+      return new KeywordSignals(List.of(), 0);
     }
-    String searchable = (source.getTitle() + "\n" + source.getRawText()).toLowerCase(Locale.ROOT);
+
+    String titleText = lowercase(source.getTitle());
+    String rawBodyText = lowercase(source.getRawText());
+    String actionTitleText = source.getActions().stream()
+        .map(ExtractedActionEntity::getTitle)
+        .filter(NoticeFeedService::hasText)
+        .collect(Collectors.joining("\n"))
+        .toLowerCase(Locale.ROOT);
+    String attachmentNameText = parseAttachments(source.getAttachmentsJson()).stream()
+        .map(CukNoticeAttachment::name)
+        .filter(NoticeFeedService::hasText)
+        .collect(Collectors.joining("\n"))
+        .toLowerCase(Locale.ROOT);
+
+    List<KeywordMatch> matches = new ArrayList<>();
     for (String keyword : keywords) {
       if (!hasText(keyword)) {
         continue;
       }
-      String normalized = keyword.trim().toLowerCase(Locale.ROOT);
-      if (searchable.contains(normalized)) {
-        if (matchedKeywords.stream().anyMatch(existing -> existing.contains(normalized) || normalized.contains(existing))) {
-          continue;
-        }
-        matchedKeywords.add(normalized);
-        reasons.add(keyword.trim() + " 관련");
+      String trimmed = keyword.trim();
+      String normalized = trimmed.toLowerCase(Locale.ROOT);
+      int strength = keywordStrength(normalized, titleText, actionTitleText, attachmentNameText, rawBodyText);
+      if (strength > 0) {
+        strength = Math.max(strength - keywordOverlapPenalty(normalized, profileReasons), 1);
+      }
+      if (strength > 0) {
+        matches.add(new KeywordMatch(trimmed, normalized, strength));
       }
     }
-    return reasons;
+
+    List<KeywordMatch> sorted = matches.stream()
+        .sorted(Comparator.comparingInt(KeywordMatch::strength).reversed()
+            .thenComparing(Comparator.comparingInt((KeywordMatch match) -> match.normalized().length()).reversed())
+            .thenComparing(KeywordMatch::displayKeyword))
+        .toList();
+
+    List<KeywordMatch> deduped = new ArrayList<>();
+    for (KeywordMatch match : sorted) {
+      boolean covered = deduped.stream().anyMatch(existing ->
+          existing.normalized().contains(match.normalized()) || match.normalized().contains(existing.normalized()));
+      if (!covered) {
+        deduped.add(match);
+      }
+    }
+
+    List<KeywordMatch> selected = deduped.stream().limit(2).toList();
+    List<String> reasons = selected.stream()
+        .map(match -> match.displayKeyword() + " 관련")
+        .toList();
+    int scoreDelta = Math.min(selected.stream().mapToInt(KeywordMatch::strength).sum(), 20);
+    return new KeywordSignals(reasons, scoreDelta);
+  }
+
+  private int keywordStrength(
+      String normalizedKeyword,
+      String titleText,
+      String actionTitleText,
+      String attachmentNameText,
+      String rawBodyText
+  ) {
+    if (titleText.contains(normalizedKeyword) || actionTitleText.contains(normalizedKeyword)) {
+      return 10;
+    }
+    if (attachmentNameText.contains(normalizedKeyword)) {
+      return 7;
+    }
+    if (rawBodyText.contains(normalizedKeyword)) {
+      return 5;
+    }
+    return 0;
+  }
+
+  private int keywordOverlapPenalty(String normalizedKeyword, List<String> profileReasons) {
+    if (profileReasons == null || profileReasons.isEmpty()) {
+      return 0;
+    }
+    for (String reason : profileReasons) {
+      if (!isPositiveProfileReason(reason)) {
+        continue;
+      }
+      String normalizedReason = lowercase(reason.replace(" 공지", ""));
+      if (normalizedReason.contains(normalizedKeyword) || normalizedKeyword.contains(normalizedReason)) {
+        return 3;
+      }
+    }
+    return 0;
+  }
+
+  private String lowercase(String value) {
+    return value == null ? "" : value.toLowerCase(Locale.ROOT);
   }
 
   private String resolveFreshnessReason(LocalDate publishedAt) {
@@ -272,6 +349,7 @@ public class NoticeFeedService {
 
     List<String> collapsedProfileReasons = new ArrayList<>();
     boolean keptProfileReason = false;
+    boolean keptKeywordReason = false;
     for (String reason : deduped) {
       if ("다른 대상 공지".equals(reason)) {
         continue;
@@ -281,6 +359,12 @@ public class NoticeFeedService {
           continue;
         }
         keptProfileReason = true;
+      }
+      if (reason.endsWith("관련")) {
+        if (keptKeywordReason) {
+          continue;
+        }
+        keptKeywordReason = true;
       }
       collapsedProfileReasons.add(reason);
     }
@@ -1374,6 +1458,14 @@ public class NoticeFeedService {
       reasons = reasons == null ? List.of() : List.copyOf(reasons);
     }
   }
+
+  private record KeywordSignals(List<String> reasons, int scoreDelta) {
+    private KeywordSignals {
+      reasons = reasons == null ? List.of() : List.copyOf(reasons);
+    }
+  }
+
+  private record KeywordMatch(String displayKeyword, String normalized, int strength) {}
 
   private record YearMatch(boolean relevant, boolean explicitlyExcluded) {
     static YearMatch relevantMatch() {

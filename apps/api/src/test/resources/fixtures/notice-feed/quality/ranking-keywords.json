@@ -1,0 +1,121 @@
+{
+  "profiles": [
+    {
+      "name": "cs_junior_enrolled_keywords",
+      "department": "컴퓨터정보공학부",
+      "year": 3,
+      "status": "재학생",
+      "keywords": ["수강신청", "취업"],
+      "expectations": [
+        {
+          "noticeId": "268226",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["컴퓨터정보공학부 공지", "수강신청 관련", "행동 필요"],
+          "expectedMustAppearAbove": ["269011", "269089", "268547"]
+        },
+        {
+          "noticeId": "268869",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["취업 관련", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["수강신청 관련", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "cs_freshman_new_keywords",
+      "department": "컴퓨터정보공학부",
+      "year": 1,
+      "status": "신입생",
+      "keywords": ["학생증", "학번", "I-DESIGN"],
+      "expectations": [
+        {
+          "noticeId": "268768",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "학번 관련", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268629"]
+        },
+        {
+          "noticeId": "268226",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "I-DESIGN 관련", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268629"]
+        },
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268629"]
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "268629",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "senior_graduation_candidate_keywords",
+      "department": null,
+      "year": 4,
+      "status": "졸업예정자",
+      "keywords": ["졸업", "트랙", "예비 졸업사정"],
+      "expectations": [
+        {
+          "noticeId": "268629",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["졸업예정자 공지", "예비 졸업사정 관련"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268396",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["졸업예정자 공지", "트랙 관련"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268630",
+          "expectedPriorityTier": "mid",
+          "expectedImportanceReasonSubset": ["졸업 관련"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "269089",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": [],
+          "expectedMustAppearAbove": []
+        },
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    }
+  ]
+}
