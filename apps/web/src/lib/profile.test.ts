@@ -17,6 +17,7 @@ describe('profile storage', () => {
       year: 3,
       status: '재학생',
       interestKeywords: ['장학금', '학생증'],
+      preferredBoards: [],
     };
 
     saveProfile(profile);
@@ -33,6 +34,7 @@ describe('profile storage', () => {
       year: 2,
       status: '재학생',
       interestKeywords: [],
+      preferredBoards: [],
     });
   });
 

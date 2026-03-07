@@ -10,6 +10,7 @@ type PersonalizedFeedViewProps = Readonly<{
   preferences: NoticePreferences;
   initialNoticeId: string | null;
   initialBoard: string | null;
+  onAvailableBoardsChange?: (boards: readonly string[]) => void;
   onNoticeSelect: (id: string | null) => void;
   onBoardSelect: (board: string | null) => void;
   onToggleSaved: (id: string) => void;
@@ -22,6 +23,7 @@ export function PersonalizedFeedView({
   preferences,
   initialNoticeId,
   initialBoard,
+  onAvailableBoardsChange,
   onNoticeSelect,
   onBoardSelect,
   onToggleSaved,
@@ -50,6 +52,7 @@ export function PersonalizedFeedView({
       if (cancelled) return;
       setNotices(response.notices);
       setAvailableBoards(response.availableBoards);
+      onAvailableBoardsChange?.(response.availableBoards);
     }).catch((caught) => {
       if (cancelled) return;
       setError(caught instanceof Error ? caught.message : '공지 피드를 불러오지 못했습니다.');
@@ -57,7 +60,7 @@ export function PersonalizedFeedView({
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [profileKey, selectedBoard]);
+  }, [onAvailableBoardsChange, profileKey, selectedBoard]);
 
   useEffect(() => {
     setSelectedId(initialNoticeId);

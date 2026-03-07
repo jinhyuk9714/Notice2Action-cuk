@@ -158,6 +158,35 @@ describe('PersonalizedFeedView', () => {
     expect(badges.at(-1)).toHaveTextContent('다른 대상 공지');
   });
 
+  it('renders preferred board reasons on cards when provided', async () => {
+    mockFetchNoticeFeed.mockResolvedValue(makeNoticeFeedResponse([
+      {
+        ...QUALITY_ACTION_NOTICE,
+        importanceReasons: ['컴퓨터정보공학부 공지', '선호 게시판', '행동 필요'],
+      },
+    ]));
+
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={EMPTY_PREFS}
+        initialNoticeId={null}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('[학사지원팀] 2026-1학기 수강과목 취소 기간 안내')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('선호 게시판')).toBeInTheDocument();
+  });
+
   it('loads detail when a notice is selected and shows informational empty state', async () => {
     mockFetchNoticeDetail.mockResolvedValue(QUALITY_INFORMATIONAL_DETAIL);
 

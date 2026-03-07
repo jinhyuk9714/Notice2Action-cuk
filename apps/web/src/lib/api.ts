@@ -184,6 +184,9 @@ function appendProfileParams(params: URLSearchParams, profile: UserProfile): voi
   for (const keyword of profile.interestKeywords ?? []) {
     if (keyword.trim().length > 0) params.append('keyword', keyword.trim());
   }
+  for (const preferredBoard of profile.preferredBoards ?? []) {
+    if (preferredBoard.trim().length > 0) params.append('preferredBoard', preferredBoard.trim());
+  }
 }
 
 export async function fetchNoticeFeed(

@@ -9,6 +9,7 @@ export type UserProfile = Readonly<{
   year: number | null;
   status: StudentStatus | null;
   interestKeywords?: readonly string[];
+  preferredBoards?: readonly string[];
 }>;
 
 const STORAGE_KEY = 'n2a_profile_v2';
@@ -19,6 +20,7 @@ export const EMPTY_PROFILE: UserProfile = {
   year: null,
   status: null,
   interestKeywords: [],
+  preferredBoards: [],
 };
 
 export function loadProfile(): UserProfile {
@@ -42,6 +44,12 @@ export function loadProfile(): UserProfile {
           .map((keyword) => keyword.trim())
           .filter((keyword) => keyword.length > 0)
         : [],
+      preferredBoards: Array.isArray(parsed.preferredBoards)
+        ? parsed.preferredBoards
+          .filter((board): board is string => typeof board === 'string')
+          .map((board) => board.trim())
+          .filter((board) => board.length > 0)
+        : [],
     };
   } catch {
     return EMPTY_PROFILE;
@@ -56,5 +64,6 @@ export function isProfileConfigured(profile: UserProfile): boolean {
   return profile.department !== null
     || profile.year !== null
     || profile.status !== null
-    || (profile.interestKeywords ?? []).length > 0;
+    || (profile.interestKeywords ?? []).length > 0
+    || (profile.preferredBoards ?? []).length > 0;
 }

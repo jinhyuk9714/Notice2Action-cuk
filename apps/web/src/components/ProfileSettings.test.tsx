@@ -7,7 +7,7 @@ import type { UserProfile } from '../lib/profile';
 function renderProfile(overrides: Partial<UserProfile> = {}) {
   const profile: UserProfile = { ...EMPTY_PROFILE, ...overrides };
   const onChange = vi.fn();
-  render(<ProfileSettings profile={profile} onProfileChange={onChange} />);
+  render(<ProfileSettings profile={profile} onProfileChange={onChange} availableBoards={['학사', '장학', '취창업']} />);
   return { onChange };
 }
 
@@ -36,5 +36,16 @@ describe('ProfileSettings', () => {
 
     expect(onChange).toHaveBeenNthCalledWith(1, expect.objectContaining({ status: '휴학생' }));
     expect(onChange).toHaveBeenNthCalledWith(2, expect.objectContaining({ interestKeywords: ['장학금', '학생증'] }));
+  });
+
+  it('shows preferred board chips and toggles selection', () => {
+    const { onChange } = renderProfile({ preferredBoards: ['학사'] });
+
+    expect(screen.getByRole('button', { name: '학사' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '장학' })).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: '장학' }));
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ preferredBoards: ['학사', '장학'] }));
   });
 });

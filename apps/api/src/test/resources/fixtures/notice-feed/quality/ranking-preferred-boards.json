@@ -1,0 +1,88 @@
+{
+  "profiles": [
+    {
+      "name": "cs_junior_enrolled_preferred_boards",
+      "department": "컴퓨터정보공학부",
+      "year": 3,
+      "status": "재학생",
+      "keywords": [],
+      "preferredBoards": ["학사", "취창업"],
+      "expectations": [
+        {
+          "noticeId": "269011",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["선호 게시판", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268869",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["선호 게시판", "행동 필요"],
+          "expectedMustAppearAbove": ["269089"]
+        },
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "cs_freshman_new_preferred_boards",
+      "department": "컴퓨터정보공학부",
+      "year": 1,
+      "status": "신입생",
+      "keywords": [],
+      "preferredBoards": ["학사", "일반"],
+      "expectations": [
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "선호 게시판", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268629"]
+        },
+        {
+          "noticeId": "268768",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["신입생 공지", "선호 게시판", "행동 필요"],
+          "expectedMustAppearAbove": ["269089", "268629"]
+        },
+        {
+          "noticeId": "268629",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    },
+    {
+      "name": "graduation_candidate_preferred_boards",
+      "department": null,
+      "year": 4,
+      "status": "졸업예정자",
+      "keywords": [],
+      "preferredBoards": ["학사", "장학"],
+      "expectations": [
+        {
+          "noticeId": "268629",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["졸업예정자 공지", "선호 게시판"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268396",
+          "expectedPriorityTier": "high",
+          "expectedImportanceReasonSubset": ["졸업예정자 공지", "선호 게시판"],
+          "expectedMustAppearAbove": ["269089", "268547"]
+        },
+        {
+          "noticeId": "268547",
+          "expectedPriorityTier": "low",
+          "expectedImportanceReasonSubset": ["다른 대상 공지"],
+          "expectedMustAppearAbove": []
+        }
+      ]
+    }
+  ]
+}

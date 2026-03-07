@@ -166,6 +166,73 @@ class NoticeFeedServiceTest {
   }
 
   @Test
+  void boostsPreferredBoardWithinSameTier() {
+    NoticeSourceEntity preferredBoardNotice = NoticeFixtures.noticeSource(
+        "취업 특강 신청 안내",
+        "재학생 대상 신청 공지입니다.",
+        LocalDate.of(2026, 3, 2),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action("취업 특강 신청", "재학생", 0.87))
+    );
+    preferredBoardNotice.setNoticeBoardLabel("취창업");
+    NoticeSourceEntity nonPreferredBoardNotice = NoticeFixtures.noticeSource(
+        "재학생 대상 일반 신청 안내",
+        "재학생 대상 신청 공지입니다.",
+        LocalDate.of(2026, 3, 2),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action("일반 신청", "재학생", 0.87))
+    );
+    nonPreferredBoardNotice.setNoticeBoardLabel("일반");
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(nonPreferredBoardNotice, preferredBoardNotice));
+
+    NoticeFeedResponse response = service.getFeed(
+        new NoticeProfile(null, null, "재학생", List.of(), List.of("취창업")),
+        0,
+        20
+    );
+
+    assertThat(response.notices()).extracting(summary -> summary.title())
+        .containsExactly("취업 특강 신청 안내", "재학생 대상 일반 신청 안내");
+    assertThat(response.notices().get(0).importanceReasons()).contains("선호 게시판");
+  }
+
+  @Test
+  void doesNotApplyPreferredBoardToExplicitlyExcludedNotices() {
+    NoticeSourceEntity excludedPreferredBoardNotice = NoticeFixtures.noticeSource(
+        "1학년 대상 장학 신청 안내",
+        "1학년 대상 장학 신청 공지입니다.",
+        LocalDate.of(2026, 3, 2),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action("장학 신청", "1학년", 0.9))
+    );
+    excludedPreferredBoardNotice.setNoticeBoardLabel("장학");
+    NoticeSourceEntity matchedNotice = NoticeFixtures.noticeSource(
+        "3학년 대상 학사 신청 안내",
+        "3학년 대상 학사 신청 공지입니다.",
+        LocalDate.of(2026, 3, 1),
+        "action_required",
+        null,
+        List.of(NoticeFixtures.action("학사 신청", "3학년", 0.9))
+    );
+    matchedNotice.setNoticeBoardLabel("학사");
+
+    when(noticeSourceRepository.findAllAutoCollectedNotices()).thenReturn(List.of(excludedPreferredBoardNotice, matchedNotice));
+
+    NoticeFeedResponse response = service.getFeed(
+        new NoticeProfile(null, 3, null, List.of(), List.of("장학")),
+        0,
+        20
+    );
+
+    assertThat(response.notices().get(1).importanceReasons()).contains("다른 대상 공지");
+    assertThat(response.notices().get(1).importanceReasons()).doesNotContain("선호 게시판");
+  }
+
+  @Test
   void omitsProfileReasonWhenProfileIsUnconfigured() {
     NoticeSourceEntity notice = NoticeFixtures.noticeSource(
         "수강신청 일정 안내",

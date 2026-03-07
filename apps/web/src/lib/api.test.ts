@@ -254,7 +254,7 @@ describe('fetchActionList', () => {
 });
 
 describe('notice feed api', () => {
-  it('requests personalized notice feed with repeated keyword params and board filter', async () => {
+  it('requests personalized notice feed with repeated keyword params, preferred boards, and board filter', async () => {
     vi.mocked(fetch).mockResolvedValue(mockOkResponse(makeNoticeFeedResponse([makeNoticeSummary()])));
 
     const result = await fetchNoticeFeed({
@@ -262,6 +262,7 @@ describe('notice feed api', () => {
       year: 1,
       status: '신입생',
       interestKeywords: ['학생증', '장학금'],
+      preferredBoards: ['학사', '장학'],
     }, 0, 20, '학사');
 
     const url = vi.mocked(fetch).mock.calls[0][0] as string;
@@ -270,6 +271,7 @@ describe('notice feed api', () => {
     expect(url).toContain('year=1');
     expect(url).toContain('status=');
     expect(url).toContain('keyword=');
+    expect(url).toContain('preferredBoard=');
     expect(url).toContain('board=');
     expect(result.notices[0].title).toBe('학생증 신청 안내');
     expect(result.availableBoards).toContain('학사');
@@ -283,10 +285,12 @@ describe('notice feed api', () => {
       year: null,
       status: null,
       interestKeywords: [],
+      preferredBoards: ['장학'],
     });
 
     const url = vi.mocked(fetch).mock.calls[0][0] as string;
     expect(url).toContain('/api/v1/notices/notice-1');
+    expect(url).toContain('preferredBoard=');
     expect(result.body).toBe('정제된 원문');
   });
 });

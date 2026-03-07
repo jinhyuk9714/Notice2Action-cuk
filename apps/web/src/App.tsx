@@ -33,6 +33,7 @@ export default function App(): ReactElement {
   const [route, navigate] = useHashRoute();
   const [profile, setProfile] = useState<UserProfile>(() => loadProfile());
   const [noticePreferences, setNoticePreferences] = useState<NoticePreferences>(() => loadNoticePreferences());
+  const [availableBoards, setAvailableBoards] = useState<readonly string[]>([]);
   const [actions, setActions] = useState<readonly ExtractedAction[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,6 +177,7 @@ export default function App(): ReactElement {
               preferences={noticePreferences}
               initialNoticeId={route.noticeId}
               initialBoard={route.board}
+              onAvailableBoardsChange={setAvailableBoards}
               onNoticeSelect={(id) => { navigate({ view: 'feed', noticeId: id, board: route.board }); }}
               onBoardSelect={(board) => { navigate({ view: 'feed', noticeId: null, board }); }}
               onToggleSaved={handleToggleSaved}
@@ -199,7 +201,7 @@ export default function App(): ReactElement {
 
         {route.view === 'profile' ? (
           <section className="layout">
-            <ProfileSettings profile={profile} onProfileChange={handleProfileChange} />
+            <ProfileSettings profile={profile} onProfileChange={handleProfileChange} availableBoards={availableBoards} />
             <div className="panel">
               <p className="eyebrow">안내</p>
               <h2>개인화 기준 설명</h2>

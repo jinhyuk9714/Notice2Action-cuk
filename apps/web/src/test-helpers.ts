@@ -15,9 +15,21 @@ import type { UserProfile } from './lib/profile';
 
 // --- Profiles ---
 
-export const EMPTY_PROFILE: UserProfile = { department: null, year: null, status: null, interestKeywords: [] };
+export const EMPTY_PROFILE: UserProfile = {
+  department: null,
+  year: null,
+  status: null,
+  interestKeywords: [],
+  preferredBoards: [],
+};
 
-export const FULL_PROFILE: UserProfile = { department: '컴퓨터공학과', year: 3, status: '재학생', interestKeywords: ['장학금'] };
+export const FULL_PROFILE: UserProfile = {
+  department: '컴퓨터공학과',
+  year: 3,
+  status: '재학생',
+  interestKeywords: ['장학금'],
+  preferredBoards: ['학사'],
+};
 
 // --- Action Summaries ---
 

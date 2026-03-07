@@ -30,10 +30,11 @@ public class NoticeFeedController {
       @RequestParam(name = "year", required = false) Integer year,
       @RequestParam(name = "status", required = false) String status,
       @RequestParam(name = "board", required = false) String board,
-      @RequestParam(name = "keyword", required = false) List<String> keywords
+      @RequestParam(name = "keyword", required = false) List<String> keywords,
+      @RequestParam(name = "preferredBoard", required = false) List<String> preferredBoards
   ) {
     return noticeFeedService.getFeed(
-        new NoticeProfile(department, year, status, normalizeKeywords(keywords)),
+        new NoticeProfile(department, year, status, normalizeKeywords(keywords), normalizeValues(preferredBoards)),
         page,
         size,
         normalizeBoard(board)
@@ -46,16 +47,21 @@ public class NoticeFeedController {
       @RequestParam(name = "department", required = false) String department,
       @RequestParam(name = "year", required = false) Integer year,
       @RequestParam(name = "status", required = false) String status,
-      @RequestParam(name = "keyword", required = false) List<String> keywords
+      @RequestParam(name = "keyword", required = false) List<String> keywords,
+      @RequestParam(name = "preferredBoard", required = false) List<String> preferredBoards
   ) {
-    return noticeFeedService.getDetail(id, new NoticeProfile(department, year, status, normalizeKeywords(keywords)));
+    return noticeFeedService.getDetail(id, new NoticeProfile(department, year, status, normalizeKeywords(keywords), normalizeValues(preferredBoards)));
   }
 
   private List<String> normalizeKeywords(List<String> keywords) {
-    if (keywords == null) {
+    return normalizeValues(keywords);
+  }
+
+  private List<String> normalizeValues(List<String> values) {
+    if (values == null) {
       return List.of();
     }
-    return keywords.stream().filter(value -> value != null && !value.isBlank()).map(String::trim).toList();
+    return values.stream().filter(value -> value != null && !value.isBlank()).map(String::trim).toList();
   }
 
   private String normalizeBoard(String board) {

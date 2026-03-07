@@ -5,11 +5,16 @@ import { STUDENT_STATUSES } from '../lib/profile';
 type ProfileSettingsProps = Readonly<{
   profile: UserProfile;
   onProfileChange: (profile: UserProfile) => void;
+  availableBoards?: readonly string[];
 }>;
 
 const YEARS = [1, 2, 3, 4] as const;
+const DEFAULT_BOARDS = ['학사', '장학', '취창업', '일반'] as const;
 
-export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsProps): ReactElement {
+export function ProfileSettings({ profile, onProfileChange, availableBoards }: ProfileSettingsProps): ReactElement {
+  const boardOptions = Array.from(new Set([...(availableBoards ?? []), ...DEFAULT_BOARDS]))
+    .filter((board) => board.trim().length > 0);
+
   function handleDepartmentChange(value: string): void {
     onProfileChange({ ...profile, department: value.trim().length > 0 ? value.trim() : null });
   }
@@ -29,6 +34,17 @@ export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsPro
     onProfileChange({
       ...profile,
       status: value.length > 0 ? (value as StudentStatus) : null,
+    });
+  }
+
+  function handlePreferredBoardToggle(board: string): void {
+    const currentBoards = profile.preferredBoards ?? [];
+    const nextBoards = currentBoards.includes(board)
+      ? currentBoards.filter((currentBoard) => currentBoard !== board)
+      : [...currentBoards, board];
+    onProfileChange({
+      ...profile,
+      preferredBoards: nextBoards,
     });
   }
 
@@ -88,6 +104,23 @@ export function ProfileSettings({ profile, onProfileChange }: ProfileSettingsPro
             value={(profile.interestKeywords ?? []).join(', ')}
             onChange={(e) => { handleKeywordChange(e.target.value); }}
           />
+        </div>
+
+        <div className="profile-field">
+          <label id="preferredBoardsLabel">선호 게시판</label>
+          <div className="chip-row" role="group" aria-labelledby="preferredBoardsLabel">
+            {boardOptions.map((board) => (
+              <button
+                key={board}
+                type="button"
+                className={`chip${(profile.preferredBoards ?? []).includes(board) ? ' board-filter-chip-active' : ''}`}
+                aria-pressed={(profile.preferredBoards ?? []).includes(board)}
+                onClick={() => { handlePreferredBoardToggle(board); }}
+              >
+                {board}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </section>

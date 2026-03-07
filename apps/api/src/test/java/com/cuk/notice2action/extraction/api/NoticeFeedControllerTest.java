@@ -36,7 +36,7 @@ class NoticeFeedControllerTest {
 
   @Test
   void returnsPersonalizedNoticeFeed() throws Exception {
-    when(noticeFeedService.getFeed(eq(new NoticeProfile("컴퓨터공학과", 1, "신입생", List.of("학생증"))), eq(0), eq(20), eq("장학")))
+    when(noticeFeedService.getFeed(eq(new NoticeProfile("컴퓨터공학과", 1, "신입생", List.of("학생증"), List.of("학사", "장학"))), eq(0), eq(20), eq("장학")))
         .thenReturn(new NoticeFeedResponse(
             List.of(new PersonalizedNoticeSummaryDto(
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
@@ -62,6 +62,8 @@ class NoticeFeedControllerTest {
             .param("year", "1")
             .param("status", "신입생")
             .param("board", "장학")
+            .param("preferredBoard", "학사")
+            .param("preferredBoard", "장학")
             .param("keyword", "학생증"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.notices[0].title").value("학생증 신청 안내"))
@@ -74,7 +76,7 @@ class NoticeFeedControllerTest {
   @Test
   void returnsNoticeDetail() throws Exception {
     UUID id = UUID.fromString("11111111-1111-1111-1111-111111111111");
-    when(noticeFeedService.getDetail(eq(id), eq(new NoticeProfile(null, null, null, List.of()))))
+    when(noticeFeedService.getDetail(eq(id), eq(new NoticeProfile(null, null, null, List.of(), List.of("장학")))))
         .thenReturn(new PersonalizedNoticeDetailDto(
             id,
             "학생증 신청 안내",
@@ -90,7 +92,8 @@ class NoticeFeedControllerTest {
             List.of(new NoticeActionBlockDto("학생증 신청", "요약", null, null, List.of(), "TRINITY", List.of(), 0.91))
         ));
 
-    mockMvc.perform(get("/api/v1/notices/{id}", id))
+    mockMvc.perform(get("/api/v1/notices/{id}", id)
+            .param("preferredBoard", "장학"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.boardLabel").value("장학"))
         .andExpect(jsonPath("$.body").value("정제된 원문"))

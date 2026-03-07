@@ -174,6 +174,14 @@ public class NoticeFeedService {
     score += relevance.scoreDelta();
     reasons.addAll(relevance.reasons());
 
+    PreferredBoardSignals preferredBoardSignals = preferredBoardSignals(
+        source.getNoticeBoardLabel(),
+        profile.preferredBoards(),
+        relevance.reasons()
+    );
+    score += preferredBoardSignals.scoreDelta();
+    reasons.addAll(preferredBoardSignals.reasons());
+
     KeywordSignals keywordSignals = keywordSignals(source, profile.keywords(), relevance.reasons());
     score += keywordSignals.scoreDelta();
     reasons.addAll(keywordSignals.reasons());
@@ -331,6 +339,28 @@ public class NoticeFeedService {
     return new KeywordSignals(reasons, scoreDelta);
   }
 
+  private PreferredBoardSignals preferredBoardSignals(
+      String boardLabel,
+      List<String> preferredBoards,
+      List<String> profileReasons
+  ) {
+    if (!hasText(boardLabel) || preferredBoards == null || preferredBoards.isEmpty()) {
+      return new PreferredBoardSignals(List.of(), 0);
+    }
+    if (profileReasons != null && profileReasons.contains("다른 대상 공지")) {
+      return new PreferredBoardSignals(List.of(), 0);
+    }
+    String normalizedBoard = boardLabel.trim();
+    boolean matched = preferredBoards.stream()
+        .filter(NoticeFeedService::hasText)
+        .map(String::trim)
+        .anyMatch(normalizedBoard::equals);
+    if (!matched) {
+      return new PreferredBoardSignals(List.of(), 0);
+    }
+    return new PreferredBoardSignals(List.of("선호 게시판"), 18);
+  }
+
   private int keywordStrength(
       String normalizedKeyword,
       String titleText,
@@ -390,6 +420,7 @@ public class NoticeFeedService {
 
     List<String> collapsedProfileReasons = new ArrayList<>();
     boolean keptProfileReason = false;
+    boolean keptPreferredBoardReason = false;
     boolean keptKeywordReason = false;
     for (String reason : deduped) {
       if ("다른 대상 공지".equals(reason)) {
@@ -400,6 +431,12 @@ public class NoticeFeedService {
           continue;
         }
         keptProfileReason = true;
+      }
+      if ("선호 게시판".equals(reason)) {
+        if (keptPreferredBoardReason) {
+          continue;
+        }
+        keptPreferredBoardReason = true;
       }
       if (reason.endsWith("관련")) {
         if (keptKeywordReason) {
@@ -442,17 +479,20 @@ public class NoticeFeedService {
     if (reason.endsWith("공지")) {
       return 0;
     }
-    if (reason.endsWith("관련")) {
+    if ("선호 게시판".equals(reason)) {
       return 1;
     }
-    if ("행동 필요".equals(reason)) {
+    if (reason.endsWith("관련")) {
       return 2;
     }
-    if (reason.contains("마감")) {
+    if ("행동 필요".equals(reason)) {
       return 3;
     }
-    if ("최근 등록".equals(reason) || "이번 주 등록".equals(reason)) {
+    if (reason.contains("마감")) {
       return 4;
+    }
+    if ("최근 등록".equals(reason) || "이번 주 등록".equals(reason)) {
+      return 5;
     }
     return 10;
   }
@@ -1502,6 +1542,12 @@ public class NoticeFeedService {
 
   private record KeywordSignals(List<String> reasons, int scoreDelta) {
     private KeywordSignals {
+      reasons = reasons == null ? List.of() : List.copyOf(reasons);
+    }
+  }
+
+  private record PreferredBoardSignals(List<String> reasons, int scoreDelta) {
+    private PreferredBoardSignals {
       reasons = reasons == null ? List.of() : List.copyOf(reasons);
     }
   }
