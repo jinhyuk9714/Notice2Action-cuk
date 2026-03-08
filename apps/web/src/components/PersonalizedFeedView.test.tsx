@@ -57,6 +57,65 @@ describe('PersonalizedFeedView', () => {
     expect(screen.getAllByText('행동 필요')).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: '전체' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '학사' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('마지막 동기화');
+  });
+
+  it('shows bootstrapping sync status instead of generic empty state', async () => {
+    mockFetchNoticeFeed.mockResolvedValue(makeNoticeFeedResponse([]));
+
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={EMPTY_PREFS}
+        initialNoticeId={null}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('공지 동기화 중...');
+    });
+
+    expect(screen.queryByText('중요 공지가 없습니다.')).not.toBeInTheDocument();
+  });
+
+  it('shows failed sync status and error detail when feed is empty', async () => {
+    mockFetchNoticeFeed.mockResolvedValue({
+      ...makeNoticeFeedResponse([]),
+      syncStatus: {
+        state: 'failed',
+        lastSuccessfulSyncAt: null,
+        lastAttemptedSyncAt: '2026-03-07T10:00:00+09:00',
+        lastErrorMessage: '네트워크 오류',
+        noticeCount: 0,
+      },
+    });
+
+    render(
+      <PersonalizedFeedView
+        profile={EMPTY_PROFILE}
+        preferences={EMPTY_PREFS}
+        initialNoticeId={null}
+        initialBoard={null}
+        onNoticeSelect={noop}
+        onBoardSelect={noop}
+        onToggleSaved={noop}
+        onHide={noop}
+        onUnhide={noop}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('공지 동기화 실패 · 잠시 후 다시 시도해 주세요');
+    });
+
+    expect(screen.getByText('네트워크 오류')).toBeInTheDocument();
+    expect(screen.queryByText('중요 공지가 없습니다.')).not.toBeInTheDocument();
   });
 
   it('hides board badge when board label is null', async () => {

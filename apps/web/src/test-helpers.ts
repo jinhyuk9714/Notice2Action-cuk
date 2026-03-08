@@ -217,5 +217,12 @@ export function makeNoticeFeedResponse(
     totalPages: 1,
     hasNext,
     availableBoards,
+    syncStatus: {
+      state: notices.length > 0 ? 'healthy' : 'bootstrapping',
+      lastSuccessfulSyncAt: notices.length > 0 ? '2026-03-07T10:00:00+09:00' : null,
+      lastAttemptedSyncAt: '2026-03-07T10:00:00+09:00',
+      lastErrorMessage: null,
+      noticeCount: notices.length,
+    },
   };
 }

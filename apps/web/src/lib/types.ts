@@ -209,9 +209,19 @@ export const PersonalizedNoticeSummarySchema = z.object({
 });
 export type PersonalizedNoticeSummary = z.infer<typeof PersonalizedNoticeSummarySchema>;
 
+export const NoticeFeedSyncStatusSchema = z.object({
+  state: z.enum(['bootstrapping', 'healthy', 'stale', 'failed']),
+  lastSuccessfulSyncAt: z.string().nullable(),
+  lastAttemptedSyncAt: z.string().nullable(),
+  lastErrorMessage: z.string().nullable(),
+  noticeCount: z.number(),
+});
+export type NoticeFeedSyncStatus = z.infer<typeof NoticeFeedSyncStatusSchema>;
+
 export const NoticeFeedResponseSchema = PaginationSchema.extend({
   notices: z.array(PersonalizedNoticeSummarySchema),
   availableBoards: z.array(z.string()),
+  syncStatus: NoticeFeedSyncStatusSchema,
 });
 export type NoticeFeedResponse = z.infer<typeof NoticeFeedResponseSchema>;
 

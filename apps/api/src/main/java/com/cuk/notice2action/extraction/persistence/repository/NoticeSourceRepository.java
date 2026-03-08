@@ -31,6 +31,8 @@ public interface NoticeSourceRepository extends JpaRepository<NoticeSourceEntity
 
   boolean existsByAutoCollectedTrue();
 
+  long countByAutoCollectedTrue();
+
   @Query("SELECT DISTINCT s FROM NoticeSourceEntity s "
       + "LEFT JOIN FETCH s.actions "
       + "WHERE s.autoCollected = true")

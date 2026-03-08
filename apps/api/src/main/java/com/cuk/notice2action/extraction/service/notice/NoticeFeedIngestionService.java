@@ -34,6 +34,7 @@ public class NoticeFeedIngestionService {
   private final NoticeFeedProperties properties;
   private final NoticeActionabilityClassifier noticeActionabilityClassifier;
   private final DateExtractor dateExtractor;
+  private final NoticeFeedSyncStateService syncStateService;
 
   public NoticeFeedIngestionService(
       NoticeSourceRepository noticeSourceRepository,
@@ -42,7 +43,8 @@ public class NoticeFeedIngestionService {
       ActionPersistenceService actionPersistenceService,
       NoticeFeedProperties properties,
       NoticeActionabilityClassifier noticeActionabilityClassifier,
-      DateExtractor dateExtractor
+      DateExtractor dateExtractor,
+      NoticeFeedSyncStateService syncStateService
   ) {
     this.noticeSourceRepository = noticeSourceRepository;
     this.cukNoticeClient = cukNoticeClient;
@@ -51,19 +53,41 @@ public class NoticeFeedIngestionService {
     this.properties = properties;
     this.noticeActionabilityClassifier = noticeActionabilityClassifier;
     this.dateExtractor = dateExtractor;
+    this.syncStateService = syncStateService;
   }
 
   @Transactional
   public void refreshCollectedNotices() {
-    List<CukNoticeDetail> notices = cukNoticeClient.fetchLatestNotices(properties.maxPagesPerRun());
-    for (CukNoticeDetail notice : notices) {
-      ingestNotice(notice);
+    long currentCount = noticeSourceRepository.countByAutoCollectedTrue();
+    syncStateService.markAttemptStarted(NoticeFeedSyncStateService.FEED_KEY, currentCount);
+    try {
+      List<CukNoticeDetail> notices = cukNoticeClient.fetchLatestNotices(properties.maxPagesPerRun());
+      for (CukNoticeDetail notice : notices) {
+        ingestNotice(notice);
+      }
+      long refreshedCount = noticeSourceRepository.countByAutoCollectedTrue();
+      syncStateService.markHealthy(NoticeFeedSyncStateService.FEED_KEY, refreshedCount);
+      log.info("Refreshed {} collected notices", notices.size());
+    } catch (RuntimeException exception) {
+      long refreshedCount = noticeSourceRepository.countByAutoCollectedTrue();
+      syncStateService.markFailed(
+          NoticeFeedSyncStateService.FEED_KEY,
+          exception.getMessage(),
+          refreshedCount
+      );
+      throw exception;
     }
-    log.info("Refreshed {} collected notices", notices.size());
   }
 
   public void bootstrapIfNeeded() {
-    if (!properties.bootstrapOnStartup() || noticeSourceRepository.existsByAutoCollectedTrue()) {
+    if (!properties.bootstrapOnStartup()) {
+      return;
+    }
+    if (noticeSourceRepository.existsByAutoCollectedTrue()) {
+      syncStateService.ensureHealthyIfMissing(
+          NoticeFeedSyncStateService.FEED_KEY,
+          noticeSourceRepository.countByAutoCollectedTrue()
+      );
       return;
     }
     refreshCollectedNotices();

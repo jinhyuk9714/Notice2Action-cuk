@@ -5,10 +5,12 @@ import com.cuk.notice2action.extraction.api.dto.NoticeActionBlockDto;
 import com.cuk.notice2action.extraction.api.dto.NoticeAttachmentDto;
 import com.cuk.notice2action.extraction.api.dto.NoticeDueHintDto;
 import com.cuk.notice2action.extraction.api.dto.NoticeFeedResponse;
+import com.cuk.notice2action.extraction.api.dto.NoticeFeedSyncStatusDto;
 import com.cuk.notice2action.extraction.api.dto.PersonalizedNoticeDetailDto;
 import com.cuk.notice2action.extraction.api.dto.PersonalizedNoticeSummaryDto;
 import com.cuk.notice2action.extraction.api.dto.ExtractedActionDto;
 import com.cuk.notice2action.extraction.persistence.entity.ExtractedActionEntity;
+import com.cuk.notice2action.extraction.persistence.entity.NoticeFeedSyncStateEntity;
 import com.cuk.notice2action.extraction.persistence.entity.NoticeSourceEntity;
 import com.cuk.notice2action.extraction.persistence.repository.NoticeSourceRepository;
 import com.cuk.notice2action.extraction.service.extractor.ActionSummaryBuilder;
@@ -34,6 +36,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,7 +58,10 @@ public class NoticeFeedService {
   private final TaskPhraseExtractor taskPhraseExtractor;
   private final ActionSummaryBuilder actionSummaryBuilder;
   private final NoticeActionabilityClassifier noticeActionabilityClassifier;
+  private final NoticeFeedSyncStateService syncStateService;
+  private final NoticeFeedProperties noticeFeedProperties;
 
+  @Autowired
   public NoticeFeedService(
       NoticeSourceRepository noticeSourceRepository,
       ObjectMapper objectMapper,
@@ -63,11 +69,33 @@ public class NoticeFeedService {
       ActionSummaryBuilder actionSummaryBuilder,
       NoticeActionabilityClassifier noticeActionabilityClassifier
   ) {
+    this(
+        noticeSourceRepository,
+        objectMapper,
+        taskPhraseExtractor,
+        actionSummaryBuilder,
+        noticeActionabilityClassifier,
+        null,
+        null
+    );
+  }
+
+  public NoticeFeedService(
+      NoticeSourceRepository noticeSourceRepository,
+      ObjectMapper objectMapper,
+      TaskPhraseExtractor taskPhraseExtractor,
+      ActionSummaryBuilder actionSummaryBuilder,
+      NoticeActionabilityClassifier noticeActionabilityClassifier,
+      NoticeFeedSyncStateService syncStateService,
+      NoticeFeedProperties noticeFeedProperties
+  ) {
     this.noticeSourceRepository = noticeSourceRepository;
     this.objectMapper = objectMapper;
     this.taskPhraseExtractor = taskPhraseExtractor;
     this.actionSummaryBuilder = actionSummaryBuilder;
     this.noticeActionabilityClassifier = noticeActionabilityClassifier;
+    this.syncStateService = syncStateService;
+    this.noticeFeedProperties = noticeFeedProperties;
   }
 
   @Transactional(readOnly = true)
@@ -104,7 +132,8 @@ public class NoticeFeedService {
         filtered.size(),
         totalPages,
         toIndex < filtered.size(),
-        availableBoards
+        availableBoards,
+        resolveSyncStatus()
     );
   }
 
@@ -157,6 +186,59 @@ public class NoticeFeedService {
             .thenComparing(Map.Entry::getKey))
         .map(Map.Entry::getKey)
         .toList();
+  }
+
+  private NoticeFeedSyncStatusDto resolveSyncStatus() {
+    long noticeCount = noticeSourceRepository.countByAutoCollectedTrue();
+    if (syncStateService == null || noticeFeedProperties == null) {
+      return new NoticeFeedSyncStatusDto(
+          noticeCount > 0 ? "healthy" : "bootstrapping",
+          null,
+          null,
+          null,
+          noticeCount
+      );
+    }
+
+    return syncStateService.find(NoticeFeedSyncStateService.FEED_KEY)
+        .map(state -> toSyncStatusDto(state, noticeCount))
+        .orElseGet(() -> {
+          if (noticeCount > 0) {
+            return new NoticeFeedSyncStatusDto("healthy", null, null, null, noticeCount);
+          }
+          return new NoticeFeedSyncStatusDto("bootstrapping", null, null, null, 0);
+        });
+  }
+
+  private NoticeFeedSyncStatusDto toSyncStatusDto(NoticeFeedSyncStateEntity state, long fallbackNoticeCount) {
+    long noticeCount = state.getNoticeCount() > 0 ? state.getNoticeCount() : fallbackNoticeCount;
+    String resolvedState = resolveSyncState(state);
+    return new NoticeFeedSyncStatusDto(
+        resolvedState,
+        formatOffsetDateTime(state.getLastSuccessfulSyncAt()),
+        formatOffsetDateTime(state.getLastAttemptedSyncAt()),
+        "failed".equals(resolvedState) ? state.getLastErrorMessage() : null,
+        noticeCount
+    );
+  }
+
+  private String resolveSyncState(NoticeFeedSyncStateEntity state) {
+    if (state.getLastSuccessfulSyncAt() == null) {
+      return "failed".equals(state.getState()) ? "failed" : "bootstrapping";
+    }
+    if ("failed".equals(state.getState())) {
+      return "failed";
+    }
+    long staleThresholdMillis = Math.max(noticeFeedProperties.fixedDelay() * 2L, 1L);
+    OffsetDateTime staleThreshold = OffsetDateTime.now(APP_OFFSET).minus(staleThresholdMillis, ChronoUnit.MILLIS);
+    if (state.getLastSuccessfulSyncAt().isBefore(staleThreshold)) {
+      return "stale";
+    }
+    return "healthy";
+  }
+
+  private String formatOffsetDateTime(OffsetDateTime value) {
+    return value == null ? null : value.toString();
   }
 
   static String toAttachmentsJson(List<CukNoticeAttachment> attachments) {

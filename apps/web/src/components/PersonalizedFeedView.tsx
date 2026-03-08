@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { fetchNoticeDetail, fetchNoticeFeed } from '../lib/api';
 import type { NoticePreferences } from '../lib/noticePrefs';
 import type { UserProfile } from '../lib/profile';
-import type { PersonalizedNoticeDetail, PersonalizedNoticeSummary } from '../lib/types';
+import type {
+  NoticeFeedSyncStatus,
+  PersonalizedNoticeDetail,
+  PersonalizedNoticeSummary,
+} from '../lib/types';
 import { NoticeDetailContent } from './NoticeDetailContent';
 
 type PersonalizedFeedViewProps = Readonly<{
@@ -18,6 +22,49 @@ type PersonalizedFeedViewProps = Readonly<{
   onUnhide: (id: string) => void;
 }>;
 
+function formatRelativeSyncTime(value: string | null): string | null {
+  if (value === null) {
+    return null;
+  }
+  const time = Date.parse(value);
+  if (Number.isNaN(time)) {
+    return null;
+  }
+  const diffMs = Math.max(Date.now() - time, 0);
+  if (diffMs < 60_000) {
+    return '방금 전';
+  }
+  if (diffMs < 3_600_000) {
+    return `${Math.floor(diffMs / 60_000)}분 전`;
+  }
+  if (diffMs < 86_400_000) {
+    return `${Math.floor(diffMs / 3_600_000)}시간 전`;
+  }
+  return `${Math.floor(diffMs / 86_400_000)}일 전`;
+}
+
+function buildSyncStatusMessage(syncStatus: NoticeFeedSyncStatus | null): { primary: string; detail: string | null } | null {
+  if (syncStatus === null) {
+    return null;
+  }
+  const relative = formatRelativeSyncTime(syncStatus.lastSuccessfulSyncAt);
+  switch (syncStatus.state) {
+    case 'healthy':
+      return { primary: `마지막 동기화 ${relative ?? '방금 전'}`, detail: null };
+    case 'stale':
+      return { primary: `동기화 지연 · 마지막 동기화 ${relative ?? '알 수 없음'}`, detail: null };
+    case 'bootstrapping':
+      return { primary: '공지 동기화 중...', detail: null };
+    case 'failed':
+      return {
+        primary: syncStatus.noticeCount === 0
+          ? '공지 동기화 실패 · 잠시 후 다시 시도해 주세요'
+          : `동기화 실패 · 마지막 동기화 ${relative ?? '알 수 없음'}`,
+        detail: syncStatus.lastErrorMessage,
+      };
+  }
+}
+
 export function PersonalizedFeedView({
   profile,
   preferences,
@@ -32,6 +79,7 @@ export function PersonalizedFeedView({
 }: PersonalizedFeedViewProps): ReactElement {
   const [notices, setNotices] = useState<readonly PersonalizedNoticeSummary[]>([]);
   const [availableBoards, setAvailableBoards] = useState<readonly string[]>([]);
+  const [syncStatus, setSyncStatus] = useState<NoticeFeedSyncStatus | null>(null);
   const [detail, setDetail] = useState<PersonalizedNoticeDetail | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initialNoticeId);
   const [selectedBoard, setSelectedBoard] = useState<string | null>(initialBoard);
@@ -52,6 +100,7 @@ export function PersonalizedFeedView({
       if (cancelled) return;
       setNotices(response.notices);
       setAvailableBoards(response.availableBoards);
+      setSyncStatus(response.syncStatus);
       onAvailableBoardsChange?.(response.availableBoards);
     }).catch((caught) => {
       if (cancelled) return;
@@ -89,6 +138,10 @@ export function PersonalizedFeedView({
 
   const visibleNotices = notices.filter((notice) => !preferences.hiddenIds.includes(notice.id));
   const hiddenNotices = notices.filter((notice) => preferences.hiddenIds.includes(notice.id));
+  const syncMessage = buildSyncStatusMessage(syncStatus);
+  const showGenericEmptyState = !loading
+    && visibleNotices.length === 0
+    && !(syncStatus !== null && syncStatus.noticeCount === 0 && ['bootstrapping', 'failed'].includes(syncStatus.state));
 
   function selectNotice(id: string): void {
     setSelectedId(id);
@@ -111,6 +164,17 @@ export function PersonalizedFeedView({
               <p className="eyebrow">개인화 피드</p>
               <h2>내게 중요한 공지</h2>
             </div>
+
+            {syncMessage !== null ? (
+              <div
+                className={`sync-status-strip sync-status-${syncStatus?.state ?? 'healthy'}`}
+                role="status"
+                aria-live="polite"
+              >
+                <p>{syncMessage.primary}</p>
+                {syncMessage.detail !== null ? <span>{syncMessage.detail}</span> : null}
+              </div>
+            ) : null}
 
             <div className="chip-row board-filter-row" aria-label="게시판 필터">
               <button
@@ -138,7 +202,7 @@ export function PersonalizedFeedView({
           <div className="panel-scroll-body feed-panel-body" data-testid="feed-panel-body">
             {error !== null ? <div className="error-banner">{error}</div> : null}
             {loading ? <p>공지 불러오는 중...</p> : null}
-            {!loading && visibleNotices.length === 0 ? <p>중요 공지가 없습니다.</p> : null}
+            {showGenericEmptyState ? <p>중요 공지가 없습니다.</p> : null}
 
             <div className="card-list">
               {visibleNotices.map((notice) => {

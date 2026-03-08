@@ -1,6 +1,9 @@
 package com.cuk.notice2action.extraction.service.notice;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +39,8 @@ class NoticeFeedIngestionServiceTest {
   private ActionExtractionService actionExtractionService;
   @Mock
   private ActionPersistenceService actionPersistenceService;
+  @Mock
+  private NoticeFeedSyncStateService syncStateService;
 
   private NoticeFeedIngestionService service;
 
@@ -54,7 +59,8 @@ class NoticeFeedIngestionServiceTest {
             true
         ),
         new NoticeActionabilityClassifier(),
-        new DateExtractor()
+        new DateExtractor(),
+        syncStateService
     );
   }
 
@@ -71,6 +77,7 @@ class NoticeFeedIngestionServiceTest {
     );
     when(cukNoticeClient.fetchLatestNotices(2)).thenReturn(List.of(detail));
     when(noticeSourceRepository.findByExternalNoticeId("268986")).thenReturn(Optional.empty());
+    when(noticeSourceRepository.countByAutoCollectedTrue()).thenReturn(0L, 1L);
     when(actionExtractionService.extract(any(ActionExtractionRequest.class)))
         .thenReturn(new ActionExtractionResponse(List.of(new ExtractedActionDto(
             null, null, "학생증 신청", "신청", null, null, "신입생", List.of(), "TRINITY", SourceCategory.NOTICE, List.of(), false, 0.9, null
@@ -81,6 +88,8 @@ class NoticeFeedIngestionServiceTest {
     verify(noticeSourceRepository).save(org.mockito.ArgumentMatchers.argThat(source ->
         "장학".equals(source.getNoticeBoardLabel())
     ));
+    verify(syncStateService).markAttemptStarted(NoticeFeedSyncStateService.FEED_KEY, 0L);
+    verify(syncStateService).markHealthy(NoticeFeedSyncStateService.FEED_KEY, 1L);
     verify(actionPersistenceService).replaceSourceActions(any(NoticeSourceEntity.class), any(ActionExtractionResponse.class));
   }
 
@@ -101,11 +110,14 @@ class NoticeFeedIngestionServiceTest {
 
     when(cukNoticeClient.fetchLatestNotices(2)).thenReturn(List.of(detail));
     when(noticeSourceRepository.findByExternalNoticeId("268986")).thenReturn(Optional.of(existing));
+    when(noticeSourceRepository.countByAutoCollectedTrue()).thenReturn(5L, 5L);
 
     service.refreshCollectedNotices();
 
     verify(actionExtractionService, never()).extract(any(ActionExtractionRequest.class));
     verify(actionPersistenceService, never()).replaceSourceActions(any(NoticeSourceEntity.class), any(ActionExtractionResponse.class));
+    verify(syncStateService).markAttemptStarted(NoticeFeedSyncStateService.FEED_KEY, 5L);
+    verify(syncStateService).markHealthy(NoticeFeedSyncStateService.FEED_KEY, 5L);
   }
 
   @Test
@@ -121,6 +133,7 @@ class NoticeFeedIngestionServiceTest {
     );
     when(cukNoticeClient.fetchLatestNotices(2)).thenReturn(List.of(detail));
     when(noticeSourceRepository.findByExternalNoticeId("269011")).thenReturn(Optional.empty());
+    when(noticeSourceRepository.countByAutoCollectedTrue()).thenReturn(0L, 1L);
     when(actionExtractionService.extract(any(ActionExtractionRequest.class)))
         .thenReturn(new ActionExtractionResponse(List.of(new ExtractedActionDto(
             null, null, "수강과목 취소", "[수강취소]", null, null, null, List.of(), null, SourceCategory.NOTICE, List.of(), false, 0.82, null
@@ -135,6 +148,7 @@ class NoticeFeedIngestionServiceTest {
             && "3. 25. (수) 17:00".equals(source.getPrimaryDueLabel())
             && "action_required".equals(source.getActionability())
     ));
+    verify(syncStateService).markHealthy(NoticeFeedSyncStateService.FEED_KEY, 1L);
   }
 
   @Test
@@ -150,6 +164,7 @@ class NoticeFeedIngestionServiceTest {
     );
     when(cukNoticeClient.fetchLatestNotices(2)).thenReturn(List.of(detail));
     when(noticeSourceRepository.findByExternalNoticeId("268679")).thenReturn(Optional.empty());
+    when(noticeSourceRepository.countByAutoCollectedTrue()).thenReturn(0L, 1L);
     when(actionExtractionService.extract(any(ActionExtractionRequest.class)))
         .thenReturn(new ActionExtractionResponse(List.of(new ExtractedActionDto(
             null, null, "확인", "[확인]", null, null, null, List.of(), "TRINITY", SourceCategory.NOTICE, List.of(), false, 0.72, null
@@ -162,6 +177,7 @@ class NoticeFeedIngestionServiceTest {
             && source.getPrimaryDueLabel() == null
             && "informational".equals(source.getActionability())
     ));
+    verify(syncStateService).markHealthy(NoticeFeedSyncStateService.FEED_KEY, 1L);
   }
 
   @Test
@@ -189,6 +205,7 @@ class NoticeFeedIngestionServiceTest {
 
     when(cukNoticeClient.fetchLatestNotices(2)).thenReturn(List.of(detail));
     when(noticeSourceRepository.findByExternalNoticeId("268986")).thenReturn(Optional.of(existing));
+    when(noticeSourceRepository.countByAutoCollectedTrue()).thenReturn(1L, 1L);
     when(actionExtractionService.extract(any(ActionExtractionRequest.class)))
         .thenReturn(new ActionExtractionResponse(List.of()));
 
@@ -197,5 +214,32 @@ class NoticeFeedIngestionServiceTest {
     verify(noticeSourceRepository).save(org.mockito.ArgumentMatchers.argThat(source ->
         "장학".equals(source.getNoticeBoardLabel())
     ));
+    verify(syncStateService).markHealthy(NoticeFeedSyncStateService.FEED_KEY, 1L);
+  }
+
+  @Test
+  void marksFeedFailedWhenRefreshThrows() {
+    when(noticeSourceRepository.countByAutoCollectedTrue()).thenReturn(0L, 0L);
+    when(cukNoticeClient.fetchLatestNotices(2)).thenThrow(new IllegalStateException("fetch failed"));
+
+    assertThrows(IllegalStateException.class, () -> service.refreshCollectedNotices());
+
+    verify(syncStateService).markAttemptStarted(NoticeFeedSyncStateService.FEED_KEY, 0L);
+    verify(syncStateService).markFailed(
+        eq(NoticeFeedSyncStateService.FEED_KEY),
+        contains("fetch failed"),
+        eq(0L)
+    );
+  }
+
+  @Test
+  void bootstrapExistingDataEnsuresHealthyStateWithoutRefresh() {
+    when(noticeSourceRepository.existsByAutoCollectedTrue()).thenReturn(true);
+    when(noticeSourceRepository.countByAutoCollectedTrue()).thenReturn(3L);
+
+    service.bootstrapIfNeeded();
+
+    verify(syncStateService).ensureHealthyIfMissing(NoticeFeedSyncStateService.FEED_KEY, 3L);
+    verify(cukNoticeClient, never()).fetchLatestNotices(any(Integer.class));
   }
 }

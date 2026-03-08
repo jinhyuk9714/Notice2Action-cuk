@@ -395,10 +395,19 @@ describe('parseSourceDetail', () => {
 });
 
 describe('parseNoticeFeedResponse', () => {
+  const VALID_NOTICE_SYNC_STATUS = {
+    state: 'healthy',
+    lastSuccessfulSyncAt: '2026-03-06T12:00:00+09:00',
+    lastAttemptedSyncAt: '2026-03-06T12:00:00+09:00',
+    lastErrorMessage: null,
+    noticeCount: 1,
+  } as const;
+
   it('parses valid personalized notice feed', () => {
     const result = parseNoticeFeedResponse({
       notices: [VALID_NOTICE_SUMMARY],
       availableBoards: ['장학', '학사'],
+      syncStatus: VALID_NOTICE_SYNC_STATUS,
       currentPage: 0,
       pageSize: 20,
       totalElements: 1,
@@ -410,6 +419,7 @@ describe('parseNoticeFeedResponse', () => {
     expect(result.notices[0].boardLabel).toBe('장학');
     expect(result.notices[0].dueHint?.label).toBe('3월 5일까지');
     expect(result.availableBoards).toEqual(['장학', '학사']);
+    expect(result.syncStatus.state).toBe('healthy');
   });
 
   it('throws when importanceReasons is missing', () => {
@@ -417,6 +427,7 @@ describe('parseNoticeFeedResponse', () => {
     expect(() => parseNoticeFeedResponse({
       notices: [broken],
       availableBoards: ['장학'],
+      syncStatus: VALID_NOTICE_SYNC_STATUS,
       currentPage: 0,
       pageSize: 20,
       totalElements: 1,

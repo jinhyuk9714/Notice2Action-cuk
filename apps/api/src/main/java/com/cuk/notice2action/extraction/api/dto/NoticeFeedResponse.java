@@ -9,7 +9,8 @@ public record NoticeFeedResponse(
     long totalElements,
     int totalPages,
     boolean hasNext,
-    List<String> availableBoards
+    List<String> availableBoards,
+    NoticeFeedSyncStatusDto syncStatus
 ) {
   public NoticeFeedResponse {
     notices = notices == null ? List.of() : List.copyOf(notices);
@@ -24,6 +25,18 @@ public record NoticeFeedResponse(
       int totalPages,
       boolean hasNext
   ) {
-    this(notices, currentPage, pageSize, totalElements, totalPages, hasNext, List.of());
+    this(notices, currentPage, pageSize, totalElements, totalPages, hasNext, List.of(), null);
+  }
+
+  public NoticeFeedResponse(
+      List<PersonalizedNoticeSummaryDto> notices,
+      int currentPage,
+      int pageSize,
+      long totalElements,
+      int totalPages,
+      boolean hasNext,
+      List<String> availableBoards
+  ) {
+    this(notices, currentPage, pageSize, totalElements, totalPages, hasNext, availableBoards, null);
   }
 }

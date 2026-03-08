@@ -11,6 +11,7 @@ import com.cuk.notice2action.extraction.api.dto.NoticeActionBlockDto;
 import com.cuk.notice2action.extraction.api.dto.NoticeAttachmentDto;
 import com.cuk.notice2action.extraction.api.dto.NoticeDueHintDto;
 import com.cuk.notice2action.extraction.api.dto.NoticeFeedResponse;
+import com.cuk.notice2action.extraction.api.dto.NoticeFeedSyncStatusDto;
 import com.cuk.notice2action.extraction.api.dto.PersonalizedNoticeDetailDto;
 import com.cuk.notice2action.extraction.api.dto.PersonalizedNoticeSummaryDto;
 import com.cuk.notice2action.extraction.service.notice.NoticeFeedService;
@@ -54,7 +55,14 @@ class NoticeFeedControllerTest {
             1,
             1,
             false,
-            List.of("장학", "학사")
+            List.of("장학", "학사"),
+            new NoticeFeedSyncStatusDto(
+                "healthy",
+                "2026-03-06T12:00:00+09:00",
+                "2026-03-06T12:00:00+09:00",
+                null,
+                1
+            )
         ));
 
     mockMvc.perform(get("/api/v1/notices/feed")
@@ -69,6 +77,8 @@ class NoticeFeedControllerTest {
         .andExpect(jsonPath("$.notices[0].title").value("학생증 신청 안내"))
         .andExpect(jsonPath("$.notices[0].boardLabel").value("장학"))
         .andExpect(jsonPath("$.availableBoards[0]").value("장학"))
+        .andExpect(jsonPath("$.syncStatus.state").value("healthy"))
+        .andExpect(jsonPath("$.syncStatus.noticeCount").value(1))
         .andExpect(jsonPath("$.notices[0].importanceReasons[0]").value("신입생 공지"))
         .andExpect(jsonPath("$.notices[0].actionability").value("action_required"));
   }
