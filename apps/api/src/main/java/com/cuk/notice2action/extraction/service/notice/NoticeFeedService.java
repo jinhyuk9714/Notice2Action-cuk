@@ -104,6 +104,11 @@ public class NoticeFeedService {
   }
 
   @Transactional(readOnly = true)
+  public NoticeFeedSyncStatusDto getSyncStatus() {
+    return resolveSyncStatus();
+  }
+
+  @Transactional(readOnly = true)
   public NoticeFeedResponse getFeed(NoticeProfile profile, int page, int size, String board) {
     List<ScoredNotice> scored = noticeSourceRepository.findAllAutoCollectedNotices().stream()
         .map(source -> scoreNotice(source, normalizeProfile(profile)))
