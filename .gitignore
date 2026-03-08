@@ -4,11 +4,11 @@
 .vscode/
 *.iml
 
-# Claude state
-.claude/state/
-.claude/plans/
-.claude/memory/
-.claude/projects/
+# Local agent tooling
+.claude/
+CLAUDE.md
+.agents/
+AGENTS.md
 
 # Web
 apps/web/node_modules/

@@ -6,7 +6,6 @@
 - `apps/api/src/test/resources/fixtures/notice-feed/*`
 - `README.md`
 - `PROJECT_PLAN.md`
-- `CLAUDE.md`
 - smoke-test notes under `docs/`
 
 ## Focus
