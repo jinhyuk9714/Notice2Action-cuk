@@ -116,26 +116,9 @@ export function computeRelevance(
 ): RelevanceResult {
   if (!isProfileConfigured(profile)) return UNKNOWN;
 
-  if (structured != null) {
-    if (structured.universal) return { level: 'relevant', reason: '전체 대상' };
-    const status = profile.status;
-    const year = profile.year;
-    if (status !== null && structured.excludedStatuses.includes(status)) {
-      return { level: 'not_relevant', reason: `${status} 제외` };
-    }
-    if (status !== null && structured.statuses.length > 0 && !structured.statuses.includes(status)) {
-      return { level: 'not_relevant', reason: '대상 아님' };
-    }
-    if (status !== null && structured.statuses.includes(status)) {
-      return { level: 'relevant', reason: status };
-    }
-    if (year !== null && structured.years.length > 0 && structured.years.includes(year)) {
-      return { level: 'relevant', reason: `${year}학년` };
-    }
-    if (year !== null && structured.years.length > 0 && !structured.years.includes(year)) {
-      return { level: 'not_relevant', reason: `${year}학년 미해당` };
-    }
-    return UNKNOWN;
+  const structuredResult = computeStructuredRelevance(profile, structured);
+  if (structuredResult !== null) {
+    return structuredResult;
   }
 
   if (eligibility === null || eligibility.trim().length === 0) return UNKNOWN;
@@ -210,4 +193,58 @@ export function computeRelevance(
   }
 
   return UNKNOWN;
+}
+
+function computeStructuredRelevance(
+  profile: UserProfile,
+  structured?: StructuredEligibility | null,
+): RelevanceResult | null {
+  if (structured == null) {
+    return null;
+  }
+
+  if (structured.universal) {
+    return { level: 'relevant', reason: '전체 대상' };
+  }
+
+  if (profile.status !== null) {
+    if (structured.excludedStatuses.includes(profile.status)) {
+      return { level: 'not_relevant', reason: `${profile.status} 제외` };
+    }
+    if (structured.statuses.length > 0) {
+      if (structured.statuses.includes(profile.status)) {
+        return { level: 'relevant', reason: `${profile.status} 해당` };
+      }
+      return { level: 'not_relevant', reason: `${structured.statuses.join(', ')} 대상` };
+    }
+  }
+
+  if (profile.year !== null && structured.years.length > 0) {
+    if (structured.years.includes(profile.year)) {
+      return { level: 'relevant', reason: `${profile.year}학년 해당` };
+    }
+    return { level: 'not_relevant', reason: `${structured.years.join(', ')}학년 대상` };
+  }
+
+  if (profile.department !== null && profile.department.length > 0 && structured.department !== null) {
+    const profileVariants = departmentVariants(profile.department);
+    const structuredVariants = departmentVariants(structured.department);
+    const matches = [...profileVariants].some((variant) => structuredVariants.has(variant));
+    if (matches) {
+      return { level: 'relevant', reason: `${profile.department} 해당` };
+    }
+    return { level: 'not_relevant', reason: `${structured.department} 대상` };
+  }
+
+  return null;
+}
+
+function departmentVariants(name: string): ReadonlySet<string> {
+  const trimmed = name.trim();
+  const normalized = normalizeDepartment(trimmed);
+  return new Set([
+    trimmed,
+    normalized,
+    ...DEPARTMENT_SUFFIXES.map((suffix) => normalized + suffix),
+  ].filter((value) => value.length >= 2));
 }

@@ -3,6 +3,7 @@ package com.cuk.notice2action.extraction.service.extractor;
 import com.cuk.notice2action.extraction.service.model.ActionSegment;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -11,6 +12,11 @@ public class ActionSegmenter {
   private final ActionVerbExtractor verbExtractor;
   private final TaskPhraseExtractor taskPhraseExtractor;
 
+  public ActionSegmenter(ActionVerbExtractor verbExtractor) {
+    this(verbExtractor, new TaskPhraseExtractor());
+  }
+
+  @Autowired
   public ActionSegmenter(ActionVerbExtractor verbExtractor, TaskPhraseExtractor taskPhraseExtractor) {
     this.verbExtractor = verbExtractor;
     this.taskPhraseExtractor = taskPhraseExtractor;
@@ -36,6 +42,9 @@ public class ActionSegmenter {
       boolean proceduralStep = isProceduralStep(trimmed);
       String foundVerb = verbExtractor.findVerb(trimmed, extraVerbs);
       String foundTaskPhrase = taskPhraseExtractor.extractForSegmentation(trimmed, foundVerb);
+      if (foundTaskPhrase == null && foundVerb != null && extraVerbs.contains(foundVerb)) {
+        foundTaskPhrase = foundVerb;
+      }
 
       if (shouldStartNewSegment(
           proceduralStep,

@@ -2,12 +2,36 @@ import { describe, it, expect } from 'vitest';
 import { parseHash, buildHash } from './router';
 
 describe('parseHash', () => {
-  it('returns extract for empty hash', () => {
-    expect(parseHash('')).toEqual({ view: 'extract' });
+  it('returns feed for empty hash', () => {
+    expect(parseHash('')).toEqual({ view: 'feed', noticeId: null, board: null });
   });
 
-  it('returns extract for #/', () => {
-    expect(parseHash('#/')).toEqual({ view: 'extract' });
+  it('returns feed for #/', () => {
+    expect(parseHash('#/')).toEqual({ view: 'feed', noticeId: null, board: null });
+  });
+
+  it('parses #/feed', () => {
+    expect(parseHash('#/feed')).toEqual({ view: 'feed', noticeId: null, board: null });
+  });
+
+  it('parses #/feed/notice-123 with board filter', () => {
+    expect(parseHash('#/feed/notice-123?board=%ED%95%99%EC%82%AC')).toEqual({
+      view: 'feed',
+      noticeId: 'notice-123',
+      board: '학사',
+    });
+  });
+
+  it('parses #/saved', () => {
+    expect(parseHash('#/saved')).toEqual({ view: 'saved', noticeId: null });
+  });
+
+  it('parses #/saved/notice-123', () => {
+    expect(parseHash('#/saved/notice-123')).toEqual({ view: 'saved', noticeId: 'notice-123' });
+  });
+
+  it('parses #/profile', () => {
+    expect(parseHash('#/profile')).toEqual({ view: 'profile' });
   });
 
   it('parses #/extract', () => {
@@ -30,8 +54,8 @@ describe('parseHash', () => {
     expect(parseHash('#/sources/src-456')).toEqual({ view: 'sources', sourceId: 'src-456' });
   });
 
-  it('returns extract for unknown path', () => {
-    expect(parseHash('#/unknown')).toEqual({ view: 'extract' });
+  it('returns feed for unknown path', () => {
+    expect(parseHash('#/unknown')).toEqual({ view: 'feed', noticeId: null, board: null });
   });
 
   it('parses inbox with sort and query filters', () => {
@@ -76,6 +100,26 @@ describe('parseHash', () => {
 });
 
 describe('buildHash', () => {
+  it('builds #/feed', () => {
+    expect(buildHash({ view: 'feed', noticeId: null, board: null })).toBe('#/feed');
+  });
+
+  it('builds #/feed/notice-123?board=', () => {
+    expect(buildHash({ view: 'feed', noticeId: 'notice-123', board: '학사' })).toBe('#/feed/notice-123?board=%ED%95%99%EC%82%AC');
+  });
+
+  it('builds #/saved', () => {
+    expect(buildHash({ view: 'saved', noticeId: null })).toBe('#/saved');
+  });
+
+  it('builds #/saved/notice-123', () => {
+    expect(buildHash({ view: 'saved', noticeId: 'notice-123' })).toBe('#/saved/notice-123');
+  });
+
+  it('builds #/profile', () => {
+    expect(buildHash({ view: 'profile' })).toBe('#/profile');
+  });
+
   it('builds #/extract', () => {
     expect(buildHash({ view: 'extract' })).toBe('#/extract');
   });
@@ -111,6 +155,11 @@ describe('buildHash', () => {
 
   it('is inverse of parseHash', () => {
     const routes = [
+      { view: 'feed' as const, noticeId: null, board: null },
+      { view: 'feed' as const, noticeId: 'notice-1', board: '학사' },
+      { view: 'saved' as const, noticeId: null },
+      { view: 'saved' as const, noticeId: 'notice-1' },
+      { view: 'profile' as const },
       { view: 'extract' as const },
       { view: 'inbox' as const, actionId: null, filters: {} },
       { view: 'inbox' as const, actionId: 'abc', filters: {} },

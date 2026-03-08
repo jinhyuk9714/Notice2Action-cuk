@@ -29,7 +29,6 @@ public record ExtractedActionDto(
     additionalDates = additionalDates == null ? List.of() : List.copyOf(additionalDates);
     requiredItems = requiredItems == null ? List.of() : List.copyOf(requiredItems);
     evidence = evidence == null ? List.of() : List.copyOf(evidence);
-    additionalDates = additionalDates == null ? List.of() : List.copyOf(additionalDates);
     status = status == null ? "pending" : status;
   }
 
@@ -65,7 +64,8 @@ public record ExtractedActionDto(
         evidence,
         inferred,
         confidenceScore,
-        createdAt
+        createdAt,
+        null
     );
   }
 }

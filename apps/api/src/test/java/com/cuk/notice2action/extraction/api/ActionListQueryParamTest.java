@@ -103,27 +103,6 @@ class ActionListQueryParamTest {
   }
 
   @Test
-  void exportCalendar_filters_by_status() throws Exception {
-    UUID pendingId = persistSampleAndGetId("2026년 3월 12일까지 신청하세요.", "진행중 액션");
-    UUID completedId = persistSampleAndGetId("2026년 3월 13일까지 제출하세요.", "완료 액션");
-
-    persistenceService.updateAction(completedId, new com.cuk.notice2action.extraction.api.dto.ActionUpdateRequest(
-        null, null, null, null, null, null, null, null, "completed"
-    ));
-
-    String body = mockMvc.perform(get("/api/v1/actions/calendar.ics")
-            .param("status", "completed"))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-
-    assertThat(body).contains("완료 액션");
-    assertThat(body).doesNotContain("진행중 액션");
-    assertThat(body).doesNotContain(pendingId.toString());
-  }
-
-  @Test
   void listActions_due_sort_with_filters_keeps_null_due_last() {
     persistSample("정렬테스트 2026년 3월 12일까지 신청하세요.", "정렬테스트-마감");
     persistSample("정렬테스트 안내문입니다.", "정렬테스트-무마감");

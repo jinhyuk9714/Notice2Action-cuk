@@ -59,6 +59,7 @@ public class HeuristicActionExtractionService implements ActionExtractionService
   @Value("${app.anthropic.confidence-threshold:0.65}")
   private double llmThreshold;
 
+  @Autowired
   public HeuristicActionExtractionService(
       TextNormalizer textNormalizer,
       DateExtractor dateExtractor,
@@ -113,6 +114,62 @@ public class HeuristicActionExtractionService implements ActionExtractionService
         taskPhraseExtractor,
         structuredEligibilityParser,
         new ExtractionStrategyFactory(new DefaultExtractionStrategy(), new SyllabusExtractionStrategy())
+    );
+  }
+
+  public HeuristicActionExtractionService(
+      TextNormalizer textNormalizer,
+      DateExtractor dateExtractor,
+      SystemHintExtractor systemHintExtractor,
+      RequiredItemExtractor requiredItemExtractor,
+      ActionVerbExtractor actionVerbExtractor,
+      EligibilityExtractor eligibilityExtractor,
+      ActionSegmenter actionSegmenter,
+      ActionSummaryBuilder actionSummaryBuilder,
+      TitleDeriver titleDeriver,
+      StructuredEligibilityParser structuredEligibilityParser,
+      ExtractionStrategyFactory strategyFactory
+  ) {
+    this(
+        textNormalizer,
+        dateExtractor,
+        systemHintExtractor,
+        requiredItemExtractor,
+        actionVerbExtractor,
+        eligibilityExtractor,
+        actionSegmenter,
+        actionSummaryBuilder,
+        titleDeriver,
+        new TaskPhraseExtractor(),
+        structuredEligibilityParser,
+        strategyFactory
+    );
+  }
+
+  public HeuristicActionExtractionService(
+      TextNormalizer textNormalizer,
+      DateExtractor dateExtractor,
+      SystemHintExtractor systemHintExtractor,
+      RequiredItemExtractor requiredItemExtractor,
+      ActionVerbExtractor actionVerbExtractor,
+      EligibilityExtractor eligibilityExtractor,
+      ActionSegmenter actionSegmenter,
+      ActionSummaryBuilder actionSummaryBuilder,
+      TitleDeriver titleDeriver,
+      StructuredEligibilityParser structuredEligibilityParser
+  ) {
+    this(
+        textNormalizer,
+        dateExtractor,
+        systemHintExtractor,
+        requiredItemExtractor,
+        actionVerbExtractor,
+        eligibilityExtractor,
+        actionSegmenter,
+        actionSummaryBuilder,
+        titleDeriver,
+        new TaskPhraseExtractor(),
+        structuredEligibilityParser
     );
   }
 
