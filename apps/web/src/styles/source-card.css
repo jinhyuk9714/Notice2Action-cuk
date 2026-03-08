@@ -2,57 +2,77 @@
 
 .source-card {
   cursor: pointer;
-  transition: border-color var(--ease-default), box-shadow var(--ease-default), transform var(--ease-default);
+  transition: all var(--ease-default);
+  box-shadow: 0 1px 2px var(--color-shadow-light);
 }
 
 .source-card:hover {
-  border-color: var(--color-brand-border);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px var(--color-shadow-brand);
+  border-color: var(--color-border-input);
+  background: var(--color-bg-surface-hover);
+  box-shadow: 0 2px 4px var(--color-shadow-light);
 }
 
 .source-card-selected {
   border-color: var(--color-brand);
-  box-shadow: 0 0 0 2px var(--color-shadow-brand-ring);
+  background: var(--color-brand-light);
+  box-shadow: 0 1px 2px var(--color-shadow-brand);
+}
+
+.source-card-selected:hover {
+  border-color: var(--color-brand-hover);
+  background: var(--color-brand-light);
 }
 
 .source-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
 .source-card-date {
   font-size: var(--text-xs);
-  color: var(--color-text-faint);
+  color: var(--color-text-muted);
+  font-weight: 500;
 }
 
 .source-card-title {
   margin: 0 0 var(--space-1);
-  font-size: 0.95rem;
+  font-size: var(--text-md);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--color-text-strong);
 }
 
 .source-card-meta {
   margin: 0;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
 }
 
 /* Source detail — actions list */
 
 .source-actions-list {
   margin-top: var(--space-4);
+  background: var(--color-bg-surface-hover);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-light);
+}
+
+.source-actions-list h4 {
+  margin: 0 0 var(--space-2) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-strong);
+  font-weight: 600;
 }
 
 .source-actions-list ul {
   list-style: none;
   padding: 0;
-  margin: var(--space-2) 0 0;
+  margin: 0;
 }
 
 .source-action-item {
@@ -65,15 +85,17 @@
 
 .source-action-item:last-child {
   border-bottom: none;
+  padding-bottom: 0;
 }
 
 .source-action-title {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  color: var(--color-text-primary);
 }
 
 .source-action-due {
@@ -81,4 +103,5 @@
   color: var(--color-text-muted);
   white-space: nowrap;
   margin-left: var(--space-3);
+  font-weight: 500;
 }
