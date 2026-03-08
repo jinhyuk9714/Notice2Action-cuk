@@ -1,43 +1,20 @@
-export type InboxFilters = Readonly<{
-  sort?: string;
-  q?: string;
-  category?: string;
-  dateRange?: string;
-  customFrom?: string;
-  customTo?: string;
-  status?: string;
-}>;
+import { isActionSort, isActionStatus, type InboxFilters } from './actionFilters';
+
+export type { InboxFilters } from './actionFilters';
 
 export type Route =
-  | Readonly<{ view: 'feed'; noticeId: string | null; board: string | null }>
-  | Readonly<{ view: 'saved'; noticeId: string | null }>
-  | Readonly<{ view: 'profile' }>
   | Readonly<{ view: 'extract' }>
   | Readonly<{ view: 'inbox'; actionId: string | null; filters: InboxFilters }>
   | Readonly<{ view: 'sources'; sourceId: string | null }>;
-
-function parseFeedBoard(queryString: string): string | null {
-  if (queryString.length === 0) return null;
-  const params = new URLSearchParams(queryString);
-  const board = params.get('board');
-  return board !== null && board.length > 0 ? board : null;
-}
-
-function buildFeedQueryString(board: string | null): string {
-  if (board === null || board.length === 0) return '';
-  const params = new URLSearchParams();
-  params.set('board', board);
-  return params.toString();
-}
 
 function parseInboxFilters(queryString: string): InboxFilters {
   if (queryString.length === 0) return {};
 
   const params = new URLSearchParams(queryString);
-  const filters: Record<string, string> = {};
+  const filters: Partial<Record<keyof InboxFilters, string>> = {};
 
   const sort = params.get('sort');
-  if (sort === 'recent' || sort === 'due') filters.sort = sort;
+  if (isActionSort(sort)) filters.sort = sort;
 
   const q = params.get('q');
   if (q !== null && q.length > 0) filters.q = q;
@@ -55,7 +32,7 @@ function parseInboxFilters(queryString: string): InboxFilters {
   if (customTo !== null && customTo.length > 0) filters.customTo = customTo;
 
   const status = params.get('status');
-  if (status === 'pending' || status === 'completed') filters.status = status;
+  if (isActionStatus(status)) filters.status = status;
 
   return filters;
 }
@@ -68,7 +45,7 @@ function buildFilterQueryString(filters: InboxFilters): string {
   if (filters.dateRange !== undefined && filters.dateRange.length > 0) params.set('dateRange', filters.dateRange);
   if (filters.customFrom !== undefined && filters.customFrom.length > 0) params.set('customFrom', filters.customFrom);
   if (filters.customTo !== undefined && filters.customTo.length > 0) params.set('customTo', filters.customTo);
-  if (filters.status !== undefined && filters.status.length > 0) params.set('status', filters.status);
+  if (filters.status !== undefined) params.set('status', filters.status);
   return params.toString();
 }
 
@@ -81,19 +58,10 @@ export function parseHash(hash: string): Route {
 
   const segments = pathPart.split('/').filter((s) => s.length > 0);
 
-  if (segments.length === 0) return { view: 'feed', noticeId: null, board: parseFeedBoard(queryPart) };
+  if (segments.length === 0) return { view: 'extract' };
 
   const view = segments[0];
 
-  if (view === 'feed') {
-    return { view: 'feed', noticeId: segments[1] ?? null, board: parseFeedBoard(queryPart) };
-  }
-  if (view === 'saved') {
-    return { view: 'saved', noticeId: segments[1] ?? null };
-  }
-  if (view === 'profile') {
-    return { view: 'profile' };
-  }
   if (view === 'inbox') {
     const filters = parseInboxFilters(queryPart);
     return { view: 'inbox', actionId: segments[1] ?? null, filters };
@@ -105,19 +73,10 @@ export function parseHash(hash: string): Route {
     return { view: 'extract' };
   }
 
-  return { view: 'feed', noticeId: null, board: parseFeedBoard(queryPart) };
+  return { view: 'extract' };
 }
 
 export function buildHash(route: Route): string {
-  if (route.view === 'feed') {
-    const base = route.noticeId !== null ? `#/feed/${route.noticeId}` : '#/feed';
-    const qs = buildFeedQueryString(route.board);
-    return qs.length > 0 ? `${base}?${qs}` : base;
-  }
-  if (route.view === 'saved') {
-    return route.noticeId !== null ? `#/saved/${route.noticeId}` : '#/saved';
-  }
-  if (route.view === 'profile') return '#/profile';
   if (route.view === 'extract') return '#/extract';
   if (route.view === 'inbox') {
     const base = route.actionId !== null ? `#/inbox/${route.actionId}` : '#/inbox';

@@ -127,15 +127,15 @@ function InboxHeader({
       </div>
 
       <div className="status-tabs" role="tablist">
-        {(['all', 'pending', 'completed'] as const).map((status) => (
+        {(['all', 'pending', 'completed'] as const).map((s) => (
           <button
-            key={status}
+            key={s}
             role="tab"
-            aria-selected={filters.statusFilter === status}
-            className={`status-tab${filters.statusFilter === status ? ' status-tab-active' : ''}`}
-            onClick={() => { filters.setStatusFilter(status); }}
+            aria-selected={filters.statusFilter === s}
+            className={`status-tab${filters.statusFilter === s ? ' status-tab-active' : ''}`}
+            onClick={() => { filters.setStatusFilter(s); }}
           >
-            {status === 'all' ? '전체' : status === 'pending' ? '진행중' : '완료'}
+            {s === 'all' ? '전체' : s === 'pending' ? '진행중' : '완료'}
           </button>
         ))}
       </div>
@@ -338,6 +338,12 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
   }, []);
 
   const handleActionUpdated = useCallback((updated: SavedActionDetail) => {
+    if (filters.statusFilter !== 'all' && updated.status !== filters.statusFilter) {
+      detail.clearSelection();
+      list.setItems((prev) => prev.filter((action) => action.id !== updated.id));
+      return;
+    }
+
     detail.setDetail(updated);
     list.setItems((prev) => prev.map((action) =>
       action.id === updated.id
@@ -352,7 +358,7 @@ export function InboxView({ initialActionId, initialFilters, onActionSelect }: I
           }
         : action,
     ));
-  }, [detail.setDetail, list.setItems]);
+  }, [detail.clearSelection, detail.setDetail, filters.statusFilter, list.setItems]);
 
   if (list.loading) {
     return (

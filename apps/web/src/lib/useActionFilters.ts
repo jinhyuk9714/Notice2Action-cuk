@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { SearchParams } from './api';
 import { computeDateRange, type DateRange, type DateRangePreset } from './dateRange';
-import { replaceFilters, type InboxFilters } from './router';
-import type { ActionStatus, SourceCategory } from './types';
+import {
+  isActionStatus,
+  type ActionSearchParams,
+  type ActionStatusFilter,
+  type InboxFilters,
+} from './actionFilters';
+import { replaceFilters } from './router';
+import type { SourceCategory } from './types';
 
 const VALID_CATEGORIES = new Set(['NOTICE', 'SYLLABUS', 'EMAIL', 'PDF', 'SCREENSHOT']);
 const VALID_PRESETS = new Set(['all', 'this-week', 'this-month', 'overdue', 'custom']);
@@ -13,10 +18,6 @@ function toCategory(val: string | undefined): SourceCategory | '' {
 
 function toPreset(val: string | undefined): DateRangePreset {
   return val !== undefined && VALID_PRESETS.has(val) ? (val as DateRangePreset) : 'all';
-}
-
-function toStatus(val: string | undefined): 'all' | ActionStatus {
-  return val === 'pending' || val === 'completed' ? val : 'all';
 }
 
 export type UseActionFiltersOptions = Readonly<{
@@ -38,13 +39,17 @@ export type UseActionFiltersResult = {
   readonly setCustomFrom: (s: string) => void;
   readonly customTo: string;
   readonly setCustomTo: (s: string) => void;
-  readonly statusFilter: 'all' | ActionStatus;
-  readonly setStatusFilter: (s: 'all' | ActionStatus) => void;
-  readonly currentSearch: SearchParams;
+  readonly statusFilter: ActionStatusFilter;
+  readonly setStatusFilter: (s: ActionStatusFilter) => void;
+  readonly currentSearch: ActionSearchParams;
   readonly dateRange: DateRange;
   readonly calendarUrl: string;
   readonly hasActiveSearch: boolean;
 };
+
+function toStatusFilter(value: InboxFilters['status']): ActionStatusFilter {
+  return isActionStatus(value) ? value : 'all';
+}
 
 export function useActionFilters({ initialFilters, selectedId }: UseActionFiltersOptions): UseActionFiltersResult {
   const [sort, setSort] = useState<'recent' | 'due'>(
@@ -56,7 +61,7 @@ export function useActionFilters({ initialFilters, selectedId }: UseActionFilter
   const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>(toPreset(initialFilters.dateRange));
   const [customFrom, setCustomFrom] = useState<string>(initialFilters.customFrom ?? '');
   const [customTo, setCustomTo] = useState<string>(initialFilters.customTo ?? '');
-  const [statusFilter, setStatusFilter] = useState<'all' | ActionStatus>(toStatus(initialFilters.status));
+  const [statusFilter, setStatusFilter] = useState<ActionStatusFilter>(toStatusFilter(initialFilters.status));
 
   // Debounce search input
   useEffect(() => {
@@ -69,7 +74,7 @@ export function useActionFilters({ initialFilters, selectedId }: UseActionFilter
     [dateRangePreset, customFrom, customTo],
   );
 
-  const currentSearch: SearchParams = useMemo(() => ({
+  const currentSearch: ActionSearchParams = useMemo(() => ({
     ...(searchQuery.length > 0 ? { q: searchQuery } : {}),
     ...(categoryFilter !== '' ? { category: categoryFilter } : {}),
     ...(dateRange.from !== undefined ? { dueDateFrom: dateRange.from } : {}),
@@ -116,14 +121,14 @@ export function useActionFilters({ initialFilters, selectedId }: UseActionFilter
     searchQuery,
     categoryFilter,
     setCategoryFilter,
+    statusFilter,
+    setStatusFilter,
     dateRangePreset,
     setDateRangePreset,
     customFrom,
     setCustomFrom,
     customTo,
     setCustomTo,
-    statusFilter,
-    setStatusFilter,
     currentSearch,
     dateRange,
     calendarUrl,

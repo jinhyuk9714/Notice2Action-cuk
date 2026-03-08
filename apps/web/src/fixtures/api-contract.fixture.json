@@ -1,0 +1,106 @@
+{
+  "actionExtractionResponse": {
+    "actions": [
+      {
+        "id": "act-1",
+        "sourceId": "src-1",
+        "title": "장학금 신청",
+        "actionSummary": "TRINITY에서 장학금을 신청하세요.",
+        "dueAtIso": "2026-03-15T18:00:00+09:00",
+        "dueAtLabel": "3월 15일 18시까지",
+        "additionalDates": [
+          {
+            "isoAt": "2026-03-10T00:00:00+09:00",
+            "label": "신청 시작 3월 10일"
+          }
+        ],
+        "eligibility": "재학생 3학년",
+        "structuredEligibility": {
+          "universal": false,
+          "statuses": ["재학생"],
+          "excludedStatuses": [],
+          "years": [3],
+          "department": null
+        },
+        "requiredItems": ["성적증명서"],
+        "systemHint": "TRINITY",
+        "sourceCategory": "NOTICE",
+        "evidence": [
+          {
+            "fieldName": "dueAtLabel",
+            "snippet": "3월 15일 18시까지",
+            "confidence": 0.9
+          }
+        ],
+        "inferred": false,
+        "confidenceScore": 0.91,
+        "createdAt": "2026-03-01T10:00:00+09:00",
+        "status": "pending"
+      }
+    ],
+    "duplicate": false
+  },
+  "actionListResponse": {
+    "actions": [
+      {
+        "id": "act-1",
+        "title": "장학금 신청",
+        "actionSummary": "TRINITY에서 장학금을 신청하세요.",
+        "dueAtIso": "2026-03-15T18:00:00+09:00",
+        "dueAtLabel": "3월 15일 18시까지",
+        "eligibility": "재학생 3학년",
+        "sourceCategory": "NOTICE",
+        "sourceTitle": "장학 안내",
+        "confidenceScore": 0.91,
+        "createdAt": "2026-03-01T10:00:00+09:00",
+        "status": "pending"
+      }
+    ],
+    "currentPage": 0,
+    "pageSize": 20,
+    "totalElements": 1,
+    "totalPages": 1,
+    "hasNext": false
+  },
+  "savedActionDetail": {
+    "id": "act-1",
+    "title": "장학금 신청",
+    "actionSummary": "TRINITY에서 장학금을 신청하세요.",
+    "dueAtIso": "2026-03-15T18:00:00+09:00",
+    "dueAtLabel": "3월 15일 18시까지",
+    "eligibility": "재학생 3학년",
+    "structuredEligibility": {
+      "universal": false,
+      "statuses": ["재학생"],
+      "excludedStatuses": [],
+      "years": [3],
+      "department": null
+    },
+    "requiredItems": ["성적증명서"],
+    "systemHint": "TRINITY",
+    "inferred": false,
+    "confidenceScore": 0.91,
+    "createdAt": "2026-03-01T10:00:00+09:00",
+    "source": {
+      "id": "src-1",
+      "title": "장학 안내",
+      "sourceCategory": "NOTICE",
+      "createdAt": "2026-03-01T10:00:00+09:00"
+    },
+    "evidence": [
+      {
+        "fieldName": "dueAtLabel",
+        "snippet": "3월 15일 18시까지",
+        "confidence": 0.9
+      }
+    ],
+    "overrides": [],
+    "additionalDates": [
+      {
+        "isoAt": "2026-03-10T00:00:00+09:00",
+        "label": "신청 시작 3월 10일"
+      }
+    ],
+    "status": "pending"
+  }
+}

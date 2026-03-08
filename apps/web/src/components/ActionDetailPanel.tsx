@@ -110,6 +110,16 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
             />
           </div>
           <div className="edit-row">
+            <label htmlFor="editDueIso">마감 날짜</label>
+            <input
+              id="editDueIso"
+              type="date"
+              className="edit-field"
+              value={editor.editDueIso}
+              onChange={(e) => { editor.setEditDueIso(e.target.value); }}
+            />
+          </div>
+          <div className="edit-row">
             <label htmlFor="editEligibility">대상/조건</label>
             <input
               id="editEligibility"
@@ -166,8 +176,8 @@ export function ActionDetailPanel({ detail, profile, onActionUpdated }: ActionDe
                 <dt>관련 일정</dt>
                 <dd>
                   <ul className="additional-dates-list">
-                    {detail.additionalDates.map((date) => (
-                      <li key={`${date.isoAt}-${date.label}`}>{date.label}</li>
+                    {detail.additionalDates.map((d) => (
+                      <li key={d.isoAt}>{d.label}</li>
                     ))}
                   </ul>
                 </dd>

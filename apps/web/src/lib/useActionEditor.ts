@@ -15,6 +15,8 @@ export type UseActionEditorResult = Readonly<{
   setEditSummary: React.Dispatch<React.SetStateAction<string>>;
   editDueLabel: string;
   setEditDueLabel: React.Dispatch<React.SetStateAction<string>>;
+  editDueIso: string;
+  setEditDueIso: React.Dispatch<React.SetStateAction<string>>;
   editEligibility: string;
   setEditEligibility: React.Dispatch<React.SetStateAction<string>>;
   editSystemHint: string;
@@ -36,6 +38,7 @@ export function useActionEditor({
   const [editTitle, setEditTitle] = useState(detail.title);
   const [editSummary, setEditSummary] = useState(detail.actionSummary);
   const [editDueLabel, setEditDueLabel] = useState(detail.dueAtLabel ?? '');
+  const [editDueIso, setEditDueIso] = useState(detail.dueAtIso?.slice(0, 10) ?? '');
   const [editEligibility, setEditEligibility] = useState(detail.eligibility ?? '');
   const [editSystemHint, setEditSystemHint] = useState(detail.systemHint ?? '');
   const [saving, setSaving] = useState(false);
@@ -47,6 +50,7 @@ export function useActionEditor({
     setEditTitle(detail.title);
     setEditSummary(detail.actionSummary);
     setEditDueLabel(detail.dueAtLabel ?? '');
+    setEditDueIso(detail.dueAtIso?.slice(0, 10) ?? '');
     setEditEligibility(detail.eligibility ?? '');
     setEditSystemHint(detail.systemHint ?? '');
     setEditError(null);
@@ -57,6 +61,7 @@ export function useActionEditor({
     detail.title,
     detail.actionSummary,
     detail.dueAtLabel,
+    detail.dueAtIso,
     detail.eligibility,
     detail.systemHint,
   ]);
@@ -65,6 +70,7 @@ export function useActionEditor({
     setEditTitle(detail.title);
     setEditSummary(detail.actionSummary);
     setEditDueLabel(detail.dueAtLabel ?? '');
+    setEditDueIso(detail.dueAtIso?.slice(0, 10) ?? '');
     setEditEligibility(detail.eligibility ?? '');
     setEditSystemHint(detail.systemHint ?? '');
     setEditError(null);
@@ -88,6 +94,7 @@ export function useActionEditor({
         title: editTitle.trim(),
         actionSummary: editSummary.trim(),
         dueAtLabel: editDueLabel.trim().length > 0 ? editDueLabel.trim() : undefined,
+        dueAtIso: editDueIso.trim().length > 0 ? editDueIso.trim() : undefined,
         eligibility: editEligibility.trim().length > 0 ? editEligibility.trim() : undefined,
         systemHint: editSystemHint.trim().length > 0 ? editSystemHint.trim() : undefined,
       });
@@ -122,6 +129,8 @@ export function useActionEditor({
     setEditSummary,
     editDueLabel,
     setEditDueLabel,
+    editDueIso,
+    setEditDueIso,
     editEligibility,
     setEditEligibility,
     editSystemHint,

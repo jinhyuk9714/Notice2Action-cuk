@@ -153,6 +153,7 @@ export function makeExtractedAction(overrides: Partial<ExtractedAction> = {}): E
     inferred: false,
     confidenceScore: 0.85,
     createdAt: '2026-03-01T10:00:00',
+    status: 'pending',
     ...overrides,
   };
 }

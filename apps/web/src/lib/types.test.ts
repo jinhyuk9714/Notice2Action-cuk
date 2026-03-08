@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import contractFixture from '../fixtures/api-contract.fixture.json';
 import {
-  parseNoticeFeedResponse,
-  parsePersonalizedNoticeDetail,
   parseActionExtractionResponse,
   parseActionListResponse,
   parseSavedActionDetail,
@@ -19,15 +18,7 @@ const VALID_EXTRACTED_ACTION = {
   actionSummary: '교내 장학금 신청',
   dueAtIso: '2026-03-15',
   dueAtLabel: '3월 15일',
-  additionalDates: [{ isoAt: '2026-03-12T10:00:00+09:00', label: '3월 12일 설명회' }],
   eligibility: '재학생',
-  structuredEligibility: {
-    universal: false,
-    statuses: ['재학생'],
-    excludedStatuses: [],
-    years: [3],
-    department: '컴퓨터정보공학',
-  },
   requiredItems: ['성적증명서'],
   systemHint: 'TRINITY',
   sourceCategory: 'NOTICE',
@@ -35,6 +26,9 @@ const VALID_EXTRACTED_ACTION = {
   inferred: false,
   confidenceScore: 0.9,
   createdAt: null,
+  additionalDates: [],
+  structuredEligibility: null,
+  status: 'pending',
 };
 
 const VALID_SUMMARY = {
@@ -67,6 +61,7 @@ const VALID_DETAIL = {
   evidence: [VALID_EVIDENCE],
   overrides: [],
   additionalDates: [],
+  status: 'pending',
 };
 
 describe('SourceCategorySchema', () => {
@@ -108,8 +103,13 @@ describe('parseActionExtractionResponse', () => {
     const result = parseActionExtractionResponse({ actions: [VALID_EXTRACTED_ACTION], duplicate: false });
     expect(result.actions).toHaveLength(1);
     expect(result.actions[0].title).toBe('장학금 신청');
+  });
+
+  it('parses backend contract fixture with structured fields', () => {
+    const result = parseActionExtractionResponse(contractFixture.actionExtractionResponse);
     expect(result.actions[0].additionalDates).toHaveLength(1);
-    expect(result.actions[0].structuredEligibility?.department).toBe('컴퓨터정보공학');
+    expect(result.actions[0].structuredEligibility?.statuses).toEqual(['재학생']);
+    expect(result.actions[0].status).toBe('pending');
   });
 
   it('throws when action missing title', () => {
@@ -210,24 +210,12 @@ describe('parseSavedActionDetail', () => {
     const result = parseSavedActionDetail(VALID_DETAIL);
     expect(result.id).toBe('123');
     expect(result.evidence).toHaveLength(1);
-    expect(result.additionalDates).toEqual([]);
   });
 
-  it('parses detail with structured eligibility and additional dates', () => {
-    const result = parseSavedActionDetail({
-      ...VALID_DETAIL,
-      structuredEligibility: {
-        universal: false,
-        statuses: ['재학생'],
-        excludedStatuses: [],
-        years: [3],
-        department: '컴퓨터정보공학',
-      },
-      additionalDates: [{ isoAt: '2026-03-12T10:00:00+09:00', label: '3월 12일 설명회' }],
-    });
-
-    expect(result.structuredEligibility?.department).toBe('컴퓨터정보공학');
-    expect(result.additionalDates[0]?.label).toBe('3월 12일 설명회');
+  it('parses backend detail fixture with additional dates and status', () => {
+    const result = parseSavedActionDetail(contractFixture.savedActionDetail);
+    expect(result.additionalDates).toHaveLength(1);
+    expect(result.status).toBe('pending');
   });
 
   it('throws when missing evidence array', () => {
@@ -279,34 +267,6 @@ const VALID_SOURCE_SUMMARY = {
   sourceUrl: null,
   createdAt: '2026-03-01T00:00:00Z',
   actionCount: 2,
-};
-
-const VALID_NOTICE_SUMMARY = {
-  id: 'notice-1',
-  title: '학생증 신청 안내',
-  publishedAt: '2026-02-27T00:00:00+09:00',
-  sourceUrl: 'https://example.com/notices/1',
-  boardLabel: '장학',
-  importanceReasons: ['신입생 공지', '학생증 관련'],
-  actionability: 'action_required',
-  dueHint: { dueAtIso: '2026-03-05T23:59:59+09:00', label: '3월 5일까지' },
-  relevanceScore: 105,
-};
-
-const VALID_NOTICE_DETAIL = {
-  ...VALID_NOTICE_SUMMARY,
-  body: '정제된 원문',
-  attachments: [{ name: '학생증 발급 신청서.hwp', url: 'https://example.com/download/1' }],
-  actionBlocks: [{
-    title: '학생증 신청',
-    summary: 'TRINITY에서 동의 후 신청',
-    dueAtIso: null,
-    dueAtLabel: null,
-    requiredItems: ['증명사진'],
-    systemHint: 'TRINITY',
-    evidence: [VALID_EVIDENCE],
-    confidenceScore: 0.91,
-  }],
 };
 
 describe('parseSourceListResponse', () => {
@@ -391,62 +351,5 @@ describe('parseSourceDetail', () => {
       createdAt: '2026-03-01T00:00:00Z',
       actions: [],
     })).toThrow();
-  });
-});
-
-describe('parseNoticeFeedResponse', () => {
-  const VALID_NOTICE_SYNC_STATUS = {
-    state: 'healthy',
-    lastSuccessfulSyncAt: '2026-03-06T12:00:00+09:00',
-    lastAttemptedSyncAt: '2026-03-06T12:00:00+09:00',
-    lastErrorMessage: null,
-    noticeCount: 1,
-  } as const;
-
-  it('parses valid personalized notice feed', () => {
-    const result = parseNoticeFeedResponse({
-      notices: [VALID_NOTICE_SUMMARY],
-      availableBoards: ['장학', '학사'],
-      syncStatus: VALID_NOTICE_SYNC_STATUS,
-      currentPage: 0,
-      pageSize: 20,
-      totalElements: 1,
-      totalPages: 1,
-      hasNext: false,
-    });
-
-    expect(result.notices[0].title).toBe('학생증 신청 안내');
-    expect(result.notices[0].boardLabel).toBe('장학');
-    expect(result.notices[0].dueHint?.label).toBe('3월 5일까지');
-    expect(result.availableBoards).toEqual(['장학', '학사']);
-    expect(result.syncStatus.state).toBe('healthy');
-  });
-
-  it('throws when importanceReasons is missing', () => {
-    const { importanceReasons: _, ...broken } = VALID_NOTICE_SUMMARY;
-    expect(() => parseNoticeFeedResponse({
-      notices: [broken],
-      availableBoards: ['장학'],
-      syncStatus: VALID_NOTICE_SYNC_STATUS,
-      currentPage: 0,
-      pageSize: 20,
-      totalElements: 1,
-      totalPages: 1,
-      hasNext: false,
-    })).toThrow();
-  });
-});
-
-describe('parsePersonalizedNoticeDetail', () => {
-  it('parses valid personalized notice detail', () => {
-    const result = parsePersonalizedNoticeDetail(VALID_NOTICE_DETAIL);
-    expect(result.boardLabel).toBe('장학');
-    expect(result.attachments).toHaveLength(1);
-    expect(result.actionBlocks).toHaveLength(1);
-  });
-
-  it('throws when body is missing', () => {
-    const { body: _, ...broken } = VALID_NOTICE_DETAIL;
-    expect(() => parsePersonalizedNoticeDetail(broken)).toThrow();
   });
 });

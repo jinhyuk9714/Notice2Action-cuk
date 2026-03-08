@@ -5,15 +5,15 @@ import { z } from 'zod';
 export const SourceCategorySchema = z.enum(['NOTICE', 'SYLLABUS', 'EMAIL', 'PDF', 'SCREENSHOT']);
 export type SourceCategory = z.infer<typeof SourceCategorySchema>;
 
+export const ActionStatusSchema = z.enum(['pending', 'completed']);
+export type ActionStatus = z.infer<typeof ActionStatusSchema>;
+
 export const EvidenceSnippetSchema = z.object({
   fieldName: z.string(),
   snippet: z.string(),
   confidence: z.number(),
 });
 export type EvidenceSnippet = z.infer<typeof EvidenceSnippetSchema>;
-
-export const ActionStatusSchema = z.enum(['pending', 'completed']);
-export type ActionStatus = z.infer<typeof ActionStatusSchema>;
 
 export const AdditionalDateSchema = z.object({
   isoAt: z.string(),
@@ -47,6 +47,7 @@ export const ExtractedActionSchema = z.object({
   inferred: z.boolean(),
   confidenceScore: z.number(),
   createdAt: z.string().nullable(),
+  status: ActionStatusSchema.default('pending'),
 });
 export type ExtractedAction = z.infer<typeof ExtractedActionSchema>;
 
@@ -129,7 +130,7 @@ export const SavedActionDetailSchema = z.object({
   dueAtIso: z.string().nullable(),
   dueAtLabel: z.string().nullable(),
   eligibility: z.string().nullable(),
-  structuredEligibility: StructuredEligibilitySchema.nullable().default(null),
+  structuredEligibility: StructuredEligibilitySchema.nullable(),
   requiredItems: z.array(z.string()),
   systemHint: z.string().nullable(),
   inferred: z.boolean(),
@@ -170,68 +171,6 @@ export const SourceDetailSchema = z.object({
 });
 export type SourceDetail = z.infer<typeof SourceDetailSchema>;
 
-// --- Personalized notice feed types ---
-
-export const NoticeDueHintSchema = z.object({
-  dueAtIso: z.string().nullable(),
-  label: z.string().nullable(),
-});
-export type NoticeDueHint = z.infer<typeof NoticeDueHintSchema>;
-
-export const NoticeAttachmentSchema = z.object({
-  name: z.string(),
-  url: z.string(),
-});
-export type NoticeAttachment = z.infer<typeof NoticeAttachmentSchema>;
-
-export const NoticeActionBlockSchema = z.object({
-  title: z.string(),
-  summary: z.string(),
-  dueAtIso: z.string().nullable(),
-  dueAtLabel: z.string().nullable(),
-  requiredItems: z.array(z.string()),
-  systemHint: z.string().nullable(),
-  evidence: z.array(EvidenceSnippetSchema),
-  confidenceScore: z.number(),
-});
-export type NoticeActionBlock = z.infer<typeof NoticeActionBlockSchema>;
-
-export const PersonalizedNoticeSummarySchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  publishedAt: z.string(),
-  sourceUrl: z.string().nullable(),
-  boardLabel: z.string().nullable(),
-  importanceReasons: z.array(z.string()),
-  actionability: z.enum(['action_required', 'informational']),
-  dueHint: NoticeDueHintSchema.nullable(),
-  relevanceScore: z.number(),
-});
-export type PersonalizedNoticeSummary = z.infer<typeof PersonalizedNoticeSummarySchema>;
-
-export const NoticeFeedSyncStatusSchema = z.object({
-  state: z.enum(['bootstrapping', 'healthy', 'stale', 'failed']),
-  lastSuccessfulSyncAt: z.string().nullable(),
-  lastAttemptedSyncAt: z.string().nullable(),
-  lastErrorMessage: z.string().nullable(),
-  noticeCount: z.number(),
-});
-export type NoticeFeedSyncStatus = z.infer<typeof NoticeFeedSyncStatusSchema>;
-
-export const NoticeFeedResponseSchema = PaginationSchema.extend({
-  notices: z.array(PersonalizedNoticeSummarySchema),
-  availableBoards: z.array(z.string()),
-  syncStatus: NoticeFeedSyncStatusSchema,
-});
-export type NoticeFeedResponse = z.infer<typeof NoticeFeedResponseSchema>;
-
-export const PersonalizedNoticeDetailSchema = PersonalizedNoticeSummarySchema.extend({
-  body: z.string(),
-  attachments: z.array(NoticeAttachmentSchema),
-  actionBlocks: z.array(NoticeActionBlockSchema),
-});
-export type PersonalizedNoticeDetail = z.infer<typeof PersonalizedNoticeDetailSchema>;
-
 // --- Parse helpers ---
 
 function safeParse<T>(schema: z.ZodType<T>, value: unknown, label: string): T {
@@ -261,12 +200,4 @@ export function parseSourceListResponse(value: unknown): SourceListResponse {
 
 export function parseSourceDetail(value: unknown): SourceDetail {
   return safeParse(SourceDetailSchema, value, 'SourceDetail');
-}
-
-export function parseNoticeFeedResponse(value: unknown): NoticeFeedResponse {
-  return safeParse(NoticeFeedResponseSchema, value, 'NoticeFeedResponse');
-}
-
-export function parsePersonalizedNoticeDetail(value: unknown): PersonalizedNoticeDetail {
-  return safeParse(PersonalizedNoticeDetailSchema, value, 'PersonalizedNoticeDetail');
 }

@@ -8,6 +8,8 @@ vi.mock('../lib/api', () => ({
   fetchActionDetail: vi.fn(),
   fetchAllMatchingActions: vi.fn(),
   deleteAction: vi.fn(),
+  updateAction: vi.fn(),
+  revertActionField: vi.fn(),
 }));
 
 vi.mock('../lib/profile', () => ({
@@ -27,7 +29,13 @@ vi.mock('../lib/csv', () => ({
   downloadCsv: vi.fn(),
 }));
 
-import { fetchActionList, fetchActionDetail, fetchAllMatchingActions, deleteAction } from '../lib/api';
+import {
+  fetchActionList,
+  fetchActionDetail,
+  fetchAllMatchingActions,
+  deleteAction,
+  updateAction,
+} from '../lib/api';
 import { isProfileConfigured } from '../lib/profile';
 import { replaceFilters } from '../lib/router';
 import { downloadCsv } from '../lib/csv';
@@ -36,6 +44,7 @@ const mockFetchActionList = vi.mocked(fetchActionList);
 const mockFetchActionDetail = vi.mocked(fetchActionDetail);
 const mockFetchAllMatchingActions = vi.mocked(fetchAllMatchingActions);
 const mockDeleteAction = vi.mocked(deleteAction);
+const mockUpdateAction = vi.mocked(updateAction);
 
 function renderInbox(overrides: Partial<Parameters<typeof InboxView>[0]> = {}) {
   const props = {
@@ -591,6 +600,31 @@ describe('InboxView - URL sync', () => {
 
     fireEvent.click(screen.getByText('클릭'));
     expect(props.onActionSelect).toHaveBeenCalledWith('a1');
+  });
+
+  it('removes selected action when status toggle no longer matches active filter', async () => {
+    mockFetchActionList.mockResolvedValue(
+      makeActionListResponse([makeActionSummary({ id: 'a1', title: '진행중 액션', status: 'pending' })]),
+    );
+    mockFetchActionDetail.mockResolvedValue(
+      makeActionDetail({ id: 'a1', title: '진행중 액션', status: 'pending' }),
+    );
+    mockUpdateAction.mockResolvedValue(
+      makeActionDetail({ id: 'a1', title: '진행중 액션', status: 'completed' }),
+    );
+
+    const props = renderInbox({ initialFilters: { status: 'pending' } as never });
+
+    await waitFor(() => { screen.getByText('진행중 액션'); });
+    fireEvent.click(screen.getByText('진행중 액션'));
+    await waitFor(() => { screen.getByRole('button', { name: '완료로 표시' }); });
+
+    fireEvent.click(screen.getByRole('button', { name: '완료로 표시' }));
+
+    await waitFor(() => {
+      expect(screen.queryAllByText('진행중 액션')).toHaveLength(0);
+    });
+    expect(props.onActionSelect).toHaveBeenCalledWith(null);
   });
 });
 

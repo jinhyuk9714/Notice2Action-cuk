@@ -2,10 +2,7 @@ import {
   type ActionExtractionRequest,
   type ActionExtractionResponse,
   type ActionListResponse,
-  type ActionStatus,
   type ActionUpdatePayload,
-  type NoticeFeedResponse,
-  type PersonalizedNoticeDetail,
   type SavedActionDetail,
   type SavedActionSummary,
   type SourceCategory,
@@ -13,13 +10,11 @@ import {
   type SourceListResponse,
   parseActionExtractionResponse,
   parseActionListResponse,
-  parseNoticeFeedResponse,
-  parsePersonalizedNoticeDetail,
   parseSavedActionDetail,
   parseSourceDetail,
   parseSourceListResponse
 } from './types';
-import type { UserProfile } from './profile';
+import type { ActionSearchParams } from './actionFilters';
 
 function parseApiError(body: string, fallback: string): string {
   try {
@@ -44,13 +39,7 @@ function parseApiError(body: string, fallback: string): string {
   return body.length > 0 ? body : fallback;
 }
 
-export type SearchParams = Readonly<{
-  q?: string;
-  category?: SourceCategory;
-  dueDateFrom?: string;
-  dueDateTo?: string;
-  status?: ActionStatus;
-}>;
+export type SearchParams = ActionSearchParams;
 
 export async function requestActionExtraction(
   payload: ActionExtractionRequest
@@ -169,66 +158,6 @@ export async function fetchActionList(
 
   const json: unknown = await response.json();
   return parseActionListResponse(json);
-}
-
-function appendProfileParams(params: URLSearchParams, profile: UserProfile): void {
-  if (profile.department !== null && profile.department.length > 0) {
-    params.set('department', profile.department);
-  }
-  if (profile.year !== null) {
-    params.set('year', String(profile.year));
-  }
-  if (profile.status !== null && profile.status.length > 0) {
-    params.set('status', profile.status);
-  }
-  for (const keyword of profile.interestKeywords ?? []) {
-    if (keyword.trim().length > 0) params.append('keyword', keyword.trim());
-  }
-  for (const preferredBoard of profile.preferredBoards ?? []) {
-    if (preferredBoard.trim().length > 0) params.append('preferredBoard', preferredBoard.trim());
-  }
-}
-
-export async function fetchNoticeFeed(
-  profile: UserProfile,
-  page: number = 0,
-  size: number = 20,
-  board: string | null = null,
-): Promise<NoticeFeedResponse> {
-  const params = new URLSearchParams();
-  params.set('page', String(page));
-  params.set('size', String(size));
-  appendProfileParams(params, profile);
-  if (board !== null && board.length > 0) {
-    params.set('board', board);
-  }
-
-  const response = await fetch(`/api/v1/notices/feed?${params.toString()}`);
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(parseApiError(body, '개인화 공지 피드를 불러오지 못했습니다'));
-  }
-
-  const json: unknown = await response.json();
-  return parseNoticeFeedResponse(json);
-}
-
-export async function fetchNoticeDetail(
-  id: string,
-  profile: UserProfile,
-): Promise<PersonalizedNoticeDetail> {
-  const params = new URLSearchParams();
-  appendProfileParams(params, profile);
-  const qs = params.toString();
-
-  const response = await fetch(`/api/v1/notices/${encodeURIComponent(id)}${qs.length > 0 ? `?${qs}` : ''}`);
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(parseApiError(body, '공지 상세 정보를 불러오지 못했습니다'));
-  }
-
-  const json: unknown = await response.json();
-  return parsePersonalizedNoticeDetail(json);
 }
 
 export async function fetchAllMatchingActions(
