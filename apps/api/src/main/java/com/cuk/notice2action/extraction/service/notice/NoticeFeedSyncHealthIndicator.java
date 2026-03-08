@@ -27,11 +27,23 @@ public class NoticeFeedSyncHealthIndicator implements HealthIndicator {
   }
 
   private Health.Builder baseHealth(NoticeFeedSyncStatusDto syncStatus, Health.Builder builder) {
-    return builder
+    Health.Builder detailBuilder = builder
         .withDetail("feedKey", NoticeFeedSyncStateService.FEED_KEY)
         .withDetail("syncState", syncStatus.state())
-        .withDetail("noticeCount", syncStatus.noticeCount())
-        .withDetail("lastSuccessfulSyncAt", syncStatus.lastSuccessfulSyncAt())
-        .withDetail("lastAttemptedSyncAt", syncStatus.lastAttemptedSyncAt());
+        .withDetail("noticeCount", syncStatus.noticeCount());
+
+    if (syncStatus.lastSuccessfulSyncAt() != null) {
+      detailBuilder = detailBuilder.withDetail("lastSuccessfulSyncAt", syncStatus.lastSuccessfulSyncAt());
+    }
+
+    if (syncStatus.lastAttemptedSyncAt() != null) {
+      detailBuilder = detailBuilder.withDetail("lastAttemptedSyncAt", syncStatus.lastAttemptedSyncAt());
+    }
+
+    if (syncStatus.lastErrorMessage() != null) {
+      detailBuilder = detailBuilder.withDetail("lastErrorMessage", syncStatus.lastErrorMessage());
+    }
+
+    return detailBuilder;
   }
 }

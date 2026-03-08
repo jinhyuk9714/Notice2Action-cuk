@@ -85,7 +85,6 @@ class NoticeFeedSyncHealthIndicatorTest {
     assertThat(health.getDetails())
         .containsEntry("feedKey", NoticeFeedSyncStateService.FEED_KEY)
         .containsEntry("syncState", state)
-        .containsEntry("noticeCount", noticeCount)
-        .containsKeys("lastSuccessfulSyncAt", "lastAttemptedSyncAt");
+        .containsEntry("noticeCount", (long) noticeCount);
   }
 }
