@@ -9,6 +9,7 @@ import com.cuk.notice2action.extraction.api.dto.ActionUpdateRequest;
 import com.cuk.notice2action.extraction.api.dto.FieldOverrideInfoDto;
 import com.cuk.notice2action.extraction.api.dto.SavedActionDetailDto;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -44,7 +45,7 @@ class ActionUpdateTest {
     UUID id = persistAndGetId();
 
     ActionUpdateRequest update = new ActionUpdateRequest(
-        "수정된 제목", "수정된 요약", null, null, null, null, null, null
+        "수정된 제목", "수정된 요약", null, null, null, null, null, null, null
     );
     SavedActionDetailDto result = persistenceService.updateAction(id, update);
 
@@ -61,7 +62,7 @@ class ActionUpdateTest {
 
     // Only update title — everything else stays
     ActionUpdateRequest update = new ActionUpdateRequest(
-        "새 제목", null, null, null, null, null, null, null
+        "새 제목", null, null, null, null, null, null, null, null
     );
     SavedActionDetailDto result = persistenceService.updateAction(id, update);
 
@@ -74,7 +75,7 @@ class ActionUpdateTest {
   void updateAction_throws_for_unknown_id() {
     UUID unknownId = UUID.randomUUID();
     ActionUpdateRequest update = new ActionUpdateRequest(
-        "제목", null, null, null, null, null, null, null
+        "제목", null, null, null, null, null, null, null, null
     );
 
     assertThatThrownBy(() -> persistenceService.updateAction(unknownId, update))
@@ -85,7 +86,7 @@ class ActionUpdateTest {
   void updateAction_rejects_blank_title() {
     UUID id = persistAndGetId();
     ActionUpdateRequest update = new ActionUpdateRequest(
-        "   ", null, null, null, null, null, null, null
+        "   ", null, null, null, null, null, null, null, null
     );
 
     assertThatThrownBy(() -> persistenceService.updateAction(id, update))
@@ -97,7 +98,7 @@ class ActionUpdateTest {
   void updateAction_rejects_invalid_dueAtIso() {
     UUID id = persistAndGetId();
     ActionUpdateRequest update = new ActionUpdateRequest(
-        null, null, "invalid-datetime", null, null, null, null, null
+        null, null, "invalid-datetime", null, null, null, null, null, null
     );
 
     assertThatThrownBy(() -> persistenceService.updateAction(id, update))
@@ -120,15 +121,27 @@ class ActionUpdateTest {
   @Test
   void updateAction_rejects_invalid_status() {
     UUID id = persistAndGetId();
+    ActionUpdateRequest update = new ActionUpdateRequest(
+        null, null, null, null, null, null, null, null, "archived"
+    );
 
-    assertThatThrownBy(() -> persistenceService.updateAction(
-        id,
-        new ActionUpdateRequest(null, null, null, null, null, null, null, null, "done")
-    ))
+    assertThatThrownBy(() -> persistenceService.updateAction(id, update))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("status");
   }
 
+  @Test
+  void updateAction_accepts_date_only_dueAtIso() {
+    UUID id = persistAndGetId();
+    ActionUpdateRequest update = new ActionUpdateRequest(
+        null, null, "2026-03-20", null, null, null, null, null, null
+    );
+
+    SavedActionDetailDto result = persistenceService.updateAction(id, update);
+
+    assertThat(OffsetDateTime.parse(result.dueAtIso()))
+        .isEqualTo(OffsetDateTime.parse("2026-03-20T00:00:00+09:00"));
+  }
   // --- Override tracking tests ---
 
   @Test
@@ -146,7 +159,7 @@ class ActionUpdateTest {
     String originalTitle = before.title();
 
     ActionUpdateRequest update = new ActionUpdateRequest(
-        "사용자 수정 제목", null, null, null, null, null, null, null
+        "사용자 수정 제목", null, null, null, null, null, null, null, null
     );
     SavedActionDetailDto result = persistenceService.updateAction(id, update);
 
@@ -164,11 +177,11 @@ class ActionUpdateTest {
 
     // First edit
     persistenceService.updateAction(id, new ActionUpdateRequest(
-        "첫 번째 수정", null, null, null, null, null, null, null
+        "첫 번째 수정", null, null, null, null, null, null, null, null
     ));
     // Second edit — machine value should still be the original
     SavedActionDetailDto result = persistenceService.updateAction(id, new ActionUpdateRequest(
-        "두 번째 수정", null, null, null, null, null, null, null
+        "두 번째 수정", null, null, null, null, null, null, null, null
     ));
 
     assertThat(result.title()).isEqualTo("두 번째 수정");
@@ -184,11 +197,11 @@ class ActionUpdateTest {
 
     // Edit title
     persistenceService.updateAction(id, new ActionUpdateRequest(
-        "수정된 제목", null, null, null, null, null, null, null
+        "수정된 제목", null, null, null, null, null, null, null, null
     ));
     // Revert title
     SavedActionDetailDto result = persistenceService.updateAction(id, new ActionUpdateRequest(
-        null, null, null, null, null, null, null, List.of("title")
+        null, null, null, null, null, null, null, List.of("title"), null
     ));
 
     assertThat(result.title()).isEqualTo(originalTitle);
@@ -199,7 +212,7 @@ class ActionUpdateTest {
   void updateAction_revert_unknown_field_throws() {
     UUID id = persistAndGetId();
     ActionUpdateRequest update = new ActionUpdateRequest(
-        null, null, null, null, null, null, null, List.of("nonExistentField")
+        null, null, null, null, null, null, null, List.of("nonExistentField"), null
     );
 
     assertThatThrownBy(() -> persistenceService.updateAction(id, update))
@@ -212,7 +225,7 @@ class ActionUpdateTest {
     UUID id = persistAndGetId();
 
     ActionUpdateRequest update = new ActionUpdateRequest(
-        "수정 제목", "수정 요약", null, null, "전체 학생", null, null, null
+        "수정 제목", "수정 요약", null, null, "전체 학생", null, null, null, null
     );
     SavedActionDetailDto result = persistenceService.updateAction(id, update);
 

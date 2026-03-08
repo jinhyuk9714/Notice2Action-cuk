@@ -55,7 +55,7 @@ class ActionSearchTest {
   @Test
   void search_by_keyword_matches_title() {
     ActionSearchCriteria criteria = new ActionSearchCriteria(
-        "공결", null, null, null, "recent"
+        "공결", null, null, null, "recent", null
     );
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
@@ -68,7 +68,7 @@ class ActionSearchTest {
   @Test
   void search_by_keyword_matches_summary() {
     ActionSearchCriteria criteria = new ActionSearchCriteria(
-        "장학", null, null, null, "recent"
+        "장학", null, null, null, "recent", null
     );
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
@@ -81,7 +81,7 @@ class ActionSearchTest {
   @Test
   void filter_by_category() {
     ActionSearchCriteria criteria = new ActionSearchCriteria(
-        null, SourceCategory.EMAIL, null, null, "recent"
+        null, SourceCategory.EMAIL, null, null, "recent", null
     );
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
@@ -97,7 +97,7 @@ class ActionSearchTest {
     OffsetDateTime to = OffsetDateTime.parse("2026-03-15T23:59:59+09:00");
 
     ActionSearchCriteria criteria = new ActionSearchCriteria(
-        null, null, from, to, "due"
+        null, null, from, to, "due", null
     );
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
@@ -109,7 +109,7 @@ class ActionSearchTest {
   @Test
   void combined_keyword_and_category_filter() {
     ActionSearchCriteria criteria = new ActionSearchCriteria(
-        "신청", SourceCategory.NOTICE, null, null, "recent"
+        "신청", SourceCategory.NOTICE, null, null, "recent", null
     );
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
@@ -122,7 +122,7 @@ class ActionSearchTest {
   @Test
   void empty_query_returns_all_actions() {
     ActionSearchCriteria criteria = new ActionSearchCriteria(
-        null, null, null, null, "recent"
+        null, null, null, null, "recent", null
     );
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
@@ -143,7 +143,7 @@ class ActionSearchTest {
     );
 
     ActionSearchCriteria criteria = new ActionSearchCriteria(
-        "정렬서비스테스트", null, null, null, "due"
+        "정렬서비스테스트", null, null, null, "due", null
     );
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 

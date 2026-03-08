@@ -2,6 +2,7 @@ package com.cuk.notice2action.extraction.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +48,14 @@ class ActionListQueryParamTest {
     return persistenceService.persistExtraction(request, extracted).actions().getFirst().id();
   }
 
+  private UUID persistSampleAndGetId(String text, String title) {
+    ActionExtractionRequest request = new ActionExtractionRequest(
+        text, null, title, SourceCategory.NOTICE, List.of()
+    );
+    ActionExtractionResponse extracted = extractionService.extract(request);
+    return persistenceService.persistExtraction(request, extracted).actions().getFirst().id();
+  }
+
   @Test
   void listActions_filters_by_date_range() {
     persistSample("2026년 3월 12일까지 신청하세요.", "3월 액션");
@@ -53,7 +63,7 @@ class ActionListQueryParamTest {
 
     OffsetDateTime from = OffsetDateTime.of(2026, 3, 1, 0, 0, 0, 0, ZoneOffset.ofHours(9));
     OffsetDateTime to = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.ofHours(9));
-    ActionSearchCriteria criteria = new ActionSearchCriteria(null, null, from, to, "due");
+    ActionSearchCriteria criteria = new ActionSearchCriteria(null, null, from, to, "due", null);
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
     assertThat(result.actions()).hasSize(1);
@@ -70,11 +80,55 @@ class ActionListQueryParamTest {
   }
 
   @Test
+  void listActions_rejects_invalid_status_param() throws Exception {
+    mockMvc.perform(get("/api/v1/actions")
+            .param("status", "archived"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("bad_request"))
+        .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("status")));
+  }
+
+  @Test
+  void updateAction_rejects_invalid_status_param() throws Exception {
+    UUID id = persistSampleAndGetId("2026년 3월 12일까지 신청하세요.", "상태 테스트");
+
+    mockMvc.perform(patch("/api/v1/actions/{id}", id)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"status":"archived"}
+                """))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("bad_request"))
+        .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("status")));
+  }
+
+  @Test
+  void exportCalendar_filters_by_status() throws Exception {
+    UUID pendingId = persistSampleAndGetId("2026년 3월 12일까지 신청하세요.", "진행중 액션");
+    UUID completedId = persistSampleAndGetId("2026년 3월 13일까지 제출하세요.", "완료 액션");
+
+    persistenceService.updateAction(completedId, new com.cuk.notice2action.extraction.api.dto.ActionUpdateRequest(
+        null, null, null, null, null, null, null, null, "completed"
+    ));
+
+    String body = mockMvc.perform(get("/api/v1/actions/calendar.ics")
+            .param("status", "completed"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    assertThat(body).contains("완료 액션");
+    assertThat(body).doesNotContain("진행중 액션");
+    assertThat(body).doesNotContain(pendingId.toString());
+  }
+
+  @Test
   void listActions_due_sort_with_filters_keeps_null_due_last() {
     persistSample("정렬테스트 2026년 3월 12일까지 신청하세요.", "정렬테스트-마감");
     persistSample("정렬테스트 안내문입니다.", "정렬테스트-무마감");
 
-    ActionSearchCriteria criteria = new ActionSearchCriteria("정렬테스트", null, null, null, "due");
+    ActionSearchCriteria criteria = new ActionSearchCriteria("정렬테스트", null, null, null, "due", null);
     ActionListResponse result = persistenceService.listActions(criteria, 0, 20);
 
     assertThat(result.actions()).hasSize(2);
