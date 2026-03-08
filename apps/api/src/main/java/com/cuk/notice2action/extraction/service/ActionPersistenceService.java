@@ -120,7 +120,7 @@ public class ActionPersistenceService {
     switch (fieldName) {
       case "title" -> entity.setTitle(value);
       case "actionSummary" -> entity.setActionSummary(value);
-      case "dueAtIso" -> entity.setDueAtIso(value != null ? OffsetDateTime.parse(value) : null);
+      case "dueAtIso" -> entity.setDueAtIso(DateTimeInputParser.parse(value, fieldName, false));
       case "dueAtLabel" -> entity.setDueAtLabel(value);
       case "eligibility" -> {
         entity.setEligibility(value);
@@ -365,16 +365,7 @@ public class ActionPersistenceService {
   }
 
   private OffsetDateTime parseDueAtIso(String isoString, String fieldName) {
-    if (isoString == null || isoString.isBlank()) {
-      return null;
-    }
-    try {
-      return OffsetDateTime.parse(isoString);
-    } catch (Exception e) {
-      throw new IllegalArgumentException(
-          "잘못된 날짜 형식입니다: " + fieldName + " = " + isoString
-      );
-    }
+    return DateTimeInputParser.parse(isoString, fieldName, false);
   }
 
   private ActionExtractionResponse resolveDuplicateByContentHash(String contentHash) {
@@ -462,7 +453,7 @@ public class ActionPersistenceService {
         extractedAction.confidenceScore(),
         now
     );
-    entity.setStatus(ActionStatus.PENDING);
+    entity.setStatus(ActionStatus.defaultStatus(extractedAction.status()));
     entity.setStructuredEligibilityJson(toStructuredJson(extractedAction.structuredEligibility()));
     entity.setAdditionalDatesJson(toAdditionalDatesJson(extractedAction.additionalDates()));
     return entity;
@@ -503,7 +494,8 @@ public class ActionPersistenceService {
             .toList(),
         entity.isInferred(),
         entity.getConfidenceScore(),
-        entity.getCreatedAt()
+        entity.getCreatedAt(),
+        ActionStatus.defaultStatus(entity.getStatus())
     );
   }
 

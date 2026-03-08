@@ -157,6 +157,42 @@ public class DateExtractor {
     return null;
   }
 
+  /**
+   * Returns all absolute date candidates sorted by confidence (desc),
+   * deduplicated by calendar day (highest-scored per day).
+   * Falls back to single-date logic for relative dates if no absolute dates found.
+   * Evidence is recorded only for the primary (first) date.
+   */
+  public List<DateMatch> extractAll(String text, List<EvidenceSnippetDto> evidence) {
+    List<ScoredDateMatch> candidates = new ArrayList<>();
+    collectKoreanFullDates(text, candidates);
+    collectIsoDates(text, candidates);
+    collectKoreanMonthDay24H(text, candidates);
+    collectKoreanMonthDayTime(text, candidates);
+    collectShortSlashDot(text, candidates);
+    collectRangeEndKorean(text, candidates);
+    collectRangeEndShort(text, candidates);
+
+    if (candidates.isEmpty()) {
+      DateMatch single = extract(text, evidence);
+      return single != null ? List.of(single) : List.of();
+    }
+
+    candidates.sort((a, b) -> Double.compare(b.score(), a.score()));
+
+    Map<String, ScoredDateMatch> byDay = new LinkedHashMap<>();
+    for (ScoredDateMatch sdm : candidates) {
+      DateComponents dc = sdm.dateMatch().components();
+      String dayKey = String.format(Locale.ROOT, "%04d-%02d-%02d", dc.year(), dc.month(), dc.day());
+      byDay.putIfAbsent(dayKey, sdm);
+    }
+
+    ScoredDateMatch primary = byDay.values().iterator().next();
+    evidence.add(new EvidenceSnippetDto("dueAtLabel", primary.dateMatch().label(), primary.score()));
+
+    return byDay.values().stream().map(ScoredDateMatch::dateMatch).toList();
+  }
+
   public String formatIso(DateComponents dc) {
     return String.format(Locale.ROOT, "%04d-%02d-%02dT%02d:%02d:00+09:00",
         dc.year(), dc.month(), dc.day(), dc.hour(), dc.minute());

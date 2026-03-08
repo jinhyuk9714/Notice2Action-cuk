@@ -48,3 +48,7 @@ app:
   ocr:
     tessdata-path: ${TESSDATA_PATH:/opt/homebrew/share/tessdata}
     languages: kor+eng
+  anthropic:
+    enabled: ${ANTHROPIC_ENABLED:false}
+    api-key: ${ANTHROPIC_API_KEY:}
+    confidence-threshold: ${ANTHROPIC_CONFIDENCE_THRESHOLD:0.65}

@@ -11,6 +11,7 @@ import com.cuk.notice2action.extraction.api.dto.SourceDetailDto;
 import com.cuk.notice2action.extraction.api.dto.SourceListResponse;
 import com.cuk.notice2action.extraction.service.ActionExtractionService;
 import com.cuk.notice2action.extraction.service.ActionPersistenceService;
+import com.cuk.notice2action.extraction.service.DateTimeInputParser;
 import com.cuk.notice2action.extraction.service.ICalendarService;
 import com.cuk.notice2action.extraction.service.SourceHistoryService;
 import com.cuk.notice2action.extraction.service.PdfTextExtractor;
@@ -22,11 +23,7 @@ import com.cuk.notice2action.extraction.domain.ActionStatus;
 import com.cuk.notice2action.extraction.domain.SourceCategory;
 import jakarta.validation.Valid;
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -47,8 +44,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1")
 public class ActionExtractionController {
-
-  private static final ZoneOffset APP_OFFSET = ZoneOffset.ofHours(9);
 
   private final ActionExtractionService actionExtractionService;
   private final ActionPersistenceService actionPersistenceService;
@@ -171,8 +166,8 @@ public class ActionExtractionController {
       @RequestParam(name = "dueDateTo", required = false) String dueDateTo,
       @RequestParam(name = "status", required = false) String status
   ) {
-    OffsetDateTime from = parseQueryDate(dueDateFrom, "dueDateFrom", false);
-    OffsetDateTime to = parseQueryDate(dueDateTo, "dueDateTo", true);
+    OffsetDateTime from = DateTimeInputParser.parse(dueDateFrom, "dueDateFrom", false);
+    OffsetDateTime to = DateTimeInputParser.parse(dueDateTo, "dueDateTo", true);
     ActionSearchCriteria criteria = new ActionSearchCriteria(
         q,
         category,
@@ -182,36 +177,6 @@ public class ActionExtractionController {
         ActionStatus.normalizeNullable(status, "status")
     );
     return actionPersistenceService.listActions(criteria, page, size);
-  }
-
-  private static OffsetDateTime parseQueryDate(String raw, String parameterName, boolean endOfDay) {
-    if (raw == null || raw.isBlank()) {
-      return null;
-    }
-
-    String input = raw.trim();
-
-    try {
-      return OffsetDateTime.parse(input);
-    } catch (Exception ignored) {
-      // fallback below
-    }
-
-    try {
-      LocalDate localDate = LocalDate.parse(input);
-      LocalTime localTime = endOfDay ? LocalTime.MAX : LocalTime.MIN;
-      return localDate.atTime(localTime).atOffset(APP_OFFSET);
-    } catch (Exception ignored) {
-      // fallback below
-    }
-
-    try {
-      return LocalDateTime.parse(input).atOffset(APP_OFFSET);
-    } catch (Exception ignored) {
-      throw new IllegalArgumentException(
-          "잘못된 날짜 형식입니다: " + parameterName + " = " + raw
-      );
-    }
   }
 
   @PatchMapping("/actions/{id}")
@@ -242,8 +207,8 @@ public class ActionExtractionController {
       @RequestParam(name = "dueDateTo", required = false) String dueDateTo,
       @RequestParam(name = "status", required = false) String status
   ) {
-    OffsetDateTime from = parseQueryDate(dueDateFrom, "dueDateFrom", false);
-    OffsetDateTime to = parseQueryDate(dueDateTo, "dueDateTo", true);
+    OffsetDateTime from = DateTimeInputParser.parse(dueDateFrom, "dueDateFrom", false);
+    OffsetDateTime to = DateTimeInputParser.parse(dueDateTo, "dueDateTo", true);
     ActionSearchCriteria criteria = new ActionSearchCriteria(
         q,
         category,

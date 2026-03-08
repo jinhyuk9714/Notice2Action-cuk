@@ -16,14 +16,23 @@ import com.cuk.notice2action.extraction.service.extractor.SystemHintExtractor;
 import com.cuk.notice2action.extraction.service.extractor.TaskPhraseExtractor;
 import com.cuk.notice2action.extraction.service.extractor.TextNormalizer;
 import com.cuk.notice2action.extraction.service.extractor.TitleDeriver;
+import com.cuk.notice2action.extraction.service.llm.LlmActionEnhancementService;
+import com.cuk.notice2action.extraction.service.llm.LlmEnhancedFields;
 import com.cuk.notice2action.extraction.service.model.ActionSegment;
 import com.cuk.notice2action.extraction.service.model.DateMatch;
 import com.cuk.notice2action.extraction.service.model.StructuredEligibility;
+import com.cuk.notice2action.extraction.service.strategy.DefaultExtractionStrategy;
+import com.cuk.notice2action.extraction.service.strategy.ExtractionStrategy;
+import com.cuk.notice2action.extraction.service.strategy.ExtractionStrategyFactory;
+import com.cuk.notice2action.extraction.service.strategy.SyllabusExtractionStrategy;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -42,6 +51,41 @@ public class HeuristicActionExtractionService implements ActionExtractionService
   private final TitleDeriver titleDeriver;
   private final TaskPhraseExtractor taskPhraseExtractor;
   private final StructuredEligibilityParser structuredEligibilityParser;
+  private final ExtractionStrategyFactory strategyFactory;
+
+  @Autowired(required = false)
+  private LlmActionEnhancementService llmService;
+
+  @Value("${app.anthropic.confidence-threshold:0.65}")
+  private double llmThreshold;
+
+  public HeuristicActionExtractionService(
+      TextNormalizer textNormalizer,
+      DateExtractor dateExtractor,
+      SystemHintExtractor systemHintExtractor,
+      RequiredItemExtractor requiredItemExtractor,
+      ActionVerbExtractor actionVerbExtractor,
+      EligibilityExtractor eligibilityExtractor,
+      ActionSegmenter actionSegmenter,
+      ActionSummaryBuilder actionSummaryBuilder,
+      TitleDeriver titleDeriver,
+      TaskPhraseExtractor taskPhraseExtractor,
+      StructuredEligibilityParser structuredEligibilityParser,
+      ExtractionStrategyFactory strategyFactory
+  ) {
+    this.textNormalizer = textNormalizer;
+    this.dateExtractor = dateExtractor;
+    this.systemHintExtractor = systemHintExtractor;
+    this.requiredItemExtractor = requiredItemExtractor;
+    this.actionVerbExtractor = actionVerbExtractor;
+    this.eligibilityExtractor = eligibilityExtractor;
+    this.actionSegmenter = actionSegmenter;
+    this.actionSummaryBuilder = actionSummaryBuilder;
+    this.titleDeriver = titleDeriver;
+    this.taskPhraseExtractor = taskPhraseExtractor;
+    this.structuredEligibilityParser = structuredEligibilityParser;
+    this.strategyFactory = strategyFactory;
+  }
 
   public HeuristicActionExtractionService(
       TextNormalizer textNormalizer,
@@ -56,17 +100,20 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       TaskPhraseExtractor taskPhraseExtractor,
       StructuredEligibilityParser structuredEligibilityParser
   ) {
-    this.textNormalizer = textNormalizer;
-    this.dateExtractor = dateExtractor;
-    this.systemHintExtractor = systemHintExtractor;
-    this.requiredItemExtractor = requiredItemExtractor;
-    this.actionVerbExtractor = actionVerbExtractor;
-    this.eligibilityExtractor = eligibilityExtractor;
-    this.actionSegmenter = actionSegmenter;
-    this.actionSummaryBuilder = actionSummaryBuilder;
-    this.titleDeriver = titleDeriver;
-    this.taskPhraseExtractor = taskPhraseExtractor;
-    this.structuredEligibilityParser = structuredEligibilityParser;
+    this(
+        textNormalizer,
+        dateExtractor,
+        systemHintExtractor,
+        requiredItemExtractor,
+        actionVerbExtractor,
+        eligibilityExtractor,
+        actionSegmenter,
+        actionSummaryBuilder,
+        titleDeriver,
+        taskPhraseExtractor,
+        structuredEligibilityParser,
+        new ExtractionStrategyFactory(new DefaultExtractionStrategy(), new SyllabusExtractionStrategy())
+    );
   }
 
   @Override
@@ -76,7 +123,9 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       throw new IllegalArgumentException("sourceText must not be blank");
     }
 
-    List<ActionSegment> segments = actionSegmenter.segment(normalizedText);
+    ExtractionStrategy strategy = strategyFactory.forCategory(request.sourceCategory());
+    List<String> extraVerbs = strategy.extraActionVerbs();
+    List<ActionSegment> segments = actionSegmenter.segment(normalizedText, extraVerbs);
 
     if (segments.size() <= 1) {
       ActionSegment singleSegment = segments.isEmpty() ? null : segments.getFirst();
@@ -88,7 +137,8 @@ public class HeuristicActionExtractionService implements ActionExtractionService
                   null,
                   singleSegment != null ? singleSegment.taskPhrase() : null,
                   0,
-                  1
+                  1,
+                  extraVerbs
               )
           );
       return new ActionExtractionResponse(
@@ -97,10 +147,12 @@ public class HeuristicActionExtractionService implements ActionExtractionService
     }
 
     List<ExtractedActionDto> actions = new ArrayList<>();
-    int total = Math.min(segments.size(), MAX_ACTIONS);
+    int total = Math.min(segments.size(), strategy.maxActions());
     for (int i = 0; i < total; i++) {
       ActionSegment seg = segments.get(i);
-      actions.add(extractSingleAction(request, seg.text(), seg.primaryVerb(), seg.taskPhrase(), i + 1, total));
+      actions.add(
+          extractSingleAction(request, seg.text(), seg.primaryVerb(), seg.taskPhrase(), i + 1, total, extraVerbs)
+      );
     }
     return new ActionExtractionResponse(
         sortByProfile(prioritizeSourceTitleTask(resolveDuplicateTitles(actions), request.sourceTitle()), request.focusProfile())
@@ -113,7 +165,8 @@ public class HeuristicActionExtractionService implements ActionExtractionService
       String overrideVerb,
       String overrideTaskPhrase,
       int actionIndex,
-      int totalActions
+      int totalActions,
+      List<String> extraVerbs
   ) {
     List<EvidenceSnippetDto> evidence = new ArrayList<>();
 
@@ -128,7 +181,7 @@ public class HeuristicActionExtractionService implements ActionExtractionService
         : List.of();
     String systemHint = systemHintExtractor.extract(text, evidence);
     List<String> requiredItems = requiredItemExtractor.extract(text, evidence);
-    String actionVerb = overrideVerb != null ? overrideVerb : actionVerbExtractor.extract(text, evidence);
+    String actionVerb = overrideVerb != null ? overrideVerb : actionVerbExtractor.extract(text, evidence, extraVerbs);
     String eligibility = eligibilityExtractor.extract(text, evidence);
     StructuredEligibility structuredEligibility = structuredEligibilityParser.parse(eligibility);
     String extractedTaskPhrase = taskPhraseExtractor.extract(request.sourceTitle(), text, actionVerb, requiredItems);
@@ -138,15 +191,25 @@ public class HeuristicActionExtractionService implements ActionExtractionService
 
     double confidenceScore = computeConfidenceScore(evidence);
 
-    return new ExtractedActionDto(
+    ExtractedActionDto dto = new ExtractedActionDto(
         null, null,
         title, actionSummary,
         dueAtIso, dueAtLabel,
         additionalDates,
         eligibility, structuredEligibility, requiredItems, systemHint,
         request.sourceCategory(),
-        evidence, computeInferred(evidence), confidenceScore, null
+        evidence, computeInferred(evidence), confidenceScore, null, "pending"
     );
+
+    if (llmService != null && (confidenceScore < llmThreshold || evidence.isEmpty())) {
+      String category = request.sourceCategory() != null ? request.sourceCategory().name() : "NOTICE";
+      Optional<LlmEnhancedFields> enhanced = llmService.enhance(text, category, dto);
+      if (enhanced.isPresent()) {
+        dto = llmService.mergeWithHeuristic(dto, enhanced.get());
+      }
+    }
+
+    return dto;
   }
 
   private List<ExtractedActionDto> resolveDuplicateTitles(List<ExtractedActionDto> actions) {
@@ -181,7 +244,8 @@ public class HeuristicActionExtractionService implements ActionExtractionService
           action.evidence(),
           action.inferred(),
           action.confidenceScore(),
-          action.createdAt()
+          action.createdAt(),
+          action.status()
       ));
     }
     return normalized;

@@ -17,6 +17,10 @@ public class ActionSegmenter {
   }
 
   public List<ActionSegment> segment(String text) {
+    return segment(text, List.of());
+  }
+
+  public List<ActionSegment> segment(String text, List<String> extraVerbs) {
     String[] sentences = text.split("\\n+");
     List<ActionSegment> segments = new ArrayList<>();
     StringBuilder currentSegment = new StringBuilder();
@@ -30,7 +34,7 @@ public class ActionSegmenter {
       }
 
       boolean proceduralStep = isProceduralStep(trimmed);
-      String foundVerb = verbExtractor.findVerb(trimmed);
+      String foundVerb = verbExtractor.findVerb(trimmed, extraVerbs);
       String foundTaskPhrase = taskPhraseExtractor.extractForSegmentation(trimmed, foundVerb);
 
       if (shouldStartNewSegment(

@@ -22,12 +22,15 @@ public record ExtractedActionDto(
     List<EvidenceSnippetDto> evidence,
     boolean inferred,
     double confidenceScore,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    String status
 ) {
   public ExtractedActionDto {
     additionalDates = additionalDates == null ? List.of() : List.copyOf(additionalDates);
     requiredItems = requiredItems == null ? List.of() : List.copyOf(requiredItems);
     evidence = evidence == null ? List.of() : List.copyOf(evidence);
+    additionalDates = additionalDates == null ? List.of() : List.copyOf(additionalDates);
+    status = status == null ? "pending" : status;
   }
 
   public ExtractedActionDto(
